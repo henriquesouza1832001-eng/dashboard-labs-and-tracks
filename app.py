@@ -18,8 +18,7 @@ def get_conn():
         access_token    = TOKEN,
     )
 
-def db_get(schema: str, table: str, chave: str):
-    """Lê dados_json de uma linha pelo chave."""
+def db_get(schema, table, chave):
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -34,8 +33,7 @@ def db_get(schema: str, table: str, chave: str):
         print(f"db_get error: {e}")
     return None
 
-def db_save(schema: str, table: str, chave: str, dados: dict, usuario: str = "sistema"):
-    """Salva (MERGE) dados_json pelo chave."""
+def db_save(schema, table, chave, dados, usuario="sistema"):
     try:
         j = json.dumps(dados, ensure_ascii=False)
         with get_conn() as conn:
@@ -56,10 +54,9 @@ def db_save(schema: str, table: str, chave: str, dados: dict, usuario: str = "si
         print(f"db_save error: {e}")
         return False
 
-def get_usuario(request: Request) -> str:
+def get_usuario(request):
     return request.headers.get("X-Forwarded-User", "dev@local")
 
-# Schemas
 S_CHAMADOS   = "eng_lab.dashboard_labs_and_tracks_chamados"
 S_OBRAS      = "eng_lab.dashboard_labs_and_tracks_obras"
 S_CODIN      = "eng_lab.dashboard_labs_and_tracks_codin"
@@ -76,92 +73,73 @@ async def health():
 @app.get("/api/chamados")
 async def get_chamados():
     dados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal")
-    if dados:
-        return JSONResponse(dados)
-    return JSONResponse({"chamados": []})
+    return JSONResponse(dados if dados else {"chamados": []})
 
 @app.post("/api/chamados")
 async def save_chamados(request: Request):
     dados = await request.json()
-    usuario = get_usuario(request)
-    ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, usuario)
+    ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
 # ── OBRAS ──────────────────────────────────────────────
 @app.get("/api/obras")
 async def get_obras():
     dados = db_get(S_OBRAS, "obras_completo", "obras_principal")
-    if dados:
-        return JSONResponse(dados)
-    return JSONResponse({"obras": [], "lancamentos": [], "budget": [], "revisoes": []})
+    return JSONResponse(dados if dados else {"obras": [], "lancamentos": [], "budget": [], "revisoes": []})
 
 @app.post("/api/obras")
 async def save_obras(request: Request):
     dados = await request.json()
-    usuario = get_usuario(request)
-    ok = db_save(S_OBRAS, "obras_completo", "obras_principal", dados, usuario)
+    ok = db_save(S_OBRAS, "obras_completo", "obras_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
 # ── CODIN ──────────────────────────────────────────────
 @app.get("/api/codin")
 async def get_codin():
     dados = db_get(S_CODIN, "codin_completo", "codin_principal")
-    if dados:
-        return JSONResponse(dados)
-    return JSONResponse({"pessoas": [], "pontos": [], "acessos": [], "leitores": []})
+    return JSONResponse(dados if dados else {"pessoas": [], "pontos": [], "acessos": [], "leitores": []})
 
 @app.post("/api/codin")
 async def save_codin(request: Request):
     dados = await request.json()
-    usuario = get_usuario(request)
-    ok = db_save(S_CODIN, "codin_completo", "codin_principal", dados, usuario)
+    ok = db_save(S_CODIN, "codin_completo", "codin_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
 # ── CONFORTO ───────────────────────────────────────────
 @app.get("/api/conforto")
 async def get_conforto():
     dados = db_get(S_CONFORTO, "conforto_completo", "conforto_principal")
-    if dados:
-        return JSONResponse(dados)
-    return JSONResponse({"areas": [], "ucs": [], "ordens": []})
+    return JSONResponse(dados if dados else {"areas": [], "ucs": [], "ordens": []})
 
 @app.post("/api/conforto")
 async def save_conforto(request: Request):
     dados = await request.json()
-    usuario = get_usuario(request)
-    ok = db_save(S_CONFORTO, "conforto_completo", "conforto_principal", dados, usuario)
+    ok = db_save(S_CONFORTO, "conforto_completo", "conforto_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
 # ── ATIVIDADES ─────────────────────────────────────────
 @app.get("/api/atividades")
 async def get_atividades():
     dados = db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal")
-    if dados:
-        return JSONResponse(dados)
-    return JSONResponse({"atividades": []})
+    return JSONResponse(dados if dados else {"atividades": []})
 
 @app.post("/api/atividades")
 async def save_atividades(request: Request):
     dados = await request.json()
-    usuario = get_usuario(request)
-    ok = db_save(S_ATIVIDADES, "atividades_completo", "atividades_principal", dados, usuario)
+    ok = db_save(S_ATIVIDADES, "atividades_completo", "atividades_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
 # ── HUB CONFIG ─────────────────────────────────────────
 @app.get("/api/hub/config")
 async def get_hub_config(request: Request):
     usuario = get_usuario(request)
-    chave = f"config_{usuario}"
-    dados = db_get(S_HUB, "config", chave)
-    if dados:
-        return JSONResponse(dados)
-    return JSONResponse({})
+    dados = db_get(S_HUB, "config", f"config_{usuario}")
+    return JSONResponse(dados if dados else {})
 
 @app.post("/api/hub/config")
 async def save_hub_config(request: Request):
     dados = await request.json()
     usuario = get_usuario(request)
-    chave = f"config_{usuario}"
     try:
         j = json.dumps(dados, ensure_ascii=False)
         with get_conn() as conn:
@@ -181,7 +159,7 @@ async def save_hub_config(request: Request):
         print(f"hub config error: {e}")
         return JSONResponse({"ok": False})
 
-# ── HUB DADOS (KPIs consolidados) ──────────────────────
+# ── HUB DADOS ──────────────────────────────────────────
 @app.get("/api/hub/dados")
 async def get_hub_dados():
     chamados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal") or {"chamados": []}
@@ -191,37 +169,62 @@ async def get_hub_dados():
     l = obras.get("lancamentos", [])
     return JSONResponse({
         "chamados": {
-            "total":     len(c),
-            "abertos":   len([x for x in c if x.get("status") == "Aberto"]),
-            "andamento": len([x for x in c if x.get("status") == "Em Andamento"]),
-            "concluidos":len([x for x in c if x.get("status") == "Concluído"]),
-            "criticos":  len([x for x in c if x.get("prioridade") == "Crítica" and x.get("status") not in ["Concluído","Cancelado"]]),
+            "total":      len(c),
+            "abertos":    len([x for x in c if x.get("status") == "Aberto"]),
+            "andamento":  len([x for x in c if x.get("status") == "Em Andamento"]),
+            "concluidos": len([x for x in c if x.get("status") == "Concluído"]),
+            "criticos":   len([x for x in c if x.get("prioridade") == "Crítica" and x.get("status") not in ["Concluído","Cancelado"]]),
         },
         "obras": {
-            "total":      len(o),
-            "andamento":  len([x for x in o if x.get("status") == "Em Andamento"]),
-            "concluidas": len([x for x in o if x.get("status") == "Concluído"]),
+            "total":       len(o),
+            "andamento":   len([x for x in o if x.get("status") == "Em Andamento"]),
+            "concluidas":  len([x for x in o if x.get("status") == "Concluído"]),
             "gasto_total": sum(x.get("precoUnit", 0) * x.get("qtd", 1) for x in l),
         }
     })
 
-# ── KPI DADOS (todos os módulos) ───────────────────────
+# ── KPI ────────────────────────────────────────────────
 @app.get("/api/kpi/dados")
 async def get_kpi():
-    chamados   = db_get(S_CHAMADOS,   "chamados_completo",   "chamados_principal")   or {}
-    obras      = db_get(S_OBRAS,      "obras_completo",      "obras_principal")      or {}
-    atividades = db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal") or {}
-    conforto   = db_get(S_CONFORTO,   "conforto_completo",   "conforto_principal")   or {}
     return JSONResponse({
-        "chamados":   chamados,
-        "obras":      obras,
-        "atividades": atividades,
-        "conforto":   conforto,
+        "chamados":   db_get(S_CHAMADOS,   "chamados_completo",   "chamados_principal")   or {},
+        "obras":      db_get(S_OBRAS,      "obras_completo",      "obras_principal")      or {},
+        "atividades": db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal") or {},
+        "conforto":   db_get(S_CONFORTO,   "conforto_completo",   "conforto_principal")   or {},
     })
 
-# ── STATIC (deve ser o último) ─────────────────────────
+# ── PÁGINAS HTML (antes do StaticFiles) ────────────────
 @app.get("/")
 async def root():
     return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
 
+@app.get("/hub")
+async def hub():
+    return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
+
+@app.get("/chamados")
+async def chamados_page():
+    return FileResponse("ERPFiat-Portatil/resources/chamados/chamados.html")
+
+@app.get("/obras")
+async def obras_page():
+    return FileResponse("ERPFiat-Portatil/resources/obras/obras.html")
+
+@app.get("/codin")
+async def codin_page():
+    return FileResponse("ERPFiat-Portatil/resources/codins/codin.html")
+
+@app.get("/conforto")
+async def conforto_page():
+    return FileResponse("ERPFiat-Portatil/resources/conforto/conforto.html")
+
+@app.get("/atividades")
+async def atividades_page():
+    return FileResponse("ERPFiat-Portatil/resources/atividades/atividades.html")
+
+@app.get("/kpi")
+async def kpi_page():
+    return FileResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
+
+# ── STATIC (sempre por último) ─────────────────────────
 app.mount("/", StaticFiles(directory="ERPFiat-Portatil/resources", html=True), name="static")
