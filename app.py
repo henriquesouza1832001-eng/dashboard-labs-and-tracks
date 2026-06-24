@@ -3,6 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from databricks import sql
 import os, json
+import asyncio
+
 
 app = FastAPI()
 
@@ -223,5 +225,15 @@ async def atividades_page():
 @app.get("/kpi")
 async def kpi_page():
     return FileResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
+
+@app.on_event("startup")
+async def prefetch():
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, lambda: db_get(S_CHAMADOS, "chamados_completo", "chamados_principal"))
+    loop.run_in_executor(None, lambda: db_get(S_OBRAS, "obras_completo", "obras_principal"))
+    loop.run_in_executor(None, lambda: db_get(S_CONFORTO, "conforto_completo", "conforto_principal"))
+    loop.run_in_executor(None, lambda: db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal"))
+
+app.mount("/", StaticFiles(directory="ERPFiat-Portatil/resources", html=True), name="static")
 
 app.mount("/", StaticFiles(directory="ERPFiat-Portatil/resources", html=True), name="static")
