@@ -68,7 +68,7 @@ function diasAberto(c) {
 function dentroDeSLA(c) {
   return diasAberto(c) <= slaParaPrio(c.prioridade);
 }
-function salvarSLA() {
+async function salvarSLA() {
   const cfg = {
     'Crítica': parseInt($('sla-critica').value) || 1,
     'Alta':    parseInt($('sla-alta').value)    || 3,

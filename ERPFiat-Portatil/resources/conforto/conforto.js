@@ -1437,10 +1437,6 @@ async function tentarCarregar(){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-
-
-  const cache = localStorage.getItem(NEU_CACHE_KEY) || localStorage.getItem(CACHE_KEY);
-  if (cache) carregarDeJSON(cache);
   $('app').style.display = 'block';
   popularSelects();
   gerarOSdasRotinas();

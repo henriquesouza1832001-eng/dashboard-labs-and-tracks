@@ -241,15 +241,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     </div>
   </div>
 </div>
-<script src="../js/neutralino.js"></script>
 <script>
 'use strict';
-Neutralino.init();
 const $ = id => document.getElementById(id);
 const hoje = () => new Date().toISOString().slice(0,10);
 
 let atividades = [];
-let fileHandle = null; // agora é string de path
 let saveTimeout = null;
 let editId = null;
 let viewAtual = 'kanban';
@@ -261,21 +258,6 @@ function setSaveStatus(s,txt){
   const el=$('save-status'); el.className='save-status '+s;
   $('save-txt').textContent=txt||s;
 }
-
-// ── NEUTRALINO FILE HELPERS ──
-async function neuAbrirArquivo(titulo){
-  try{const p=await Neutralino.os.showOpenDialog(titulo,{filters:[{name:'JSON',extensions:['json']}]});return(p&&p.length)?p[0]:null;}catch(e){return null;}
-}
-async function neuSalvarDialogo(nome){
-  try{return await Neutralino.os.showSaveDialog('Salvar como',{defaultPath:nome,filters:[{name:'JSON',extensions:['json']}]});}catch(e){return null;}
-}
-async function neuLerArquivo(path){try{return await Neutralino.filesystem.readFile(path);}catch(e){return null;}}
-async function neuSalvarArquivo(path,txt){try{await Neutralino.filesystem.writeFile(path,txt);return true;}catch(e){return false;}}
-function salvarPath(key,path){try{localStorage.setItem('neu-path-'+key,path);}catch(e){}}
-function lerPath(key){try{return localStorage.getItem('neu-path-'+key)||null;}catch(e){return null;}}
-
-function toJSON(){ return {versao:'1.0',modulo:'atividades',atividades}; }
-
 function carregarDeJSON(txt){
   try{
     const d=JSON.parse(txt);
@@ -505,19 +487,17 @@ $('btn-nova').onclick=()=>novaAtividade();
 $('btn-abrir-ativ').onclick=()=>iniciarApp();
 $('btn-criar-ativ').onclick=()=>iniciarApp();
 
-function inicializarAtividades() {
-  const cache = localStorage.getItem('hub-atividades');
-  if (cache) {
-    try {
-      const parsed = JSON.parse(cache);
-      atividades = Array.isArray(parsed) ? parsed : (parsed.atividades || []);
-      setSaveStatus('saved', 'cache local');
-    } catch(e) { atividades = []; }
+async function inicializarAtividades() {
+  try {
+    const r = await fetch('/api/atividades');
+    const d = await r.json();
+    atividades = d.atividades || [];
+    setSaveStatus('saved', 'carregado');
+  } catch(e) {
+    atividades = [];
+    setSaveStatus('nosave', 'erro ao carregar');
   }
   iniciarApp();
-}
-if (typeof Neutralino !== 'undefined') {
-  Neutralino.events.on('ready', inicializarAtividades);
 }
 setTimeout(inicializarAtividades, 300);
 </script>
