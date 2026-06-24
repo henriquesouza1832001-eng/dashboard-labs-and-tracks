@@ -14,21 +14,15 @@ let state = {
              '933','935','936','937','938','941','942','943','944','359','978'],
   senhaHash: '',
 };
-// fileHandle agora é string de caminho (path)
 let fileHandle = null, saveTimeout = null, editCtx = {tipo:null,idx:-1}, confirmCallback = null;
 const SESSION_ID = Date.now().toString(36)+Math.random().toString(36).slice(2);
 const DB_NAME = 'obras-db', DB_STORE = 'handles';
-
-function salvarPath(key,path){try{localStorage.setItem('neu-path-'+key,path);}catch(e){}}
-function lerPath(key){try{return localStorage.getItem('neu-path-'+key)||null;}catch(e){return null;}}
 function hashSimples(str){ let h=0; for(let i=0;i<str.length;i++)h=Math.imul(31,h)+str.charCodeAt(i)|0; return h.toString(16); }
 function toast(msg,tipo=''){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast show '+tipo; setTimeout(()=>{el.className='toast';},3000); }
 function setSaveStatus(s){ const ind=document.getElementById('save-indicator'),txt=document.getElementById('save-text'); ind.className='save-indicator '+s; txt.textContent=s==='saving'?'Salvando...':s==='error'?'Erro':'Salvo'; }
 function formatDate(d){ if(!d)return'—'; const[y,m,dia]=d.split('-'); return`${dia}/${m}/${y}`; }
 function badge(s){ const map={'Ativo':'badge-ativo','Inativo':'badge-inativo','Bloqueado':'badge-bloqueado','Temporário':'badge-temp'}; return`<span class="badge ${map[s]||'badge-inativo'}">${s}</span>`; }
 function badgePonto(t){ return t==='Restrito'?'<span class="badge badge-restrito">🔒 Restrito</span>':'<span class="badge badge-publico">Público</span>'; }
-setInterval(()=>{if(fileHandle)acquireLock();},30000);
-window.addEventListener('beforeunload',releaseLock);
 async function salvarDados(){
   await fetch('/api/codin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
   setSaveStatus('ok');
@@ -43,19 +37,7 @@ function carregarDeJSON(json){
     return true;
   }catch{return false;}
 }
-async function abrirArquivo(){
-  try{
-  const path = await neuAbrirArquivo('Selecionar dados-codin.json');
-  if(!path) return false;
-  const txt = await neuLerArquivo(path);
-  if(!txt) return false;
-  if(txt.trim()) carregarDeJSON(txt);
-  fileHandle = path;
-  salvarPath('codin', path);
-  document.getElementById('sidebar-arquivo').textContent = path.split(/[\\/]/).pop();
-  return true;
-  }catch(e){ return false; }
-}
+async function abrirArquivo(){ return false; }
 async function carregarDados(){
   const d=await(await fetch('/api/codin')).json();
   if(d)carregarDeJSON(JSON.stringify(d));

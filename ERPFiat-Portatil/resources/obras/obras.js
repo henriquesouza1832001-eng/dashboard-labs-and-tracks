@@ -13,9 +13,7 @@ let state = {
   editIdx: { obra: -1, lanc: -1, budget: -1, rev: -1, cresp: -1, etapa: -1 },
   obraAtiva: null  
 };
-let obrasHandle = null, centralHandle = null, saveTimeout = null, centralSaveTimeout = null, lockInterval = null;
-const SESSION_KEY = 'obras-session', LAST_FILE_KEY = 'obras-ultimo-arquivo', CENTRAL_CACHE_KEY = 'intranet-central';
-const DB_NAME = 'obras-db', DB_STORE = 'handles';
+let saveTimeout = null, centralSaveTimeout = null;
 const $ = id => document.getElementById(id);
 const fmt = (v, dec=0) => (v||0).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
 const fmtR = v => 'R$ '+fmt(v,2);
@@ -23,24 +21,9 @@ const fmtD = s => s ? s.split('-').reverse().join('/') : '—';
 const hoje = () => new Date().toISOString().slice(0,10);
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
 async function salvarCentral(){
-  const txt = JSON.stringify(centralToJSON(), null, 2);
-  localStorage.setItem(CENTRAL_CACHE_KEY, txt);
-  if(!centralHandle){ return; }
-  try{ await Neutralino.filesystem.writeFile(centralHandle, txt); }catch(e){}
+  await fetch('/api/hub/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(centralToJSON())});
 }
-
-function abrirDB(){
-  return new Promise((res,rej)=>{
-    const req = indexedDB.open(DB_NAME, 2);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if(!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
-      if(!db.objectStoreNames.contains('dados')) db.createObjectStore('dados');
-    };
-    req.onsuccess = e => res(e.target.result);
-    req.onerror = e => rej(e.target.error);
-  });
-}
+function abrirDB(){ return Promise.resolve(); }
 
 function setSaveStatus(s,txt){ const el=$('save-status'); el.className='save-status '+s; $('save-txt').textContent=txt||s; }
 function gerarId(prefix,arr,campo){ let n=arr.length+1; while(arr.find(x=>x[campo]===`${prefix}-${String(n).padStart(3,'0')}`))n++; return `${prefix}-${String(n).padStart(3,'0')}`; }
@@ -59,8 +42,7 @@ function badgeStatus(s){ const map={'Em Andamento':'badge-orange','Planejado':'b
 function badgeBudget(pct){ if(pct>=100)return'badge-red'; if(pct>=85)return'badge-yellow'; return'badge-green'; }
 function progressBar(pct,cor){ const cls=cor||(pct>=100?'red':pct>=85?'yellow':''); const p=Math.min(pct,100); return `<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${cls}" style="width:${p}%"></div></div><span class="progress-pct">${fmt(pct,1)}%</span></div>`; }
 function toJSON(){ return {versao:'1.0',modulo:'obras',obras:state.obras,budget:state.budget,lancamentos:state.lancamentos,revisoes:state.revisoes}; }
-function centralToJSON(){ return {...JSON.parse(localStorage.getItem(CENTRAL_CACHE_KEY)||'{}'), pessoas:state.central.pessoas, cresp:state.central.cresp, tiposObra:state.central.tiposObra, categoriasCusto:state.central.categoriasCusto, leitores:state.central.leitores}; }
-function carregarDeJSON(txt){
+function centralToJSON(){ return {pessoas:state.central.pessoas, cresp:state.central.cresp, tiposObra:state.central.tiposObra, categoriasCusto:state.central.categoriasCusto, leitores:state.central.leitores}; }function carregarDeJSON(txt){
   try {
     const d=JSON.parse(txt);
     state.obras=Array.isArray(d.obras)?d.obras:[];
@@ -83,7 +65,6 @@ function carregarCentral(txt){
     state.central.tiposObra=Array.isArray(d.tiposObra)?d.tiposObra:['Banheiro','Escritório','Cozinha/Refeitório','Área Técnica','Fachada/Externo','Almoxarifado','Sala de Reunião','Laboratório','Área de Lazer','Outros'];
     state.central.categoriasCusto=Array.isArray(d.categoriasCusto)?d.categoriasCusto:[];
     state.central.leitores=Array.isArray(d.leitores)?d.leitores:[];
-    localStorage.setItem(CENTRAL_CACHE_KEY,txt);
     return true;
   } catch(e){ console.error(e); return false; }
 }
@@ -95,9 +76,8 @@ async function salvarDados(){
 }
 function agendarSalvamento(){ setSaveStatus('saving','salvando…'); clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
 function agendarSalvamentoCentral(){ clearTimeout(centralSaveTimeout); centralSaveTimeout=setTimeout(()=>salvarCentral(),400); }
-function acquireLock(){ const s={ts:Date.now(),user:'obras-user'}; localStorage.setItem(SESSION_KEY,JSON.stringify(s)); if(lockInterval)clearInterval(lockInterval); lockInterval=setInterval(()=>{const x=JSON.parse(localStorage.getItem(SESSION_KEY)||'{}');x.ts=Date.now();localStorage.setItem(SESSION_KEY,JSON.stringify(x));},30000); window.addEventListener('beforeunload',()=>localStorage.removeItem(SESSION_KEY)); }
-function checkLock(){ const raw=localStorage.getItem(SESSION_KEY); if(!raw)return true; try{const s=JSON.parse(raw);if(Date.now()-s.ts>5*60*1000)return true;return confirm('Outro usuário pode estar com este arquivo aberto. Continuar mesmo assim?');}catch{return true;} }
-
+function acquireLock(){}
+function checkLock(){ return true; }
 function aplicarFiltroURL(){
   const p = new URLSearchParams(location.search);
   const pane = p.get('page');
@@ -580,90 +560,29 @@ window.editarEtapa=editarEtapa; window.excluirEtapa=excluirEtapa;
 window.atualizarAvancoEtapa=atualizarAvancoEtapa;
 window.excluirTipo=excluirTipo;
 window.editarCategoria=editarCategoria; window.excluirCategoria=excluirCategoria;
-document.addEventListener('DOMContentLoaded', () => {
-  const cc = localStorage.getItem(CENTRAL_CACHE_KEY);
-  if (cc) {
-    carregarCentral(cc);
-    $('sidebar-central-file').textContent='central: (cache)';
-  } else {
-    const hubUsuarios = localStorage.getItem('hub-usuarios');
-    if (hubUsuarios) {
-      try {
-        const pessoas = JSON.parse(hubUsuarios);
-        carregarCentral(JSON.stringify({ pessoas, cresp:[], tiposObra:[], categoriasCusto:[], leitores:[] }));
-      } catch(e) {}
-    }
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const [rObras, rCentral] = await Promise.all([
+      fetch('/api/obras'),
+      fetch('/api/hub/config')
+    ]);
+    const dObras = await rObras.json();
+    const dCentral = await rCentral.json();
+    if (dObras) carregarDeJSON(JSON.stringify(dObras));
+    if (dCentral && Object.keys(dCentral).length) carregarCentral(JSON.stringify(dCentral));
+    setSaveStatus('saved', 'carregado');
+  } catch(e) {
+    setSaveStatus('nosave', 'erro ao carregar');
   }
-function lerPath(chave){
-  return localStorage.getItem('obras-path-'+chave);
-}
-function salvarPath(chave, valor){
-  localStorage.setItem('obras-path-'+chave, valor);
-}
-function tentarCarregar() {
-    const cacheCentral = localStorage.getItem('neu-cache-central') || localStorage.getItem(CENTRAL_CACHE_KEY);
-    if (cacheCentral) {
-      try { carregarCentral(cacheCentral); } catch(e) {}
-    }
-    const txt = localStorage.getItem('neu-cache-obras') || localStorage.getItem('obras-dados-cache');
-    if (txt && carregarDeJSON(txt)) {
-      localStorage.setItem('obras-dados-cache', txt);
-      setSaveStatus('saved', 'cache local');
-    }
-    if ($('sidebar-arquivo')) $('sidebar-arquivo').textContent = 'dados-obras.json';
-    $('app').style.display = 'block';
-    popularSelects(); renderTudo(); aplicarFiltroURL();
-  }
-  tentarCarregar();
+  $('app').style.display = 'block';
+  popularSelects(); renderTudo(); aplicarFiltroURL();
 
 $('btn-vincular-arquivo')?.addEventListener('click', () => {
   alert('Gerencie os arquivos pelo Hub principal.');
 });
 $('_placeholder_vincular')?.addEventListener('click', () => {
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = '.json,application/json'; inp.style.display = 'none';
-  document.body.appendChild(inp);
-  inp.onchange = async () => {
-    const file = inp.files && inp.files[0];
-    document.body.removeChild(inp);
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async e => {
-      const txt = e.target.result;
-      if (!carregarDeJSON(txt)) { alert('Arquivo inválido.'); return; }
-      localStorage.setItem('obras-dados-cache', txt);
-      localStorage.setItem('neu-cache-obras', txt);
-      localStorage.setItem('neu-name-obras', file.name);
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: file.name,
-          types: [{ description: 'JSON', accept: {'application/json': ['.json']} }]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(txt);
-        await writable.close();
-        obrasHandle = { _fsHandle: handle };
-        salvarDados._useFileSystemAPI = true;
-        $('sidebar-arquivo').textContent = file.name;
-        setSaveStatus('saved', 'salvo');
-        $('btn-vincular-arquivo').style.display = 'none';
-        renderTudo();
-      } catch(err) {
-        if (err.name !== 'AbortError') {
-          $('sidebar-arquivo').textContent = file.name + ' (sem escrita)';
-          setSaveStatus('nosave', 'somente leitura');
-        }
-      }
-    };
-    reader.readAsText(file, 'UTF-8');
-  };
-  window.addEventListener('focus', function onFocus() {
-    window.removeEventListener('focus', onFocus);
-    setTimeout(() => { if (document.body.contains(inp)) document.body.removeChild(inp); }, 400);
-  }, { once: true });
-  inp.click();
+  alert('Dados carregados automaticamente do banco.');
 });
-
   $('btn-export-json').addEventListener('click', () => { const b=new Blob([JSON.stringify(toJSON(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`dados-obras-backup-${hoje()}.json`; a.click(); });
   $('btn-export-pdf').addEventListener('click', exportarPDF);
   document.querySelectorAll('.nav-item[data-pane]').forEach(btn => {

@@ -11,9 +11,7 @@ function fmtR(v) { return v != null && v !== '' ? 'R$ ' + Number(v).toLocaleStri
 function fmtD(d) { if (!d) return '—'; const [y, m, day] = d.split('-'); return `${day}/${m}/${y}`; }
 function hoje() { return new Date().toISOString().slice(0, 10); }
 
-// ── CONSTANTES ──
-const CACHE_KEY = 'conforto-dados-cache';
-const NEU_CACHE_KEY = 'neu-cache-conforto';
+
 const NEU_NAME_KEY = 'neu-name-conforto';
 let confortoHandle = null, saveTimeout = null;
 
@@ -1573,9 +1571,6 @@ document.addEventListener('DOMContentLoaded', () => {
     agendarSalvamento();
     renderConfiguracoes();
   });
-
-  // 9. Neutralino / FileSystem
-
   setTimeout(tentarCarregar, 300);
 });
 

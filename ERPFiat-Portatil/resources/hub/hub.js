@@ -266,7 +266,7 @@ function buildMetricsPanel(){
 const centralRow=document.createElement('div');
 centralRow.style.cssText='display:flex;align-items:center;gap:6px';
 centralRow.innerHTML=`
-  <div style="width:5px;height:5px;border-radius:50%;background:${localStorage.getItem('intranet-central')?'var(--gn)':'var(--bor)'};flex-shrink:0" id="fdot-central"></div>
+  <div style="width:5px;height:5px;border-radius:50%;background:var(--gn);flex-shrink:0" id="fdot-central"></div>
   <span style="font-size:10px;color:var(--td);font-family:var(--mono);flex:1" id="fname-central">${localStorage.getItem('neu-name-central')||'central.json'}</span>
   <button style="background:none;border:1px solid var(--bor);border-radius:4px;color:var(--td);font-size:9px;padding:2px 6px;cursor:pointer;font-family:var(--mono)" onclick="loadCentral()">📂</button>`;
 $('el-file-rows').appendChild(centralRow);

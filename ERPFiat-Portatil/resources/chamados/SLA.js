@@ -44,7 +44,6 @@
   window._dbLogs=function(){ return _logs; };
 })();
 const $ = id => document.getElementById(id);
-const SLA_KEY = 'chamados-sla-config';
 
 const CATS = {
   INF: { label: 'Infraestrutura', prefix: 'INF', color: '#58a6ff' },
@@ -54,7 +53,7 @@ const CATS = {
   AR:  { label: 'Ar Cond.',       prefix: 'AR',  color: '#39c5cf' },
 };
 function lerSLA() {
-  try { return JSON.parse(localStorage.getItem(SLA_KEY)) || {}; } catch(e) { return {}; }
+  return {};
 }
 function slaParaPrio(prio) {
   const sla = lerSLA();
@@ -76,7 +75,7 @@ function salvarSLA() {
     'Média':   parseInt($('sla-media').value)   || 5,
     'Baixa':   parseInt($('sla-baixa').value)   || 7,
   };
-  localStorage.setItem(SLA_KEY, JSON.stringify(cfg));
+  await fetch('/api/hub/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sla: cfg})});
   showToast('SLA salvo!');
   renderDashboard();
 }
