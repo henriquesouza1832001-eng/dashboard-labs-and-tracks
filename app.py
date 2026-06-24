@@ -6,11 +6,11 @@ import os
 app = FastAPI()
 
 # Serve os arquivos estaticos do frontend
-app.mount('/static', StaticFiles(directory='ERPFiat-Portal/resources'), name='static')
+app.mount('/static', StaticFiles(directory='ERPFiat-Portatil/resources'), name='static')
 
 @app.get('/')
 async def root():
-    return FileResponse('ERPFiat-Portal/resources/hub/hub.html')
+    return FileResponse('ERPFiat-Portatil/resources/hub/hub.html')
 
 @app.get('/health')
 async def health():
