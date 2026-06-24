@@ -10,12 +10,21 @@ HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
 WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "d523a4cf58739a90")
 
+_conn_cache = None
+
 def get_conn():
-    return sql.connect(
+    global _conn_cache
+    try:
+        if _conn_cache and _conn_cache.open:
+            return _conn_cache
+    except:
+        pass
+    _conn_cache = sql.connect(
         server_hostname = HOST,
         http_path       = f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
         access_token    = TOKEN,
     )
+    return _conn_cache
 
 def db_get(schema, table, chave):
     try:
