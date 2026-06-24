@@ -7,7 +7,6 @@ window.addEventListener('unhandledrejection', function(e){
   if(bar){ bar.style.display='block'; bar.textContent += 'PROMISE: '+(e.reason?.stack||e.reason)+'\n'; }
 });
 'use strict';
-Neutralino.init();
 let state = {
   pessoas: [], pontos: [], acessos: [],
   leitores: ['200','209','270','396','517','559','580','581','588','590',
@@ -20,12 +19,6 @@ let fileHandle = null, saveTimeout = null, editCtx = {tipo:null,idx:-1}, confirm
 const SESSION_ID = Date.now().toString(36)+Math.random().toString(36).slice(2);
 const DB_NAME = 'obras-db', DB_STORE = 'handles';
 
-// ── NEUTRALINO FILE HELPERS ──
-async function neuAbrirArquivo(titulo='Selecionar JSON'){
-  try{const paths=await Neutralino.os.showOpenDialog(titulo,{filters:[{name:'JSON',extensions:['json']}]});return(paths&&paths.length)?paths[0]:null;}catch(e){return null;}
-}
-async function neuLerArquivo(path){try{return await Neutralino.filesystem.readFile(path);}catch(e){return null;}}
-async function neuSalvarArquivo(path,txt){try{await Neutralino.filesystem.writeFile(path,txt);return true;}catch(e){return false;}}
 function salvarPath(key,path){try{localStorage.setItem('neu-path-'+key,path);}catch(e){}}
 function lerPath(key){try{return localStorage.getItem('neu-path-'+key)||null;}catch(e){return null;}}
 function hashSimples(str){ let h=0; for(let i=0;i<str.length;i++)h=Math.imul(31,h)+str.charCodeAt(i)|0; return h.toString(16); }
@@ -34,14 +27,10 @@ function setSaveStatus(s){ const ind=document.getElementById('save-indicator'),t
 function formatDate(d){ if(!d)return'—'; const[y,m,dia]=d.split('-'); return`${dia}/${m}/${y}`; }
 function badge(s){ const map={'Ativo':'badge-ativo','Inativo':'badge-inativo','Bloqueado':'badge-bloqueado','Temporário':'badge-temp'}; return`<span class="badge ${map[s]||'badge-inativo'}">${s}</span>`; }
 function badgePonto(t){ return t==='Restrito'?'<span class="badge badge-restrito">🔒 Restrito</span>':'<span class="badge badge-publico">Público</span>'; }
-function acquireLock(){ localStorage.setItem('ca-lock',JSON.stringify({session:SESSION_ID,ts:Date.now()})); }
-function releaseLock(){ const r=localStorage.getItem('ca-lock'); if(!r)return; try{const l=JSON.parse(r);if(l.session===SESSION_ID)localStorage.removeItem('ca-lock');}catch{} }
-function checkLock(){ const r=localStorage.getItem('ca-lock'); if(!r)return false; try{const l=JSON.parse(r);if(l.session===SESSION_ID)return false;if(Date.now()-l.ts>5*60*1000){localStorage.removeItem('ca-lock');return false;}return true;}catch{return false;} }
 setInterval(()=>{if(fileHandle)acquireLock();},30000);
 window.addEventListener('beforeunload',releaseLock);
 async function salvarDados(){
-  const json=JSON.stringify(state,null,2);
-  localStorage.setItem('controle-acesso-dados',json);
+  await fetch('/api/codin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
   setSaveStatus('ok');
 }
 function agendarSalvamento(){ clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
@@ -67,7 +56,10 @@ async function abrirArquivo(){
   return true;
   }catch(e){ return false; }
 }
-function carregarDoLocalStorage(){ const r=localStorage.getItem('controle-acesso-dados'); if(r)carregarDeJSON(r); }
+async function carregarDados(){
+  const d=await(await fetch('/api/codin')).json();
+  if(d)carregarDeJSON(JSON.stringify(d));
+}
 function aplicarFiltroURL(){
   const p = new URLSearchParams(location.search);
   const pane = p.get('page');
@@ -95,18 +87,10 @@ function iniciarApp(){
   aplicarFiltroURL();
 }
 function renderAll(){ renderPessoas(); renderPontos(); renderAcessos(); renderMatriz(); renderLeitoresCfg(); updateDashboard(); }
-function inicializarCodin() {
-  const cache = localStorage.getItem('controle-acesso-dados');
-  if (cache && carregarDeJSON(cache)) {
-    setSaveStatus('ok');
-    document.getElementById('sidebar-arquivo').textContent = 'dados-codin.json';
-    iniciarApp();
-    return;
-  }
+async function inicializarCodin(){
+  await carregarDados();
+  setSaveStatus('ok');
   iniciarApp();
-}
-if (typeof Neutralino !== 'undefined') {
-  Neutralino.events.on('ready', inicializarCodin);
 }
 setTimeout(inicializarCodin, 300);
 document.getElementById('btn-reabrir')?.addEventListener('click',()=>{ toast('Arquivos gerenciados pelo Hub.',''); });

@@ -1,4 +1,4 @@
-$('btn-open-file')?.addEventListener('click', () => showToast('Arquivos gerenciados pelo Hub.', 'err'));
+$('btn-open-file')?.addEventListener('click', () => showToast('Dados carregados do banco automaticamente.', 'ok'));
 $('btn-novo').addEventListener('click', abrirModalNovo);
 document.querySelectorAll('[data-filter]').forEach(btn => {
   btn.addEventListener('click', () => {

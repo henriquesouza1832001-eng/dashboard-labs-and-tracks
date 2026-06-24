@@ -32,63 +32,17 @@ function setSave(state, label) {
   el.className = 'save-status ' + state;
   $('save-label').textContent = label;
 }
-function lerPath() { return localStorage.getItem(STORAGE_KEY); }
-function salvarPath(v) { localStorage.setItem(STORAGE_KEY, v); }
-async function salvarArquivo() {
-  const txt = JSON.stringify({ chamados: allChamados }, null, 2);
-  localStorage.setItem(DATA_KEY, txt);
-  setSave('saved', 'cache local');
-}
-function abrirArquivo() {
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = '.json';
-  inp.onchange = () => {
-    const f = inp.files[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = e => {
-      try {
-        const d = JSON.parse(e.target.result);
-        allChamados = d.chamados || (Array.isArray(d) ? d : []);
-        localStorage.setItem(DATA_KEY, e.target.result);
-        setSave('saved', f.name);
-        atualizarContadores();
-        aplicarFiltros();
-        showToast(`${allChamados.length} chamado(s) carregado(s)`);
-      } catch(err) { showToast('Erro ao ler o arquivo.', 'err'); }
-    };
-    r.readAsText(f);
-  };
-  inp.click();
-}
-async function carregarDoArquivo() {
+async function tentarCarregarCache() {
   try {
-    const txt = await Neutralino.filesystem.readFile(fileHandle);
-    const json = JSON.parse(txt);
-    allChamados = json.chamados || [];
-    setSave('saved','salvo');
-    atualizarContadores();
-    aplicarFiltros();
-    showToast(`${allChamados.length} chamado(s) carregado(s)`);
-  } catch(e) {
-    allChamados = [];
-    setSave('saved','arquivo novo');
-    atualizarContadores();
-    aplicarFiltros();
-  }
-}
-
-function tentarCarregarCache() {
-  const txt = localStorage.getItem(DATA_KEY);
-  if (!txt) { setSave('saved', 'pronto'); renderTabela(); return; }
-  try {
-    const json = JSON.parse(txt);
-    allChamados = json.chamados || [];
-    setSave('saved', 'cache local');
+    const r = await fetch('/api/chamados');
+    const d = await r.json();
+    allChamados = d.chamados || [];
+    setSave('saved', 'carregado');
     atualizarContadores();
     atualizarBadgeFiltroAtivo();
     aplicarFiltros();
   } catch(e) {
-    setSave('nosave', 'erro ao ler');
+    setSave('nosave', 'erro ao carregar');
     renderTabela();
   }
 }

@@ -44,8 +44,6 @@
   window._dbLogs=function(){ return _logs; };
 })();
 const $ = id => document.getElementById(id);
-const STORAGE_KEY = 'chamados-facilities-path';
-const DATA_KEY    = 'chamados-facilities-dados';
 const SLA_KEY = 'chamados-sla-config';
 
 const CATS = {

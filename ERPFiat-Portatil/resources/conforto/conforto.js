@@ -5,11 +5,6 @@ window.onerror = (msg, src, line, col, err) => {
   if (bar) { bar.style.display = 'block'; bar.textContent = `[ERRO] ${msg} (${src}:${line}:${col})`; }
   return false;
 };
-if (typeof Neutralino !== 'undefined' && !window._neuInit) {
-  window._neuInit = true;
-  Neutralino.init();
-}
-
 const $ = id => document.getElementById(id);
 function fmt(v) { return v || '—'; }
 function fmtR(v) { return v != null && v !== '' ? 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'; }
@@ -81,19 +76,6 @@ function setSaveStatus(s, txt) {
 function abrirModal(id) { const el = $(id); if (el) el.classList.add('open'); }
 function fecharModal(id) { const el = $(id); if (el) el.classList.remove('open'); }
 
-// ── IDB ──
-function salvarIDB(txt) {
-  try {
-    const req = indexedDB.open('conforto-db', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('dados');
-    req.onsuccess = e => {
-      const db = e.target.result;
-      const tx = db.transaction('dados', 'readwrite');
-      tx.objectStore('dados').put(txt, 'conforto');
-    };
-  } catch (e) { }
-}
-
 // ── PERSISTÊNCIA ──
 function toJSON() {
   return {
@@ -134,12 +116,9 @@ function carregarDeJSON(txt) {
   } catch (e) { return false; }
 }
 
-async function salvarDados() {
-  const txt = JSON.stringify(toJSON(), null, 2);
-  try { localStorage.setItem(CACHE_KEY, txt); } catch (e) { /* silencia */ }
-  salvarIDB(txt);
-  localStorage.setItem(NEU_CACHE_KEY, txt);
-  setSaveStatus('saved', 'cache local');
+async function salvarDados(){
+  await fetch('/api/conforto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toJSON())});
+  setSaveStatus('saved','salvo');
 }
 
 function agendarSalvamento() {
@@ -1454,15 +1433,9 @@ function exportarJSON() {
   URL.revokeObjectURL(url);
 }
 
-function tentarCarregar() {
-  const cache = localStorage.getItem(NEU_CACHE_KEY) || localStorage.getItem(CACHE_KEY);
-  if (cache && carregarDeJSON(cache)) {
-    setSaveStatus('saved', 'cache local');
-  }
-  if ($('sidebar-arquivo')) $('sidebar-arquivo').textContent = 'conforto-dados.json';
-  $('app').style.display = 'block';
-  popularSelects();
-  renderTudo();
+async function tentarCarregar(){
+  const d=await(await fetch('/api/conforto')).json();
+  if(d&&d.modulo==='conforto')carregarDeJSON(JSON.stringify(d));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1602,9 +1575,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 9. Neutralino / FileSystem
-  if (typeof Neutralino !== 'undefined') {
-    Neutralino.events.on('ready', tentarCarregar);
-  }
+
   setTimeout(tentarCarregar, 300);
 });
 

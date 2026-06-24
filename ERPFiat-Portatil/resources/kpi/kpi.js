@@ -1,8 +1,6 @@
 'use strict';
 window.onerror=function(msg,src,line,col,err){var b=document.getElementById('debug-bar');if(b){b.style.display='block';b.textContent+='ERRO linha '+line+': '+msg+'\n';}};
 window.addEventListener('unhandledrejection',function(e){var b=document.getElementById('debug-bar');if(b){b.style.display='block';b.textContent+='PROMISE: '+(e.reason?.stack||e.reason)+'\n';}});
-if(typeof Neutralino!=='undefined'&&!window._neuInit){window._neuInit=true;Neutralino.init();}
-
 const $=id=>document.getElementById(id);
 const fmt=(v,d=0)=>isNaN(v)?'0':Number(v).toFixed(d);
 const fmtRK=v=>{if(v===null||v===undefined)return'—';const n=Number(v);if(Math.abs(n)>=1e6)return'R$'+(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return'R$'+(n/1e3).toFixed(1)+'k';return'R$'+Math.round(n);};
@@ -11,8 +9,14 @@ const fmtDate=s=>{if(!s)return'—';const p=s.split('-');return p.length===3?p[2
 
 function tick(){const n=new Date();$('clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
 tick();setInterval(tick,1000);
-function preencherMicroCards(){
-  const dOb=lerCache(CACHES.obras);
+async function preencherMicroCards(){
+  const d=await(await fetch('/api/kpi/dados')).json();
+  const dOb=d.obras||null;
+  const dCap=d.capex||null;
+  const dCod=d.codin||null;
+  const dCnf=d.conforto||null;
+  const dErg=d.ergonomia||null;
+  const dCh=d.chamados||null;
   if(dOb){
     const obras=dOb.obras||[];
     const lanc=dOb.lancamentos||[];
@@ -185,8 +189,6 @@ function desenharMicroDonut(id,labels,vals,cores){
 })();
 
 
-function lerCache(chave){const txt=localStorage.getItem(chave);if(!txt)return null;try{return JSON.parse(txt);}catch(e){return null;}}
-const CACHES={obras:'obras-dados-cache',capex:'capex-dados-cache',chamados:'chamados-facilities-dados',codin:'controle-acessos-dados',conforto:'conforto-dados-cache',ergonomia:'ergonomia-dados-cache',acesso:'controle-acesso-dados'};
 let moduloAtivo=null;
 let _obrasData=null,_drillOb=null;
 let _confortoDrillAtivo=null,_chamDrillAtivo=null;

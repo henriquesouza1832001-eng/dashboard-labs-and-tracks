@@ -34,9 +34,7 @@ const DEFAULT={
   logos:['','','','']
 };
 
-const saved=localStorage.getItem('hub-config');
 let CFG=JSON.parse(JSON.stringify(DEFAULT));
-if(saved){try{const s=JSON.parse(saved);CFG=Object.assign({},DEFAULT,s);CFG.painelEsq=Object.assign({},DEFAULT.painelEsq,s.painelEsq||{});CFG.identidade=Object.assign({},DEFAULT.identidade,s.identidade||{});}catch(e){}}
 
 // ── LOGOS ──
 function buildLogos(){
@@ -180,9 +178,8 @@ function buildVMO(){
   setTimeout(()=>{const f=$('obj-fill');if(f){f.style.transition='width 1.2s ease';f.style.width=prog+'%';}},400);
 }
 
-// ── VIDEO / GIF ──
+
 let gifLoaded=false;
-const savedGif=localStorage.getItem('hub-gif');
 function dbg(){}
 if(savedGif){
   const img=$('video-gif');
@@ -203,7 +200,6 @@ if(savedGif){
 }
 $('btn-gif-upload').addEventListener('click',e=>{e.stopPropagation();const inp=document.createElement('input');inp.type='file';inp.accept='image/gif,image/*';inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{
   const src=ev.target.result;
-  localStorage.setItem('hub-gif',src);
   const img=$('video-gif');
   img.dataset.src=src;  
   img.src='';            
@@ -474,8 +470,7 @@ function syncCentral(){
     alert('Central.json muito grande para o localStorage. Use Exportar para salvar em arquivo.');
   }
 }
-// ── SAVE CFG ──
-function saveCFG(){localStorage.setItem('hub-config',JSON.stringify(CFG));}
+async function saveCFG(){await fetch('/api/hub/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(CFG)});}
 
 // ── INIT ──
 applyIdent();
@@ -507,4 +502,9 @@ window.addEventListener('storage', e => {
     buildMetricsPanel();
   } catch(err) {}
 });
-if(typeof Neutralino!=='undefined'&&!window._ni){window._ni=true;Neutralino.init();}
+async function loadCache(){
+  const d=await(await fetch('/api/hub/dados')).json();
+  if(d.obras)atualizarObras({obras:d.obras,budget:d.budget||[],lancamentos:d.lancamentos||[]});
+  if(d.chamados)atualizarCham({chamados:d.chamados});
+  if(d.atividades)atualizarAtiv(d.atividades);
+}

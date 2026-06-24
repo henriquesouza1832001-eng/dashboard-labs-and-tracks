@@ -7,10 +7,6 @@ window.addEventListener('unhandledrejection', function(e){
   if(bar){ bar.style.display='block'; bar.textContent += 'PROMISE: '+(e.reason?.stack||e.reason)+'\n'; }
 });
 'use strict';
-if (typeof Neutralino !== 'undefined' && !window._neuInit) {
-  window._neuInit = true;
-  Neutralino.init();
-} 
 let state = {
   obras: [], budget: [], lancamentos: [], revisoes: [],
   central: { pessoas: [], cresp: [], tiposObra: [], categoriasCusto: [], leitores: [] },
@@ -26,11 +22,6 @@ const fmtR = v => 'R$ '+fmt(v,2);
 const fmtD = s => s ? s.split('-').reverse().join('/') : '—';
 const hoje = () => new Date().toISOString().slice(0,10);
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
-
-async function neuLerArquivo(path){
-  try{ return await Neutralino.filesystem.readFile(path); }catch(e){ return null; }
-}
-
 async function salvarCentral(){
   const txt = JSON.stringify(centralToJSON(), null, 2);
   localStorage.setItem(CENTRAL_CACHE_KEY, txt);
@@ -97,20 +88,10 @@ function carregarCentral(txt){
   } catch(e){ console.error(e); return false; }
 }
 
-async function salvarDadosIDB(key,txt){
-  try{const db=await abrirDB();db.transaction('dados','readwrite').objectStore('dados').put(txt,key);}catch(e){}
-}
 async function salvarDados(){
-  const json = toJSON();
-  const txt = JSON.stringify(json,null,2);
-  localStorage.setItem('obras-dados-cache', txt);
-  localStorage.setItem('neu-cache-obras', txt);
-  try{ await salvarDadosIDB('obras-dados', txt); }catch(e){}
-  if(!obrasHandle){ 
-    setSaveStatus('saved', 'cache local');
-  localStorage.setItem('obras-dados-cache', txt);
-  localStorage.setItem('neu-cache-obras', txt);
-  }
+  setSaveStatus('saving','salvando…');
+  await fetch('/api/obras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toJSON())});
+  setSaveStatus('saved','salvo');
 }
 function agendarSalvamento(){ setSaveStatus('saving','salvando…'); clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
 function agendarSalvamentoCentral(){ clearTimeout(centralSaveTimeout); centralSaveTimeout=setTimeout(()=>salvarCentral(),400); }
