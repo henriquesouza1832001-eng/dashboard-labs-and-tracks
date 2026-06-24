@@ -1,3 +1,5 @@
+const CACHES = {obras:'obras',capex:'obras',chamados:'chamados',codin:'codin',conforto:'conforto',ergonomia:null,acesso:'codin'};
+function lerCache(mod){ if(!mod)return null; return window['_kpiDados_'+(mod)]||null; }
 'use strict';
 window.onerror=function(msg,src,line,col,err){var b=document.getElementById('debug-bar');if(b){b.style.display='block';b.textContent+='ERRO linha '+line+': '+msg+'\n';}};
 window.addEventListener('unhandledrejection',function(e){var b=document.getElementById('debug-bar');if(b){b.style.display='block';b.textContent+='PROMISE: '+(e.reason?.stack||e.reason)+'\n';}});
@@ -11,6 +13,10 @@ function tick(){const n=new Date();$('clock').textContent=[n.getHours(),n.getMin
 tick();setInterval(tick,1000);
 async function preencherMicroCards(){
   const d=await(await fetch('/api/kpi/dados')).json();
+  window._kpiDados_obras    = d.obras    || null;
+window._kpiDados_chamados = d.chamados || null;
+window._kpiDados_codin    = d.codin    || null;
+window._kpiDados_conforto = d.conforto || null;
   const dOb=d.obras||null;
   const dCap=d.capex||null;
   const dCod=d.codin||null;
@@ -39,24 +45,6 @@ async function preencherMicroCards(){
     const cores=['#e3711a','#d0d8e8'];
     setTimeout(()=>desenharMicroDonut('mcv-obras',labels,vals,cores),80);
   }
-  const dCap=lerCache(CACHES.capex);
-  if(dCap){
-    const obras=dCap.obras||[];
-    const budget=dCap.budget||[];
-    const lanc=dCap.lancamentos||[];
-    const budgTotal=budget.reduce((s,b)=>s+(b.budgetAprov||0),0);
-    const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-    const pct=budgTotal>0?Math.round(real/budgTotal*100):0;
-    const Orçado=budgTotal-real;
-    document.getElementById('mkpis-capex').innerHTML=
-      mkMicro(fmtRK(budgTotal),'Budget total','c-azul',"abrirModuloComDrill('capex','cx-budget')")+
-mkMicro(fmtRK(real),'Realizado','c-laranja',"abrirModuloComDrill('capex','cx-andamento')")+
-mkMicro(fmtRK(Orçado),'Orçado',Orçado<0?'c-vermelho':'c-verde',"abrirModuloComDrill('capex','cx-conc')")+
-mkMicro(pct+'%','% realizado',pct>90?'c-vermelho':'c-verde',"abrirModuloComDrill('capex','cx-cat')")
-    document.getElementById('mfoot-capex').textContent='Budget: '+fmtRK(budgTotal)+' · Orçado: '+fmtRK(Orçado);
-    setTimeout(()=>desenharMicroDonut('mcv-capex',['Gasto','Orçado restante'],[real||1,Math.max(Orçado,0)||1],['#e3711a','#3fb950']),80);
-  }
-  const dCod=lerCache(CACHES.codin);
   if(dCod){
     const pessoas=dCod.pessoas||[];
     const ativos=pessoas.filter(p=>p.status==='Ativo'||!p.status).length;
@@ -70,7 +58,6 @@ mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
     document.getElementById('mfoot-codin').textContent=Math.round(ativos/Math.max(pessoas.length,1)*100)+'% ativos · '+semPonto+' sem ponto';
     setTimeout(()=>desenharMicroDonut('mcv-codin',['Ativos','Inativos'],[ativos||1,pessoas.length-ativos||1],['#3fb950','#f85149']),80);
   }
-  const dCnf=lerCache(CACHES.conforto);
   if(dCnf){
     const regs=dCnf.registros||[];
     const conform=regs.filter(r=>r.status==='Conforme'||r.situacao==='OK').length;
@@ -85,7 +72,6 @@ mkMicro(pct+'%','Conformidade',pct>80?'c-verde':'c-vermelho',"abrirModuloComDril
     document.getElementById('mfoot-conforto').textContent=areas+' áreas · '+pct+'% conformidade';
     setTimeout(()=>desenharMicroDonut('mcv-conforto',['Conforme','Não Conforme'],[conform||1,nconf||1],['#3fb950','#f85149']),80);
   }
-  const dErg=lerCache(CACHES.ergonomia);
   if(dErg){
     const avs=dErg.avaliacoes||[];
     const ok=avs.filter(a=>a.resultado==='OK'||a.status==='Aprovado').length;
@@ -100,7 +86,6 @@ mkMicro(postos,'Postos','c-azul',"abrirModuloComDrill('ergonomia','erg-postos')"
     document.getElementById('mfoot-ergonomia').textContent=avs.length>0?Math.round(ok/avs.length*100)+'% aprovadas · '+pend+' pendentes':'—';
     setTimeout(()=>desenharMicroDonut('mcv-ergonomia',['Aprovadas','Reprovadas','Pendentes'],[ok||1,nok||1,pend||1],['#3fb950','#f85149','#d29922']),80);
   }
-  const dCh=lerCache(CACHES.chamados);
   if(dCh){
     const cham=dCh.chamados||(Array.isArray(dCh)?dCh:[]);
     const total=cham.length;
