@@ -28,7 +28,12 @@ def get_conn():
     )
     return _conn_cache
 
+_cache = {}
+
 def db_get(schema, table, chave):
+    cache_key = f"{table}/{chave}"
+    if cache_key in _cache:
+        return _cache[cache_key]
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -38,12 +43,15 @@ def db_get(schema, table, chave):
                 )
                 row = cur.fetchone()
                 if row:
-                    return json.loads(row[0])
+                    dados = json.loads(row[0])
+                    _cache[cache_key] = dados
+                    return dados
     except Exception as e:
         print(f"db_get error: {e}")
     return None
 
 def db_save(schema, table, chave, dados, usuario="sistema"):
+    cache_key = f"{table}/{chave}"
     try:
         j = json.dumps(dados, ensure_ascii=False)
         with get_conn() as conn:
@@ -59,6 +67,7 @@ def db_save(schema, table, chave, dados, usuario="sistema"):
                     WHEN NOT MATCHED THEN INSERT (chave, dados_json, atualizado_por, atualizado_em)
                         VALUES (s.chave, s.dados_json, s.atualizado_por, current_timestamp())
                 """, [chave, j, usuario])
+        _cache[cache_key] = dados
         return True
     except Exception as e:
         print(f"db_save error: {e}")
