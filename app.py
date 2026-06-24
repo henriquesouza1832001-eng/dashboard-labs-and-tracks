@@ -6,16 +6,19 @@ import os, json
 
 app = FastAPI()
 
-# ── Conexão Delta Lake ─────────────────────────────────
-WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "")
+# ── Conexão Delta Lake via OAuth (Client Credentials) ──
 HOST         = os.getenv("DATABRICKS_HOST", "")
-TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
+CLIENT_ID    = os.getenv("DATABRICKS_CLIENT_ID", "")
+CLIENT_SECRET= os.getenv("DATABRICKS_CLIENT_SECRET", "")
+WAREHOUSE_ID = "d523a4cf58739a90"
 
 def get_conn():
     return sql.connect(
-        server_hostname = HOST,
-        http_path       = f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-        access_token    = TOKEN,
+        server_hostname    = HOST,
+        http_path          = f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+        client_id          = CLIENT_ID,
+        client_secret      = CLIENT_SECRET,
+        auth_type          = "databricks-oauth",
     )
 
 def db_get(schema, table, chave):
@@ -193,7 +196,7 @@ async def get_kpi():
         "conforto":   db_get(S_CONFORTO,   "conforto_completo",   "conforto_principal")   or {},
     })
 
-# ── PÁGINAS HTML (antes do StaticFiles) ────────────────
+# ── PÁGINAS HTML ───────────────────────────────────────
 @app.get("/")
 async def root():
     return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
