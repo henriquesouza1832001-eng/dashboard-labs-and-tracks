@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obras</title>
+<link rel="stylesheet" href="obras.css">
+<style>
+.detalhe-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.detalhe-tab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 18px;color:var(--text-muted);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;transition:all 0.15s;margin-bottom:-1px}
+.detalhe-tab:hover{color:var(--text)}
+.detalhe-tab.active{color:var(--blue-light);border-bottom-color:var(--blue-light)}
+.detalhe-pane{display:none}.detalhe-pane.active{display:block}
+.progress-fill.blue{background:var(--blue-light)!important}
+#crono-gantt{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;margin-bottom:24px}
+#crono-progresso{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px}
+</style>
+</head>
+<body>
+  <div id="debug-bar" style="position:fixed;bottom:0;left:0;right:0;background:#1a0000;border-top:1px solid #f85149;color:#f85149;font-family:monospace;font-size:11px;padding:6px 12px;z-index:9999;display:none;white-space:pre-wrap;max-height:120px;overflow-y:auto"></div>
+<div class="topbar">
+  <a href="../hub/hub.html" class="topbar-back">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Hub
+  </a>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-title">Obras</span>
+  <div class="topbar-right">
+    <div class="save-status nosave" id="save-status"><div class="dot"></div><span id="save-txt">sem arquivo</span></div>
+    <span class="file-badge" id="sidebar-arquivo">—</span>
+  </div>
+</div>
+<div id="app">
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">navegação</div>
+        <button class="nav-item active" data-pane="dashboard">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="nav-item" data-pane="graficos">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Gráficos
+        </button>
+        <button class="nav-item" data-pane="obras">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Obras
+        </button>
+        <button class="nav-item" data-pane="lancamentos">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Lançamentos
+        </button>
+        <button class="nav-item" data-pane="budget">
+          <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Budget / CAPEX
+        </button>
+        <button class="nav-item" data-pane="revisoes">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Revisões
+        </button>
+        <button class="nav-item" data-pane="cresp">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          CRESP
+        </button>
+        <button class="nav-item" data-pane="configuracoes">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
+        </button>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="sidebar-file" id="sidebar-central-file">central: —</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="pane active" id="pane-dashboard">
+        <div class="pane-header">
+          <div><div class="pane-title">Dashboard Executivo</div><div class="pane-sub">Consolidado de obras, budget e realizado</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-export-pdf">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Exportar PDF
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-export-json">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar JSON
+            </button>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <div class="section-mini">consolidado por obra</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CÓDIGO</th><th>NOME</th><th>TIPO</th><th>CRESP</th><th>STATUS</th><th>BUDGET (R$)</th><th>REALIZADO (R$)</th><th>% EXEC</th><th>GASTO (R$)</th></tr></thead>
+            <tbody id="dash-tbody"></tbody>
+            <tfoot><tr id="dash-tfoot"></tr></tfoot>
+          </table>
+        </div>
+        <div class="section-mini" style="margin-top:24px">ranking por cresp</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CRESP</th><th>DESCRIÇÃO</th><th>LANÇAMENTOS</th><th>GASTO (R$)</th><th>% DO TOTAL</th><th>BUDGET (R$)</th><th>SALDO (R$)</th><th>STATUS</th></tr></thead>
+            <tbody id="cresp-dash-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GRÁFICOS -->
+      <div class="pane" id="pane-graficos">
+        <div class="pane-header">
+          <div><div class="pane-title">Análise Gráfica</div><div class="pane-sub">Visualização completa — evolução, distribuição e saldos</div></div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card full">
+            <div class="chart-title">Evolução de Gasto por Mês</div>
+            <div id="chart-gasto-mes"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Budget vs Realizado por Obra</div>
+            <div id="chart-budget-real"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Distribuição por CRESP</div>
+            <div id="chart-donut"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">% Execução por Obra</div>
+            <div id="chart-horizontal"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Saldo Restante por Obra (Waterfall)</div>
+            <div id="chart-waterfall"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OBRAS -->
+      <div class="pane" id="pane-obras">
+        <div class="pane-header">
+          <div><div class="pane-title">Cadastro de Obras</div><div class="pane-sub">Gerencie obras, responsáveis, datas e status</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-nova-obra">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova Obra
+            </button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="obras-search" placeholder="Buscar obra…"></div>
+            <select class="filter-sel" id="obras-filtro-status"><option value="">Todos os status</option><option>Planejado</option><option>Em Andamento</option><option>Concluído</option><option>Suspenso</option></select>
+          </div>
+          <table>
+            <thead><tr><th>CÓDIGO</th><th>NOME</th><th>TIPO</th><th>LOCAL</th><th>RESPONSÁVEL</th><th>CRESP</th><th>STATUS</th><th>PRAZO</th><th>AÇÕES</th></tr></thead>
+            <tbody id="obras-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LANÇAMENTOS -->
+      <div class="pane" id="pane-lancamentos">
+        <div class="pane-header">
+          <div><div class="pane-title">Lançamentos de Custo</div><div class="pane-sub">Todo item deve ter CRESP e obra vinculados</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-novo-lanc">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Lançamento
+            </button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="lanc-search" placeholder="Buscar descrição…"></div>
+            <select class="filter-sel" id="lanc-filtro-obra"><option value="">Todas as obras</option></select>
+            <select class="filter-sel" id="lanc-filtro-cat"><option value="">Todas as categorias</option></select>
+          </div>
+          <table>
+            <thead><tr><th>ID</th><th>OBRA</th><th>CRESP</th><th>CATEGORIA</th><th>SUBCATEGORIA</th><th>DESCRIÇÃO</th><th>UNID</th><th>QTD</th><th>UNIT (R$)</th><th>TOTAL (R$)</th><th>NF/DOC</th><th>DATA</th><th>AÇÕES</th></tr></thead>
+            <tbody id="lanc-tbody"></tbody>
+            <tfoot><tr id="lanc-tfoot"></tr></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- BUDGET -->
+      <div class="pane" id="pane-budget">
+        <div class="pane-header">
+          <div><div class="pane-title">Budget / CAPEX</div><div class="pane-sub">Orçamento aprovado por obra e CRESP</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-novo-budget">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Budget
+            </button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>OBRA</th><th>CRESP</th><th>TIPO</th><th>BUDGET APROV (R$)</th><th>CAPEX (R$)</th><th>OPEX (R$)</th><th>CONTINGÊNCIA (R$)</th><th>TOTAL DISP (R$)</th><th>REALIZADO (R$)</th><th>% REAL.</th><th>SALDO (R$)</th><th>STATUS</th><th style="position:sticky;right:0;background:var(--surface2);z-index:2">AÇÕES</th></tr></thead>
+            <tbody id="budget-tbody"></tbody>
+            <tfoot><tr id="budget-tfoot"></tr></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- REVISÕES -->
+      <div class="pane" id="pane-revisoes">
+        <div class="pane-header">
+          <div><div class="pane-title">Revisões & Aditivos</div><div class="pane-sub">Histórico de revisões orçamentárias</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-nova-revisao">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Registrar Revisão
+            </button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nº REV</th><th>OBRA</th><th>CRESP</th><th>DATA</th><th>BUDGET ANT (R$)</th><th>ADITIVO (R$)</th><th>NOVO BUDGET (R$)</th><th>MOTIVO</th><th>APROVADO POR</th><th>AÇÕES</th></tr></thead>
+            <tbody id="rev-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CRESP -->
+      <div class="pane" id="pane-cresp">
+        <div class="pane-header">
+          <div><div class="pane-title">Centros de Resultado (CRESP)</div><div class="pane-sub">Visão de utilização — edite na aba Configurações</div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CRESP</th><th>DESCRIÇÃO</th><th>ÁREA</th><th>BUDGET TOTAL (R$)</th><th>REALIZADO (R$)</th><th>SALDO (R$)</th><th>% UTIL.</th></tr></thead>
+            <tbody id="cresp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CONFIGURAÇÕES -->
+      <div class="pane" id="pane-configuracoes">
+        <div class="pane-header">
+          <div><div class="pane-title">Configurações</div><div class="pane-sub">Gerencie CRESPs, tipos e categorias — salvo no dados-central.json</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-novo-cresp">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo CRESP
+            </button>
+          </div>
+        </div>
+        <div class="alert-box" style="margin-bottom:16px">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Para salvar no dados-central.json, selecione o central com permissão de escrita ao abrir o módulo.
+        </div>
+        <div class="table-wrap" style="margin-bottom:24px">
+          <table>
+            <thead><tr><th>ID</th><th>DESCRIÇÃO</th><th>ÁREA</th><th>AÇÕES</th></tr></thead>
+            <tbody id="config-cresp-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- TIPOS DE OBRA -->
+        <div class="pane-header" style="margin-bottom:12px">
+          <div><div class="pane-title" style="font-size:14px">Tipos de Obra</div></div>
+          <button class="btn btn-primary btn-sm" id="btn-add-tipo">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px" id="tipos-list"></div>
+
+        <!-- CATEGORIAS DE CUSTO -->
+        <div class="pane-header" style="margin-bottom:12px">
+          <div><div class="pane-title" style="font-size:14px">Categorias de Custo</div></div>
+          <button class="btn btn-primary btn-sm" id="btn-nova-cat">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova Categoria
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CATEGORIA</th><th>SUBCATEGORIAS</th><th>AÇÕES</th></tr></thead>
+            <tbody id="config-cat-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+
+      <!-- DETALHE DA OBRA -->
+      <div class="pane" id="pane-detalhe">
+        <div class="pane-header" style="flex-wrap:wrap;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-secondary btn-sm" id="btn-voltar-detalhe">
+              <svg viewBox="0 0 24 24" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+              Voltar
+            </button>
+            <div>
+              <div class="pane-title" id="detalhe-titulo">—</div>
+              <div id="detalhe-status"></div>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-grid" id="detalhe-kpis"></div>
+        <div class="detalhe-tabs">
+          <button class="detalhe-tab active" data-tab="lancamentos">Lançamentos</button>
+          <button class="detalhe-tab" data-tab="budget">Budget / CAPEX</button>
+          <button class="detalhe-tab" data-tab="revisoes">Revisões</button>
+          <button class="detalhe-tab" data-tab="cronograma">Cronograma & Avanço</button>
+        </div>
+        <div class="detalhe-pane active" id="detalhe-lancamentos">
+          <div class="table-toolbar" style="margin-bottom:12px">
+            <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="detalhe-lanc-search" placeholder="Buscar lançamento…"></div>
+            <select class="filter-sel" id="detalhe-filtro-cat"><option value="">Todas as categorias</option></select>
+            <button class="btn btn-primary btn-sm" id="btn-novo-lanc-detalhe">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Lançamento
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>CRESP</th><th>CATEGORIA</th><th>SUBCATEGORIA</th><th>DESCRIÇÃO</th><th>UNID</th><th>QTD</th><th>UNIT (R$)</th><th>TOTAL (R$)</th><th>DATA</th><th>AÇÕES</th></tr></thead>
+              <tbody id="detalhe-lanc-tbody"></tbody>
+              <tfoot><tr id="detalhe-lanc-tfoot"></tr></tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="detalhe-pane" id="detalhe-budget">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <button class="btn btn-primary btn-sm" onclick="$('bgt-obra').value=state.obraAtiva||'';abrirModal('modal-budget')">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Budget
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>CRESP</th><th>TIPO</th><th>BUDGET (R$)</th><th>CONTINGÊNCIA (R$)</th><th>TOTAL DISP (R$)</th><th>REALIZADO (R$)</th><th>% REAL.</th><th>SALDO (R$)</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+              <tbody id="detalhe-budget-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="detalhe-pane" id="detalhe-revisoes">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <button class="btn btn-primary btn-sm" onclick="$('rev-obra').value=state.obraAtiva||'';abrirModal('modal-rev')">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Registrar Revisão
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nº REV</th><th>CRESP</th><th>DATA</th><th>BUDGET ANT (R$)</th><th>ADITIVO (R$)</th><th>NOVO BUDGET (R$)</th><th>MOTIVO</th><th>AÇÕES</th></tr></thead>
+              <tbody id="detalhe-rev-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="detalhe-pane" id="detalhe-cronograma">
+          <div class="kpi-grid" id="crono-kpis" style="margin-bottom:16px"></div>
+          <div id="crono-progresso"></div>
+          <div class="section-mini" style="margin-bottom:12px">gantt — linha do tempo</div>
+          <div id="crono-gantt"></div>
+          <div class="pane-header" style="margin-bottom:12px">
+            <div class="section-mini">etapas</div>
+            <button class="btn btn-primary btn-sm" id="btn-nova-etapa">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nova Etapa
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ETAPA</th><th>INÍCIO PREV</th><th>FIM PREV</th><th>RESPONSÁVEL</th><th>PESO</th><th>AVANÇO FÍSICO</th><th>AÇÕES</th></tr></thead>
+              <tbody id="crono-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAIS OBRA / LANÇAMENTO / BUDGET / REVISÃO -->
+<div class="modal-overlay" id="modal-obra">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-obra-title">Nova Obra</span><button class="modal-close" id="modal-obra-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Código *</label><input type="text" id="ob-cod" placeholder="OB-004"></div><div class="field"><label>Status *</label><select id="ob-status"><option>Planejado</option><option>Em Andamento</option><option>Concluído</option><option>Suspenso</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Nome da Obra *</label><input type="text" id="ob-nome"></div></div>
+      <div class="form-row"><div class="field"><label>Tipo *</label><select id="ob-tipo"></select></div><div class="field"><label>Localização</label><input type="text" id="ob-local"></div></div>
+      <div class="form-row"><div class="field"><label>Responsável</label><select id="ob-resp"><option value="">—</option></select></div><div class="field"><label>CRESP Principal</label><select id="ob-cresp"><option value="">—</option></select></div></div>
+      <div class="form-row cols3"><div class="field"><label>Início Previsto</label><input type="date" id="ob-dt-ini-prev"></div><div class="field"><label>Fim Previsto</label><input type="date" id="ob-dt-fim-prev"></div><div class="field"></div></div>
+      <div class="form-row cols3"><div class="field"><label>Início Real</label><input type="date" id="ob-dt-ini-real"></div><div class="field"><label>Fim Real</label><input type="date" id="ob-dt-fim-real"></div><div class="field"></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="ob-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="ob-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-obra-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-obra">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-lanc">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-lanc-title">Novo Lançamento</span><button class="modal-close" id="modal-lanc-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Obra *</label><select id="lanc-obra"><option value="">—</option></select></div><div class="field"><label>CRESP *</label><select id="lanc-cresp"><option value="">—</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Categoria *</label><select id="lanc-cat"><option value="">—</option></select></div><div class="field"><label>Subcategoria *</label><select id="lanc-subcat"><option value="">—</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Descrição *</label><input type="text" id="lanc-desc"></div></div>
+      <div class="form-row cols3"><div class="field"><label>Unidade</label><input type="text" id="lanc-unid" placeholder="m², Pç…"></div><div class="field"><label>Quantidade *</label><input type="number" id="lanc-qtd" min="0" step="any"></div><div class="field"><label>Preço Unit (R$) *</label><input type="number" id="lanc-preco" min="0" step="0.01"></div></div>
+      <div class="form-row cols3"><div class="field"><label>NF / Doc</label><input type="text" id="lanc-nf"></div><div class="field"><label>Data</label><input type="date" id="lanc-data"></div><div class="field"><label>Fornecedor</label><input type="text" id="lanc-forn"></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="lanc-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="lanc-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-lanc-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-lanc">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-budget">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-budget-title">Novo Budget</span><button class="modal-close" id="modal-budget-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Obra *</label><select id="bgt-obra"><option value="">—</option></select></div><div class="field"><label>CRESP *</label><select id="bgt-cresp"><option value="">—</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Tipo de Verba</label><select id="bgt-tipo"><option>CAPEX</option><option>OPEX</option><option>CAPEX+OPEX</option></select></div><div class="field"><label>Budget Aprovado (R$) *</label><input type="number" id="bgt-aprov" min="0" step="0.01"></div></div>
+      <div class="form-row cols3"><div class="field"><label>CAPEX (R$)</label><input type="number" id="bgt-capex" min="0" step="0.01"></div><div class="field"><label>OPEX (R$)</label><input type="number" id="bgt-opex" min="0" step="0.01"></div><div class="field"><label>Contingência (R$)</label><input type="number" id="bgt-cont" min="0" step="0.01"></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="bgt-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="bgt-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-budget-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-budget">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rev">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Registrar Revisão / Aditivo</span><button class="modal-close" id="modal-rev-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Obra *</label><select id="rev-obra"><option value="">—</option></select></div><div class="field"><label>CRESP *</label><select id="rev-cresp"><option value="">—</option></select></div></div>
+      <div class="form-row cols3"><div class="field"><label>Data da Revisão</label><input type="date" id="rev-data"></div><div class="field"><label>Budget Anterior (R$)</label><input type="number" id="rev-ant" min="0" step="0.01"></div><div class="field"><label>Valor Aditivo (R$) *</label><input type="number" id="rev-adit" step="0.01"></div></div>
+      <div class="form-row"><div class="field"><label>Motivo *</label><input type="text" id="rev-motivo"></div><div class="field"><label>Aprovado Por</label><input type="text" id="rev-aprov"></div></div>
+      <div class="field-err" id="rev-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-rev-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-rev">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL CRESP -->
+<div class="modal-overlay" id="modal-cresp">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><span class="modal-title" id="modal-cresp-title">Novo CRESP</span><button class="modal-close" id="modal-cresp-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="field"><label>ID do CRESP *</label><input type="text" id="cresp-id" placeholder="CR-008" style="text-transform:uppercase"></div></div>
+      <div class="form-row full"><div class="field"><label>Descrição *</label><input type="text" id="cresp-desc" placeholder="Obras Sala de Reunião"></div></div>
+      <div class="form-row full"><div class="field"><label>Área Responsável</label><input type="text" id="cresp-area" placeholder="Facilities"></div></div>
+      <div class="field-err" id="cresp-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-cresp-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-cresp">Salvar</button></div>
+  </div>
+</div>
+
+
+<!-- MODAL ETAPA -->
+<div class="modal-overlay" id="modal-etapa">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><span class="modal-title" id="modal-etapa-title">Nova Etapa</span><button class="modal-close" id="modal-etapa-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="field"><label>Nome da Etapa *</label><input type="text" id="etapa-nome" placeholder="Ex: Fundação, Estrutura…"></div></div>
+      <div class="form-row">
+        <div class="field"><label>Início Previsto</label><input type="date" id="etapa-dt-inicio"></div>
+        <div class="field"><label>Fim Previsto</label><input type="date" id="etapa-dt-fim"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Responsável</label><select id="etapa-resp"><option value="">—</option></select></div>
+        <div class="field"><label>Peso (importância)</label><input type="number" id="etapa-peso" min="1" max="100" value="1"></div>
+      </div>
+      <div class="field"><label>Avanço Físico Atual (%)</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" id="etapa-af" min="0" max="100" value="0" style="flex:1;accent-color:var(--blue-light)" oninput="document.getElementById('etapa-af-val').textContent=this.value+'%'">
+          <span id="etapa-af-val" style="font-family:var(--mono);min-width:40px">0%</span>
+        </div>
+      </div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="etapa-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="etapa-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-etapa-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-etapa">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL CATEGORIA -->
+<div class="modal-overlay" id="modal-cat">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-title" id="modal-cat-title">Nova Categoria</span><button class="modal-close" id="modal-cat-close">×</button></div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="field"><label>Nome da Categoria *</label><input type="text" id="cat-nome" placeholder="Ex: Mão de Obra"></div></div>
+      <div class="form-row full"><div class="field"><label>Subcategorias (separadas por vírgula)</label><input type="text" id="cat-subs" placeholder="Ex: Pedreiro, Eletricista, Pintor"></div></div>
+      <div class="field-err" id="cat-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-cat-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-cat">Salvar</button></div>
+  </div>
+</div>
+<script src="../js/neutralino.js"></script>
+<script src="obras.js"></script>
+</body>
+</html>

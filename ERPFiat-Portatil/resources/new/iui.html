@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Config — Controler</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--blue-mid:#2E5FA3;--blue-light:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#e3711a;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#555e6a;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;--r:8px;--rl:12px}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px}
+.topbar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.t-brand{font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px}
+.t-brand span{color:var(--text-muted);font-weight:400;font-size:11px;font-family:var(--mono)}
+.t-actions{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--r);font-size:11.5px;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);transition:all .12s}
+.btn:hover{border-color:var(--text-dim);color:var(--text)}
+.btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+.btn-primary{background:var(--blue-mid);border-color:var(--blue-mid);color:#fff}
+.btn-primary:hover{background:var(--blue-light);border-color:var(--blue-light);color:var(--bg)}
+.btn-danger{border-color:rgba(248,81,73,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(248,81,73,.08)}
+.layout{display:flex;height:calc(100vh - 52px)}
+.sidebar{width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;color:var(--text-muted);font-size:12px;border:none;background:none;width:100%;text-align:left;transition:color .12s,background .12s}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{color:var(--blue-light);background:rgba(88,166,255,.06)}
+.nav-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
+.nav-sec{padding:10px 14px 4px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);font-weight:500}
+.main{flex:1;overflow-y:auto;padding:24px 28px 40px}
+.main::-webkit-scrollbar{width:5px}
+.main::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.page{display:none}
+.page.active{display:block}
+.page-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.page-sub{font-size:11.5px;color:var(--text-muted);margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;margin-bottom:14px}
+.card-title{font-size:10.5px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.06em}
+.card-title::before{content:'';width:2px;height:11px;background:var(--blue-light);border-radius:2px;flex-shrink:0}
+.field{margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:9.5px;color:var(--text-muted);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.field input[type=text],.field input[type=number],.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;resize:vertical}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--blue-light)}
+.field textarea{min-height:60px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-lbl{font-size:12px;color:var(--text)}
+.toggle-sub{font-size:10px;color:var(--text-dim);margin-top:1px}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .2s}
+.toggle-slider::before{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--text-dim);top:2px;left:2px;transition:all .2s}
+.toggle input:checked+.toggle-slider{background:var(--blue-mid);border-color:var(--blue-mid)}
+.toggle input:checked+.toggle-slider::before{transform:translateX(16px);background:#fff}
+/* Strip items */
+.strip-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px}
+.strip-item .drag-handle{cursor:grab;color:var(--text-dim);font-size:14px;flex-shrink:0}
+.strip-item input[type=text]{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:11.5px;outline:none}
+.strip-item input[type=text]:focus{border-color:var(--blue-light)}
+/* Ação item */
+.acao-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px}
+.acao-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.acao-num{font-size:10px;font-family:var(--mono);color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 7px}
+.acao-grid{display:grid;grid-template-columns:1fr 120px 60px 80px;gap:7px}
+/* Módulo item */
+.mod-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px}
+.mod-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mod-lbl{flex:1;font-size:12px}
+.mod-href{width:200px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:11px;outline:none;font-family:var(--mono)}
+.mod-href:focus{border-color:var(--blue-light)}
+/* Atividade item */
+.atv-item{display:grid;grid-template-columns:auto 1fr 80px 60px auto;gap:7px;align-items:center;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:5px}
+.atv-item select{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 5px;color:var(--text);font-size:11px;outline:none}
+.atv-item select:focus{border-color:var(--blue-light)}
+.atv-item input[type=text]{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:11.5px;outline:none;width:100%}
+.atv-item input:focus{border-color:var(--blue-light)}
+.btn-sm{padding:3px 8px;font-size:10.5px;border-radius:5px;border:1px solid transparent;cursor:pointer;font-family:var(--font);background:none;color:var(--text-muted);transition:all .12s}
+.btn-sm:hover{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.3);color:var(--red)}
+.btn-add{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--r);font-size:11px;cursor:pointer;border:1px dashed var(--border);background:none;color:var(--text-muted);transition:all .12s;margin-top:6px}
+.btn-add:hover{border-color:var(--blue-light);color:var(--blue-light)}
+/* KPI Facilities */
+.fkpi-item{display:grid;grid-template-columns:1fr 100px 150px 60px;gap:7px;align-items:center;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:5px}
+.fkpi-item input,.fkpi-item select{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:11.5px;outline:none;width:100%}
+.fkpi-item input:focus,.fkpi-item select:focus{border-color:var(--blue-light)}
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--green);color:var(--green);padding:10px 16px;border-radius:var(--r);font-size:12px;font-family:var(--mono);z-index:999;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="t-brand">Config — Controler <span>hub_novo.html</span></div>
+  <div class="t-actions">
+    <button class="btn" id="btn-importar"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Importar</button>
+    <button class="btn" id="btn-exportar"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Exportar</button>
+    <button class="btn btn-danger" id="btn-resetar"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>Resetar</button>
+    <button class="btn btn-primary" id="btn-salvar"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Salvar</button>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-sec">Configurações</div>
+    <button class="nav-item active" data-page="identidade"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identidade</button>
+    <button class="nav-item" data-page="layout"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Layout</button>
+    <button class="nav-item" data-page="kpi-strip"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>KPI Strip</button>
+    <button class="nav-item" data-page="painel-esq"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Painel Esquerdo</button>
+    <button class="nav-item" data-page="modulos"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Módulos</button>
+    <button class="nav-item" data-page="acoes"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Ações Futuras</button>
+    <button class="nav-item" data-page="atividades"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17h7M17 14v7"/></svg>Atividades</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- IDENTIDADE -->
+    <div class="page active" id="page-identidade">
+      <div class="page-title">Identidade</div>
+      <div class="page-sub">Textos, títulos e informações exibidas no hub.</div>
+      <div class="card">
+        <div class="card-title">Marca</div>
+        <div class="row2">
+          <div class="field"><label>Nome do sistema</label><input type="text" id="id-brandName"></div>
+          <div class="field"><label>Versão / ambiente</label><input type="text" id="id-brandEnv"></div>
+        </div>
+        <div class="field"><label>Texto rodapé</label><input type="text" id="id-footerNome"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Hero / Banner</div>
+        <div class="field"><label>Badge (ex: SISTEMA ONLINE)</label><input type="text" id="id-heroBadge"></div>
+        <div class="field"><label>Título principal</label><input type="text" id="id-heroTitulo"></div>
+        <div class="field"><label>Subtítulo / descrição</label><textarea id="id-heroSub"></textarea></div>
+        <div class="field"><label>Ícones de meta (um por linha)</label><textarea id="id-heroMeta" style="min-height:80px"></textarea></div>
+      </div>
+    </div>
+
+    <!-- LAYOUT -->
+    <div class="page" id="page-layout">
+      <div class="page-title">Layout</div>
+      <div class="page-sub">Visibilidade e estrutura da página.</div>
+      <div class="card">
+        <div class="card-title">Visibilidade de seções</div>
+        <div class="toggle-row"><div><div class="toggle-lbl">Hero / Banner</div><div class="toggle-sub">Painel superior com título e vídeo</div></div><label class="toggle"><input type="checkbox" id="ly-heroVisivel"><div class="toggle-slider"></div></label></div>
+        <div class="toggle-row"><div><div class="toggle-lbl">KPI Strip</div><div class="toggle-sub">Faixa de 5 indicadores no topo</div></div><label class="toggle"><input type="checkbox" id="ly-kpiStripVisivel"><div class="toggle-slider"></div></label></div>
+        <div class="toggle-row"><div><div class="toggle-lbl">Painel esquerdo</div><div class="toggle-sub">Identidade, KPIs e atividades</div></div><label class="toggle"><input type="checkbox" id="ly-painelEsqVisivel"><div class="toggle-slider"></div></label></div>
+        <div class="toggle-row"><div><div class="toggle-lbl">Ações Futuras</div><div class="toggle-sub">Grid de cards de projetos</div></div><label class="toggle"><input type="checkbox" id="ly-acoesVisiveis"><div class="toggle-slider"></div></label></div>
+        <div class="toggle-row"><div><div class="toggle-lbl">Usuários / Responsáveis</div><div class="toggle-sub">Tabela de usuários cadastrados</div></div><label class="toggle"><input type="checkbox" id="ly-usuariosVisiveis"><div class="toggle-slider"></div></label></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Dimensões e grade</div>
+        <div class="row3">
+          <div class="field"><label>Altura do hero (px)</label><input type="number" id="ly-heroAltura" min="160" max="500"></div>
+          <div class="field"><label>Largura painel esq. (px)</label><input type="number" id="ly-painelEsqLargura" min="200" max="500"></div>
+          <div class="field"><label>Sidebar padrão</label><select id="ly-sidebarPadrao"><option value="expandida">Expandida</option><option value="colapsada">Colapsada</option></select></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Colunas de módulos</label><select id="ly-colunasModulos"><option value="1">1 coluna</option><option value="2">2 colunas</option><option value="3">3 colunas</option></select></div>
+          <div class="field"><label>Colunas de ações futuras</label><select id="ly-acoesGrade"><option value="1">1 coluna</option><option value="2">2 colunas</option><option value="3">3 colunas</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="page" id="page-kpi-strip">
+      <div class="page-title">KPI Strip</div>
+      <div class="page-sub">Faixa de indicadores no topo. Edite labels e ative/desative cada item.</div>
+      <div class="card">
+        <div class="card-title">Itens do strip</div>
+        <div id="strip-list"></div>
+      </div>
+    </div>
+
+    <!-- PAINEL ESQUERDO -->
+    <div class="page" id="page-painel-esq">
+      <div class="page-title">Painel Esquerdo</div>
+      <div class="page-sub">Controle o conteúdo de cada seção do painel lateral esquerdo.</div>
+
+      <div class="card">
+        <div class="card-title">Identidade Estratégica</div>
+        <div class="toggle-row"><div><div class="toggle-lbl">Seção visível</div></div><label class="toggle"><input type="checkbox" id="pe-identidade-visivel"><div class="toggle-slider"></div></label></div>
+        <div class="field" style="margin-top:10px"><label>Valores</label><textarea id="pe-valores"></textarea></div>
+        <div class="row2">
+          <div class="field"><label>Objetivo</label><textarea id="pe-objetivo"></textarea></div>
+          <div>
+            <div class="field"><label>Progresso (%)</label><input type="number" id="pe-objProgresso" min="0" max="100"></div>
+            <div class="field"><label>Prazo</label><input type="text" id="pe-objPrazo"></div>
+          </div>
+        </div>
+        <div class="field"><label>Missão</label><textarea id="pe-missao"></textarea></div>
+        <div class="field"><label>Metas (uma por linha)</label><textarea id="pe-metas" style="min-height:70px"></textarea></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">KPIs Facilities</div>
+        <div class="toggle-row"><div><div class="toggle-lbl">Seção visível</div></div><label class="toggle"><input type="checkbox" id="pe-kpis-visivel"><div class="toggle-slider"></div></label></div>
+        <div id="fkpi-list" style="margin-top:10px"></div>
+        <button class="btn-add" id="btn-add-fkpi"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar KPI</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Atividades do Turno</div>
+        <div class="toggle-row"><div><div class="toggle-lbl">Seção visível</div></div><label class="toggle"><input type="checkbox" id="pe-atividades-visivel"><div class="toggle-slider"></div></label></div>
+      </div>
+    </div>
+
+    <!-- MÓDULOS -->
+    <div class="page" id="page-modulos">
+      <div class="page-title">Módulos</div>
+      <div class="page-sub">Ative, renomeie e configure o link de cada módulo do sistema.</div>
+      <div class="card">
+        <div class="card-title">Módulos disponíveis</div>
+        <div id="mod-list"></div>
+      </div>
+    </div>
+
+    <!-- AÇÕES FUTURAS -->
+    <div class="page" id="page-acoes">
+      <div class="page-title">Ações Futuras</div>
+      <div class="page-sub">Configure os cards de projetos e ações planejadas.</div>
+      <div class="card">
+        <div class="card-title">Cards de ação</div>
+        <div id="acoes-list"></div>
+        <button class="btn-add" id="btn-add-acao"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar ação</button>
+      </div>
+    </div>
+
+    <!-- ATIVIDADES -->
+    <div class="page" id="page-atividades">
+      <div class="page-title">Atividades do Turno</div>
+      <div class="page-sub">Configure as tarefas exibidas no painel lateral.</div>
+      <div class="card">
+        <div class="card-title">Lista de atividades</div>
+        <div id="atv-list"></div>
+        <button class="btn-add" id="btn-add-atv"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar atividade</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast">Configuração salva!</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+
+const DEFAULT={
+  identidade:{brandName:'Controler',brandEnv:'ERP Facilities v2.0',plantaNome:'Planta CBA · SP',heroBadge:'SISTEMA ONLINE — PLANTA CBA',heroTitulo:'Controler Facilities',heroSub:'Visão integrada de obras, chamados, atividades e controle de acesso da infraestrutura.',heroMeta:['Planta CBA · SP','Monitoramento 24/7','ISO 55001'],footerNome:'Controler Facilities'},
+  layout:{heroVisivel:true,heroAltura:260,kpiStripVisivel:true,painelEsqVisivel:true,painelEsqLargura:280,colunasModulos:2,acoesVisiveis:true,acoesGrade:2,usuariosVisiveis:true,sidebarPadrao:'expandida'},
+  kpiStrip:[
+    {id:'obras',label:'Obras em andamento',cor:'yw',visivel:true},
+    {id:'chamados',label:'Chamados abertos',cor:'rd',visivel:true},
+    {id:'atividades',label:'Atividades em aberto',cor:'or',visivel:true},
+    {id:'acesso',label:'Acesso — IDs ativos',cor:'bl',visivel:true},
+    {id:'budget',label:'Budget executado',cor:'gn',visivel:true}
+  ],
+  painelEsq:{
+    identidade:{visivel:true,valores:'Excelência Operacional · Segurança · Sustentabilidade',objetivo:'Zero paradas não planejadas. Redução 30% no consumo energético.',objProgresso:68,objPrazo:'Dez/2026',missao:'Infraestrutura segura, eficiente e sustentável para operações de classe mundial.',metas:['Manutenção preventiva ≥ 95%','Redução chamados corretivos -15%','Conformidade NR-12: 100%']},
+    kpis:{visivel:true,itens:[{label:'Disponibilidade',valor:'97.4%',tend:'↑ +1.2% vs meta',cor:'gn'},{label:'MTTR médio',valor:'12h',tend:'↓ 2h abaixo da meta',cor:'bl'},{label:'Econ. energia/mês',valor:'R$48k',tend:'↑ acima da meta',cor:'gn'},{label:'Acidentes/mês',valor:'0',tend:'✦ Meta atingida',cor:'gn'}]},
+    atividades:{visivel:true}
+  },
+  modulos:{colunas:2,itens:[{id:'obras',visivel:true,label:'Obras & CAPEX',cor:'yellow',href:'obras/obras.html'},{id:'chamados',visivel:true,label:'Chamados',cor:'red',href:'chamados/chamados.html'},{id:'atividades',visivel:true,label:'Atividades',cor:'orange',href:'atividades/atividades.html'},{id:'acesso',visivel:true,label:'Controle de Acesso',cor:'blue-light',href:'codins/codin.html'}]},
+  acoes:[
+    {id:'a1',visivel:true,titulo:'Recertificação Sistema de Sprinklers',status:'urg',prazo:'20 Jun 2026',resp:'RM',desc:'Vencimento AVCB em 30 dias. Corpo de Bombeiros notificado.'},
+    {id:'a2',visivel:true,titulo:'Modernização Subestação Elétrica #3',status:'plan',prazo:'Jul 2026',resp:'FS',desc:'Substituição de transformadores. Redução de 18% no consumo estimado.'},
+    {id:'a3',visivel:true,titulo:'Instalação Fotovoltaicos — Fase 2',status:'prog',prazo:'Ago 2026',resp:'KL',desc:'Blocos B e D. 480 kWp adicionais. Meta ESG 2026.'},
+    {id:'a4',visivel:true,titulo:'Retrofit HVAC — Área de Pintura',status:'plan',prazo:'Set 2026',resp:'JP',desc:'Substituição de chillers e torres de resfriamento.'},
+    {id:'a5',visivel:true,titulo:'Adequação NR-12 — Prensas Linha 7',status:'rev',prazo:'25 Jun 2026',resp:'AL',desc:'Auditoria identificou 3 não-conformidades.'},
+    {id:'a6',visivel:true,titulo:'Sistema Reuso de Água Industrial',status:'plan',prazo:'Out 2026',resp:'MC',desc:'ETA interna. Meta -40% captação de poço.'},
+    {id:'a7',visivel:true,titulo:'CMMS — Módulo Preditivo IoT',status:'prog',prazo:'Nov 2026',resp:'TS',desc:'Integração sensores IoT com SAP PM.'},
+    {id:'a8',visivel:true,titulo:'Reforma Vestiários e Refeitório',status:'plan',prazo:'Dez 2026',resp:'BH',desc:'Melhoria bem-estar. Execução em fim de semana.'}
+  ],
+  atividades:[
+    {texto:'Inspeção HVAC — Bloco A',estado:'done',prio:'p-l',prio_txt:'OK'},
+    {texto:'Teste geradores emergência',estado:'done',prio:'p-l',prio_txt:'OK'},
+    {texto:'Calibração sistemas contra incêndio',estado:'pend',prio:'p-h',prio_txt:'HOJE'},
+    {texto:'Manutenção preventiva compressores',estado:'pend',prio:'p-h',prio_txt:'14h'},
+    {texto:'Auditoria EPI — Linha de Montagem 3',estado:'',prio:'p-m',prio_txt:'AMANHÃ'},
+    {texto:'Revisão contrato fornecedor limpeza',estado:'',prio:'p-m',prio_txt:'SEX'},
+    {texto:'Atualização planta elétrica Bloco C',estado:'',prio:'p-l',prio_txt:'SEM.'},
+    {texto:'Vistoria subestação elétrica principal',estado:'',prio:'p-m',prio_txt:'SEM.'}
+  ]
+};
+
+let CFG=JSON.parse(JSON.stringify(DEFAULT));
+const saved=localStorage.getItem('hub-config');
+if(saved)try{CFG=Object.assign({},DEFAULT,JSON.parse(saved));}catch(e){}
+
+// ── NAV ──
+document.querySelectorAll('.nav-item[data-page]').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    this.classList.add('active');
+    $('page-'+this.dataset.page).classList.add('active');
+  });
+});
+
+// ── POPULATE ──
+function populate(){
+  const id=CFG.identidade||{};
+  $('id-brandName').value=id.brandName||'';$('id-brandEnv').value=id.brandEnv||'';
+  $('id-footerNome').value=id.footerNome||'';$('id-heroBadge').value=id.heroBadge||'';
+  $('id-heroTitulo').value=id.heroTitulo||'';$('id-heroSub').value=id.heroSub||'';
+  $('id-heroMeta').value=(id.heroMeta||[]).join('\n');
+
+  const L=CFG.layout||{};
+  ['heroVisivel','kpiStripVisivel','painelEsqVisivel','acoesVisiveis','usuariosVisiveis'].forEach(k=>{const e=$('ly-'+k);if(e)e.checked=!!L[k];});
+  const lyFields=['heroAltura','painelEsqLargura','sidebarPadrao','colunasModulos','acoesGrade'];
+  lyFields.forEach(k=>{const e=$('ly-'+k);if(e)e.value=L[k]!==undefined?L[k]:'';});
+
+  buildStripList();
+  const PE=CFG.painelEsq||{};
+  const peid=PE.identidade||{};
+  $('pe-identidade-visivel').checked=peid.visivel!==false;
+  $('pe-valores').value=peid.valores||'';$('pe-objetivo').value=peid.objetivo||'';
+  $('pe-objProgresso').value=peid.objProgresso||0;$('pe-objPrazo').value=peid.objPrazo||'';
+  $('pe-missao').value=peid.missao||'';$('pe-metas').value=(peid.metas||[]).join('\n');
+  const pekpis=PE.kpis||{};
+  $('pe-kpis-visivel').checked=pekpis.visivel!==false;
+  buildFkpiList();
+  $('pe-atividades-visivel').checked=(PE.atividades||{}).visivel!==false;
+
+  buildModList();
+  buildAcoesList();
+  buildAtvList();
+}
+
+// ── KPI STRIP ──
+function buildStripList(){
+  $('strip-list').innerHTML=(CFG.kpiStrip||[]).map((item,i)=>`
+    <div class="strip-item">
+      <span class="drag-handle">⠿</span>
+      <input type="text" value="${item.label}" onchange="CFG.kpiStrip[${i}].label=this.value">
+      <select onchange="CFG.kpiStrip[${i}].cor=this.value" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px;color:var(--text);font-size:11px;outline:none">
+        ${['yw','gn','rd','bl','or'].map(c=>`<option value="${c}" ${item.cor===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <label class="toggle" style="flex-shrink:0"><input type="checkbox" ${item.visivel!==false?'checked':''} onchange="CFG.kpiStrip[${i}].visivel=this.checked"><div class="toggle-slider"></div></label>
+    </div>`).join('');
+}
+
+// ── FKPI LIST ──
+function buildFkpiList(){
+  $('fkpi-list').innerHTML=(CFG.painelEsq.kpis.itens||[]).map((k,i)=>`
+    <div class="fkpi-item">
+      <input type="text" value="${k.label}" placeholder="Label" onchange="CFG.painelEsq.kpis.itens[${i}].label=this.value">
+      <input type="text" value="${k.valor}" placeholder="Valor" onchange="CFG.painelEsq.kpis.itens[${i}].valor=this.value">
+      <input type="text" value="${k.tend}" placeholder="Tendência" onchange="CFG.painelEsq.kpis.itens[${i}].tend=this.value">
+      <select onchange="CFG.painelEsq.kpis.itens[${i}].cor=this.value">${['gn','yw','bl','rd'].map(c=>`<option value="${c}" ${k.cor===c?'selected':''}>${c}</option>`).join('')}</select>
+      <button class="btn-sm" onclick="CFG.painelEsq.kpis.itens.splice(${i},1);buildFkpiList()">✕</button>
+    </div>`).join('');
+}
+$('btn-add-fkpi').onclick=()=>{CFG.painelEsq.kpis.itens.push({label:'Novo KPI',valor:'—',tend:'',cor:'gn'});buildFkpiList();};
+
+// ── MOD LIST ──
+const MOD_DOTS={yellow:'#d29922',red:'#f85149',orange:'#e3711a','blue-light':'#58a6ff',green:'#3fb950',purple:'#a371f7'};
+function buildModList(){
+  $('mod-list').innerHTML=(CFG.modulos.itens||[]).map((m,i)=>`
+    <div class="mod-item">
+      <div class="mod-dot" style="background:${MOD_DOTS[m.cor]||'#8b949e'}"></div>
+      <input type="text" value="${m.label}" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:12px;outline:none" onchange="CFG.modulos.itens[${i}].label=this.value">
+      <input type="text" class="mod-href" value="${m.href||''}" placeholder="href" onchange="CFG.modulos.itens[${i}].href=this.value">
+      <label class="toggle"><input type="checkbox" ${m.visivel!==false?'checked':''} onchange="CFG.modulos.itens[${i}].visivel=this.checked"><div class="toggle-slider"></div></label>
+    </div>`).join('');
+}
+
+// ── AÇÕES ──
+function buildAcoesList(){
+  $('acoes-list').innerHTML=(CFG.acoes||[]).map((a,i)=>`
+    <div class="acao-item">
+      <div class="acao-header">
+        <span class="acao-num">A${i+1}</span>
+        <select onchange="CFG.acoes[${i}].status=this.value" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 7px;color:var(--text);font-size:11px;outline:none">
+          ${['plan','prog','urg','rev'].map(s=>`<option value="${s}" ${a.status===s?'selected':''}>${s==='plan'?'Planejado':s==='prog'?'Em andamento':s==='urg'?'Urgente':'Revisão'}</option>`).join('')}
+        </select>
+        <label class="toggle" style="margin-left:auto"><input type="checkbox" ${a.visivel!==false?'checked':''} onchange="CFG.acoes[${i}].visivel=this.checked"><div class="toggle-slider"></div></label>
+        <button class="btn-sm" onclick="CFG.acoes.splice(${i},1);buildAcoesList()">✕</button>
+      </div>
+      <div class="acao-grid">
+        <input type="text" value="${a.titulo||''}" placeholder="Título" onchange="CFG.acoes[${i}].titulo=this.value" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:12px;outline:none">
+        <input type="text" value="${a.prazo||''}" placeholder="Prazo" onchange="CFG.acoes[${i}].prazo=this.value" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:12px;outline:none">
+        <input type="text" value="${a.resp||''}" placeholder="Resp." onchange="CFG.acoes[${i}].resp=this.value" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:12px;outline:none;text-transform:uppercase">
+      </div>
+      <textarea placeholder="Descrição" onchange="CFG.acoes[${i}].desc=this.value" style="width:100%;margin-top:6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11.5px;outline:none;resize:vertical;min-height:44px;font-family:var(--font)">${a.desc||''}</textarea>
+    </div>`).join('');
+}
+$('btn-add-acao').onclick=()=>{CFG.acoes.push({id:'a'+(Date.now()),visivel:true,titulo:'Nova ação',status:'plan',prazo:'',resp:'',desc:''});buildAcoesList();};
+
+// ── ATIVIDADES ──
+function buildAtvList(){
+  $('atv-list').innerHTML=(CFG.atividades||[]).map((a,i)=>`
+    <div class="atv-item">
+      <select onchange="CFG.atividades[${i}].estado=this.value">
+        <option value="" ${a.estado===''?'selected':''}>—</option>
+        <option value="pend" ${a.estado==='pend'?'selected':''}>⬤ Pend.</option>
+        <option value="done" ${a.estado==='done'?'selected':''}>✓ Feito</option>
+      </select>
+      <input type="text" value="${a.texto||''}" onchange="CFG.atividades[${i}].texto=this.value">
+      <input type="text" value="${a.prio_txt||''}" placeholder="Label" onchange="CFG.atividades[${i}].prio_txt=this.value">
+      <select onchange="CFG.atividades[${i}].prio=this.value">
+        <option value="p-h" ${a.prio==='p-h'?'selected':''}>Alta</option>
+        <option value="p-m" ${a.prio==='p-m'?'selected':''}>Média</option>
+        <option value="p-l" ${a.prio==='p-l'?'selected':''}>Baixa</option>
+      </select>
+      <button class="btn-sm" onclick="CFG.atividades.splice(${i},1);buildAtvList()">✕</button>
+    </div>`).join('');
+}
+$('btn-add-atv').onclick=()=>{CFG.atividades.push({texto:'Nova atividade',estado:'',prio:'p-m',prio_txt:'HOJ'});buildAtvList();};
+
+// ── COLLECT (ler formulários antes de salvar) ──
+function collect(){
+  CFG.identidade.brandName=$('id-brandName').value;
+  CFG.identidade.brandEnv=$('id-brandEnv').value;
+  CFG.identidade.footerNome=$('id-footerNome').value;
+  CFG.identidade.heroBadge=$('id-heroBadge').value;
+  CFG.identidade.heroTitulo=$('id-heroTitulo').value;
+  CFG.identidade.heroSub=$('id-heroSub').value;
+  CFG.identidade.heroMeta=$('id-heroMeta').value.split('\n').map(s=>s.trim()).filter(Boolean);
+
+  CFG.layout.heroVisivel=$('ly-heroVisivel').checked;
+  CFG.layout.kpiStripVisivel=$('ly-kpiStripVisivel').checked;
+  CFG.layout.painelEsqVisivel=$('ly-painelEsqVisivel').checked;
+  CFG.layout.acoesVisiveis=$('ly-acoesVisiveis').checked;
+  CFG.layout.usuariosVisiveis=$('ly-usuariosVisiveis').checked;
+  CFG.layout.heroAltura=+$('ly-heroAltura').value||260;
+  CFG.layout.painelEsqLargura=+$('ly-painelEsqLargura').value||280;
+  CFG.layout.sidebarPadrao=$('ly-sidebarPadrao').value;
+  CFG.layout.colunasModulos=+$('ly-colunasModulos').value||2;
+  CFG.layout.acoesGrade=+$('ly-acoesGrade').value||2;
+
+  CFG.painelEsq.identidade.visivel=$('pe-identidade-visivel').checked;
+  CFG.painelEsq.identidade.valores=$('pe-valores').value;
+  CFG.painelEsq.identidade.objetivo=$('pe-objetivo').value;
+  CFG.painelEsq.identidade.objProgresso=+$('pe-objProgresso').value||0;
+  CFG.painelEsq.identidade.objPrazo=$('pe-objPrazo').value;
+  CFG.painelEsq.identidade.missao=$('pe-missao').value;
+  CFG.painelEsq.identidade.metas=$('pe-metas').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  CFG.painelEsq.kpis.visivel=$('pe-kpis-visivel').checked;
+  CFG.painelEsq.atividades.visivel=$('pe-atividades-visivel').checked;
+}
+
+// ── SALVAR ──
+function showToast(msg){const t=$('toast');t.textContent=msg||'Salvo!';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+$('btn-salvar').onclick=()=>{
+  collect();
+  localStorage.setItem('hub-config',JSON.stringify(CFG));
+  showToast('Configuração salva! Recarregue o hub.');
+  if(window.opener&&!window.opener.closed)window.opener.location.reload();
+};
+
+// ── EXPORTAR ──
+$('btn-exportar').onclick=()=>{
+  collect();
+  const blob=new Blob([JSON.stringify(CFG,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hub-config.json';a.click();
+};
+
+// ── IMPORTAR ──
+$('btn-importar').onclick=()=>{
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=()=>{if(!inp.files[0])return;const r=new FileReader();r.onload=e=>{try{CFG=JSON.parse(e.target.result);localStorage.setItem('hub-config',JSON.stringify(CFG));populate();showToast('Importado com sucesso!');}catch(err){alert('JSON inválido.');}};r.readAsText(inp.files[0]);};
+  inp.click();
+};
+
+// ── RESETAR ──
+$('btn-resetar').onclick=()=>{if(!confirm('Resetar todas as configurações para o padrão?'))return;CFG=JSON.parse(JSON.stringify(DEFAULT));localStorage.removeItem('hub-config');populate();showToast('Resetado para o padrão!');};
+
+// ── INIT ──
+populate();
+</script>
+</body>
+</html>

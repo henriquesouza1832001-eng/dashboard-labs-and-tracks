@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Registrar Ocorrência — Facilities</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;900&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet">
+<link href="abrir.css" rel="stylesheet"></style>
+</head>
+<body>
+
+<!-- TELA FORM -->
+<div id="tela-form">
+  <div class="header">
+    <div class="header-tag">Eng. Services, Labs & Office Maintainance</div>
+    <h1>Registrar <em>Ocorrência</em></h1>
+    <div class="header-sub">Preencha o formulário abaixo para abrir um chamado</div>
+    <div class="local-badge" id="badge-local">
+      📍 <strong id="badge-local-txt">—</strong>
+    </div>
+  </div>
+
+  <div class="form-card">
+
+    <!-- CATEGORIA -->
+    <div class="form-group">
+      <label class="form-label">Categoria <span class="req">*</span></label>
+      <div class="cat-pills" id="cat-pills">
+        <label class="cat-pill" data-cat="INF">
+          <input type="radio" name="cat" value="INF">
+          <span class="dot"></span> Infraestrutura
+        </label>
+        <label class="cat-pill" data-cat="ELE">
+          <input type="radio" name="cat" value="ELE">
+          <span class="dot"></span> Elétrica
+        </label>
+        <label class="cat-pill" data-cat="HID">
+          <input type="radio" name="cat" value="HID">
+          <span class="dot"></span> Hidráulica
+        </label>
+        <label class="cat-pill" data-cat="LMP">
+          <input type="radio" name="cat" value="LMP">
+          <span class="dot"></span> Limpeza
+        </label>
+        <label class="cat-pill" data-cat="AR">
+          <input type="radio" name="cat" value="AR">
+          <span class="dot"></span> Ar Cond.
+        </label>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- TÍTULO -->
+    <div class="form-group">
+      <label class="form-label" for="f-titulo">Descreva o problema <span class="req">*</span></label>
+      <input type="text" class="form-control" id="f-titulo" placeholder="Ex: Lâmpada queimada, vazamento, porta travada…" maxlength="120">
+    </div>
+
+    <!-- LOCAL -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="f-local">Local <span class="req">*</span></label>
+        <input type="text" class="form-control" id="f-local" placeholder="Ex: Banheiro 50-10">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="f-setor">Setor / Bloco</label>
+        <input type="text" class="form-control" id="f-setor" placeholder="Ex: Bloco A">
+      </div>
+    </div>
+
+    <!-- DESCRIÇÃO -->
+    <div class="form-group">
+      <label class="form-label" for="f-desc">Detalhes adicionais</label>
+      <textarea class="form-control" id="f-desc" rows="3" placeholder="Descreva melhor o problema: desde quando, impacto, urgência…"></textarea>
+    </div>
+
+    <!-- SOLICITANTE -->
+    <div class="form-group">
+      <label class="form-label" for="f-solicitante">Seu nome / matrícula</label>
+      <input type="text" class="form-control" id="f-solicitante" placeholder="Opcional — para retorno">
+    </div>
+
+    <hr class="divider">
+
+    <!-- FOTOS -->
+    <span class="section-label">Fotos (opcional)</span>
+    <div class="fotos-wrap" id="fotos-wrap">
+      <div class="foto-add" id="foto-add-btn" onclick="document.getElementById('foto-input').click()">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Adicionar
+      </div>
+    </div>
+    <input type="file" id="foto-input" accept="image/*" multiple style="display:none">
+
+    <!-- BOTÃO -->
+    <button class="btn-registrar" id="btn-registrar" onclick="registrar()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Registrar Chamado
+    </button>
+  </div>
+</div>
+
+<!-- TELA SUCESSO -->
+<div id="tela-sucesso">
+  <div class="check-circle">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <h2>Chamado Registrado!</h2>
+  <div>Número do chamado:</div>
+  <div class="chamado-num" id="sucesso-id">—</div>
+  <p>Sua ocorrência foi registrada com sucesso.<br>Em breve nossa equipe irá analisá-la.</p>
+  <button class="btn-novo" onclick="reiniciar()">Registrar outro chamado</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+<script src="abrir.js"></script>
+</body>
+</html>

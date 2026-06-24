@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chamados — Facilities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="chamados.css" rel="stylesheet"></style>
+</head>
+<body>
+<div id="debug-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0d1117;border-top:2px solid #f85149;font-family:monospace;font-size:11px;flex-direction:column;max-height:220px">
+  <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0">
+    <span style="color:#f85149;font-weight:700;font-size:11px">DEBUG</span>
+    <span id="db-badge" style="display:none;background:#f85149;color:#fff;border-radius:10px;padding:0 6px;font-size:10px;font-weight:700"></span>
+    <span style="color:#555e6a;font-size:10px">Ctrl+Shift+D para abrir/fechar</span>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button onclick="document.getElementById('db-body').innerHTML='';document.getElementById('db-badge').style.display='none'" style="background:none;border:1px solid #30363d;border-radius:3px;color:#8b949e;font-size:10px;padding:2px 7px;cursor:pointer">limpar</button>
+      <button onclick="document.getElementById('debug-bar').style.display='none'" style="background:none;border:1px solid #30363d;border-radius:3px;color:#8b949e;font-size:10px;padding:2px 7px;cursor:pointer">✕</button>
+    </div>
+  </div>
+  <div id="db-body" style="flex:1;overflow-y:auto;padding:6px 12px;display:flex;flex-direction:column;gap:1px"></div>
+</div>
+<div class="loading-bar" id="loading-bar"></div>
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="../hub/hub.html" class="back-btn">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Hub
+    </a>
+    <div class="page-title">Chamados <span>— Facilities</span></div>
+  </div>
+  <div class="topbar-right">
+    <a href="../operador/operador.html" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;text-decoration:none" target="_blank">
+  <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  Operador
+</a>
+
+<a href="../abrir/abrir.html" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;text-decoration:none" target="_blank">
+  <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  Abrir Chamado
+</a>
+    <div class="save-status nosave" id="save-status">
+      <span class="save-dot"></span>
+      <span id="save-label">sem arquivo</span>
+    </div>
+    <button class="btn btn-ghost" id="btn-open-file" style="font-size:12px;padding:6px 12px;opacity:.4;cursor:default" disabled title="Arquivos gerenciados pelo Hub">
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Via Hub
+    </button>
+  </div>
+</div>
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- FILTRO ATIVO BADGE -->
+    <div class="sb-filtro-ativo" id="sb-filtro-ativo" style="display:none">
+      <span id="sb-filtro-txt">—</span>
+      <button onclick="limparTodosFiltros()" title="Limpar filtros">✕</button>
+    </div>
+
+    <!-- STATUS -->
+    <div class="sb-group-title">Status</div>
+    <div class="sb-chips" id="chips-status">
+      <button class="sb-chip active" data-filter="status" data-val="">
+        <span class="sb-chip-label">Todos</span>
+        <span class="sb-chip-count" id="cnt-todos">0</span>
+      </button>
+      <button class="sb-chip sb-chip-aberto" data-filter="status" data-val="Aberto">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Aberto</span>
+        <span class="sb-chip-count" id="cnt-aberto">0</span>
+      </button>
+      <button class="sb-chip sb-chip-andamento" data-filter="status" data-val="Em Andamento">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Em Andamento</span>
+        <span class="sb-chip-count" id="cnt-andamento">0</span>
+      </button>
+      <button class="sb-chip sb-chip-concluido" data-filter="status" data-val="Concluído">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Concluído</span>
+        <span class="sb-chip-count" id="cnt-concluido">0</span>
+      </button>
+      <button class="sb-chip sb-chip-cancelado" data-filter="status" data-val="Cancelado">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Cancelado</span>
+        <span class="sb-chip-count" id="cnt-cancelado">0</span>
+      </button>
+    </div>
+
+    <!-- CATEGORIA -->
+    <div class="sb-group-title">Categoria</div>
+    <div class="sb-chips" id="chips-cat">
+      <button class="sb-chip" data-filter="cat" data-val="">
+        <span class="sb-chip-label">Todas</span>
+        <span class="sb-chip-count" id="cnt-call">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="INF">
+        <span class="cat-dot c-INF"></span>
+        <span class="sb-chip-label">Infraestrutura</span>
+        <span class="sb-chip-count" id="cnt-INF">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="ELE">
+        <span class="cat-dot c-ELE"></span>
+        <span class="sb-chip-label">Elétrica</span>
+        <span class="sb-chip-count" id="cnt-ELE">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="HID">
+        <span class="cat-dot c-HID"></span>
+        <span class="sb-chip-label">Hidráulica</span>
+        <span class="sb-chip-count" id="cnt-HID">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="LMP">
+        <span class="cat-dot c-LMP"></span>
+        <span class="sb-chip-label">Limpeza</span>
+        <span class="sb-chip-count" id="cnt-LMP">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="AR">
+        <span class="cat-dot c-AR"></span>
+        <span class="sb-chip-label">Ar Cond.</span>
+        <span class="sb-chip-count" id="cnt-AR">0</span>
+      </button>
+    </div>
+
+    <!-- PRIORIDADE -->
+    <div class="sb-group-title">Prioridade</div>
+    <div class="sb-chips" id="chips-prio">
+      <button class="sb-chip sb-chip-critica" data-filter="prio" data-val="Crítica">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Crítica</span>
+        <span class="sb-chip-count" id="cnt-critica">0</span>
+      </button>
+      <button class="sb-chip sb-chip-alta" data-filter="prio" data-val="Alta">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Alta</span>
+        <span class="sb-chip-count" id="cnt-alta">0</span>
+      </button>
+      <button class="sb-chip sb-chip-media" data-filter="prio" data-val="Média">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Média</span>
+        <span class="sb-chip-count" id="cnt-media">0</span>
+      </button>
+      <button class="sb-chip sb-chip-baixa" data-filter="prio" data-val="Baixa">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Baixa</span>
+        <span class="sb-chip-count" id="cnt-baixa">0</span>
+      </button>
+    </div>
+
+    <!-- RESUMO -->
+    <div class="sb-group-title" style="margin-top:auto">Resumo</div>
+    <div class="sb-resumo">
+      <div class="sb-resumo-row">
+        <span>Abertos hoje</span>
+        <strong id="stat-hoje">0</strong>
+      </div>
+      <div class="sb-resumo-row">
+        <span>Em andamento</span>
+        <strong id="stat-andamento">0</strong>
+      </div>
+      <div class="sb-resumo-row sb-resumo-alerta" id="row-criticos">
+        <span>Críticos abertos</span>
+        <strong id="stat-criticos">0</strong>
+      </div>
+      <div class="sb-resumo-row sb-resumo-warn" id="row-semresp">
+        <span>Sem responsável</span>
+        <strong id="stat-sem-resp">0</strong>
+      </div>
+    </div>
+  </div>
+  <!-- MAIN -->
+  <div class="main">
+    <div class="main-toolbar">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-lista" onclick="setTab('lista')">Lista</button>
+    <button class="tab-btn" id="tab-dash"  onclick="setTab('dash')">Dashboard</button>
+    <button class="tab-btn" id="tab-config" onclick="setTab('config')">Configurações</button>
+  </div>
+  <div class="search-wrap" id="wrap-search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" class="search-input" id="search-input" placeholder="Buscar por ID, título, local, responsável…">
+  </div>
+  <select class="toolbar-sel" id="filtro-data" title="Filtrar por período">
+    <option value="">Qualquer data</option>
+    <option value="hoje">Hoje</option>
+    <option value="semana">Esta semana</option>
+    <option value="mes">Este mês</option>
+    <option value="atrasado">Atrasados (SLA)</option>
+  </select>
+  <select class="toolbar-sel" id="filtro-cat" title="Filtrar por categoria">
+    <option value="">Qualquer categoria</option>
+    <option value="INF">Infraestrutura</option>
+    <option value="ELE">Elétrica</option>
+    <option value="HID">Hidráulica</option>
+    <option value="LMP">Limpeza</option>
+    <option value="AR">Ar Cond.</option>
+  </select>
+  <select class="toolbar-sel" id="filtro-tipo" title="Filtrar por tipo">
+    <option value="">Qualquer tipo</option>
+    <option value="Corretiva">Corretiva</option>
+    <option value="Preventiva">Preventiva</option>
+    <option value="Inspeção">Inspeção</option>
+    <option value="Limpeza">Limpeza</option>
+    <option value="Instalação">Instalação</option>
+    <option value="Urgência">Urgência</option>
+  </select>
+  <select class="toolbar-sel" id="ordenar-por" title="Ordenar">
+    <option value="data-desc">Mais recentes</option>
+    <option value="data-asc">Mais antigos</option>
+    <option value="prio">Prioridade</option>
+    <option value="sla">SLA</option>
+  </select>
+  <button class="btn btn-primary" id="btn-novo">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Novo Chamado
+  </button>
+</div>
+    <div id="view-lista">
+  <div class="table-wrap">
+    <table class="chamados-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Título</th>
+          <th>Categoria</th>
+          <th>Local / Setor</th>
+          <th>Status</th>
+          <th>Prioridade</th>
+          <th>SLA</th>
+          <th>Responsável</th>
+          <th>Abertura</th>
+        </tr>
+      </thead>
+      <tbody id="chamados-tbody"></tbody>
+    </table>
+  </div>
+</div>
+<div id="view-dash" style="display:none">
+  <div class="dash-grid">
+    <div class="dash-card">
+      <div class="dash-card-title">Chamados por Status</div>
+      <div style="height:200px;position:relative"><canvas id="chart-status"></canvas></div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-title">Por Categoria</div>
+      <div style="height:200px;position:relative"><canvas id="chart-cat"></canvas></div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-title">Indicadores de Atendimento</div>
+      <div id="indicadores-list"></div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-title">Abertos por Prioridade</div>
+      <div style="height:200px;position:relative"><canvas id="chart-prio"></canvas></div>
+    </div>
+    <div class="dash-card" id="sla-painel"></div>
+    <div class="dash-card" style="grid-column:1/-1">
+      <div class="dash-card-title">Cadastros por Mês</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <label style="font-size:11px;color:var(--text-muted)">Meses:</label>
+        <select id="filtro-mes-qtd" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-family:var(--font)">
+          <option value="1">1 mês</option>
+          <option value="3">3 meses</option>
+          <option value="6">6 meses</option>
+          <option value="12" selected>12 meses</option>
+          <option value="24">24 meses</option>
+          <option value="36">3 anos</option>
+          <option value="60">5 anos</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:12px">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 16px;flex:1;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Média Cadastros/mês</div>
+          <div id="kpi-media-abertos" style="font-size:22px;font-weight:700;color:#3a6bc7;font-family:var(--mono)">—</div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 16px;flex:1;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Média Fechados/mês</div>
+          <div id="kpi-media-fechados" style="font-size:22px;font-weight:700;color:#1a7f4b;font-family:var(--mono)">—</div>
+        </div>
+      </div>
+      <div style="height:220px;position:relative"><canvas id="chart-mes"></canvas></div>
+    </div>
+    <div class="dash-card" style="grid-column:1/-1">
+      <div class="dash-card-title">Fechados por Mês</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <label style="font-size:11px;color:var(--text-muted)">Meses:</label>
+        <select id="filtro-mes-qtd-fech" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-family:var(--font)">
+          <option value="1">1 mês</option>
+          <option value="3">3 meses</option>
+          <option value="6">6 meses</option>
+          <option value="12" selected>12 meses</option>
+          <option value="24">24 meses</option>
+          <option value="36">3 anos</option>
+          <option value="60">5 anos</option>
+        </select>
+      </div>
+      <div style="height:220px;position:relative"><canvas id="chart-mes-fech"></canvas></div>
+    </div>
+  </div>
+</div>
+<div id="view-config" style="display:none">
+  <div style="padding:28px 32px;max-width:420px">
+    <div class="section-label" style="display:block;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border)">SLA de Resolução (dias)</div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <label class="form-label" style="font-size:13px;font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-family:var(--font)">🔴 Crítica</label>
+      <input type="number" class="form-control" id="sla-critica" min="1" value="1" style="width:80px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:600">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <label class="form-label" style="font-size:13px;font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-family:var(--font)">🟠 Alta</label>
+      <input type="number" class="form-control" id="sla-alta" min="1" value="3" style="width:80px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:600">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <label class="form-label" style="font-size:13px;font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-family:var(--font)">🔵 Média</label>
+      <input type="number" class="form-control" id="sla-media" min="1" value="5" style="width:80px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:600">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <label class="form-label" style="font-size:13px;font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-family:var(--font)">⚪ Baixa</label>
+      <input type="number" class="form-control" id="sla-baixa" min="1" value="7" style="width:80px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:600">
+    </div>
+    <button class="btn btn-primary" onclick="salvarSLA()" style="margin-top:20px">Salvar configurações</button>
+  </div>
+</div>
+<!-- ===== MODAL VER / EDITAR CHAMADO ===== -->
+<div class="modal-overlay" id="modal-ver">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title-row">
+          <div class="modal-title" id="mv-titulo">Chamado</div>
+          <span class="id-badge" id="mv-id">–</span>
+        </div>
+        <div class="modal-subtitle" id="mv-subtitle">–</div>
+      </div>
+      <button class="modal-close" id="mv-close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Info somente leitura -->
+      <div class="section-label">Dados do chamado</div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <div class="form-label">Data Abertura</div>
+          <div class="readonly-field" id="mv-data">–</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select class="form-control" id="mv-cat">
+            <option value="INF">Infraestrutura</option>
+            <option value="ELE">Elétrica</option>
+            <option value="HID">Hidráulica</option>
+            <option value="LMP">Limpeza</option>
+            <option value="AR">Ar Cond.</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Local</label>
+          <input type="text" class="form-control" id="mv-local" placeholder="Local / Setor">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input type="text" class="form-control" id="mv-titulo-edit" placeholder="Título do chamado">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-control" id="mv-desc" rows="3" style="white-space:pre-wrap;min-height:60px"></textarea>
+      </div>
+      <hr class="divider">
+      <!-- Campos editáveis -->
+      <div class="section-label">Atualizar</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-control" id="mv-status">
+            <option>Aberto</option>
+            <option>Em Andamento</option>
+            <option>Concluído</option>
+            <option>Cancelado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridade</label>
+          <select class="form-control" id="mv-prio">
+            <option>Baixa</option>
+            <option>Média</option>
+            <option>Alta</option>
+            <option>Crítica</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Responsável (executor)</label>
+          <input type="text" class="form-control" id="mv-responsavel" placeholder="Nome do executor">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de Serviço</label>
+          <select class="form-control" id="mv-tipo">
+            <option value="">—</option>
+            <option value="Corretiva">Corretiva</option>
+            <option value="Preventiva">Preventiva</option>
+            <option value="Inspeção">Inspeção</option>
+            <option value="Limpeza">Limpeza</option>
+            <option value="Instalação">Instalação</option>
+            <option value="Urgência">Urgência</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">ID Externo (ICT / OS)</label>
+          <input type="text" class="form-control" id="mv-idext" placeholder="Ex: ICT-123456">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data Desejada</label>
+          <input type="date" class="form-control" id="mv-data-desejada">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data de Conclusão</label>
+        <input type="datetime-local" class="form-control" id="mv-dataconclusao">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações / Atualização</label>
+        <textarea class="form-control" id="mv-obs" rows="3" placeholder="Descreva o andamento, ação tomada, pendências…"></textarea>
+      </div>
+      <hr class="divider">
+      <!-- Fotos -->
+      <div class="section-label">Fotos</div>
+      <div class="fotos-grid" id="mv-fotos-grid">
+        <button class="foto-add-btn" id="mv-add-foto">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Adicionar
+        </button>
+      </div>
+      <input type="file" id="mv-file-input" accept="image/*" multiple style="display:none">
+      <hr class="divider">
+      <!-- Timeline -->
+      <div class="section-label">Histórico</div>
+      <div class="timeline" id="mv-timeline"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="mv-excluir" style="margin-right:auto">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Excluir
+      </button>
+      <button class="btn btn-ghost" id="mv-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="mv-salvar">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+<!-- ===== MODAL NOVO CHAMADO ===== -->
+<div class="modal-overlay" id="modal-novo">
+  <div class="modal modal-novo">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Novo Chamado</div>
+        <div class="modal-subtitle">Preencha os dados para registrar</div>
+      </div>
+      <button class="modal-close" id="mn-close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Título *</label>
+        <input type="text" class="form-control" id="mn-titulo" placeholder="Resumo curto do problema">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Categoria *</label>
+          <select class="form-control" id="mn-cat">
+            <option value="">Selecionar…</option>
+            <option value="INF">Infraestrutura / Civil</option>
+            <option value="ELE">Elétrica</option>
+            <option value="HID">Hidráulica</option>
+            <option value="LMP">Limpeza / Higiene</option>
+            <option value="AR">Ar Condicionado / Conforto Térmico</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridade *</label>
+          <select class="form-control" id="mn-prio">
+            <option value="Baixa">Baixa</option>
+            <option value="Média" selected>Média</option>
+            <option value="Alta">Alta</option>
+            <option value="Crítica">Crítica</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Local *</label>
+          <input type="text" class="form-control" id="mn-local" placeholder="Ex: Linha 3, Vestiário Norte">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Setor / Bloco</label>
+          <input type="text" class="form-control" id="mn-setor" placeholder="Ex: Bloco A, Produção, RH">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Serviço</label>
+          <select class="form-control" id="mn-tipo">
+            <option value="">Selecionar…</option>
+            <option value="Corretiva">Corretiva</option>
+            <option value="Preventiva">Preventiva</option>
+            <option value="Inspeção">Inspeção</option>
+            <option value="Limpeza">Limpeza</option>
+            <option value="Instalação">Instalação</option>
+            <option value="Urgência">Urgência</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Solicitante</label>
+          <input type="text" class="form-control" id="mn-solicitante" placeholder="Nome ou matrícula">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Data Desejada</label>
+          <input type="date" class="form-control" id="mn-data-desejada">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Responsável Sugerido</label>
+          <input type="text" class="form-control" id="mn-resp-sugerido" placeholder="Opcional">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição *</label>
+        <textarea class="form-control" id="mn-desc" rows="4" placeholder="Descreva o problema com detalhes: o que acontece, desde quando, impacto…"></textarea>
+      </div>
+      <!-- Fotos no cadastro -->
+      <div class="form-group">
+        <div class="form-label">Fotos (opcional)</div>
+        <div class="fotos-grid" id="mn-fotos-grid">
+          <button type="button" class="foto-add-btn" id="mn-add-foto">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Adicionar
+          </button>
+        </div>
+        <input type="file" id="mn-file-input" accept="image/*" multiple style="display:none">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="mn-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="mn-salvar">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Registrar Chamado
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Foto Viewer -->
+<div class="foto-viewer" id="foto-viewer">
+  <button class="foto-viewer-close" id="foto-viewer-close">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <img id="foto-viewer-img" src="" alt="">
+</div>
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" id="toast-icon"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toast-msg"></span>
+</div>
+<script src="SLA.js"></script>
+<script>
+document.addEventListener('keydown',function(e){
+  if(e.ctrlKey&&e.shiftKey&&(e.key==='D'||e.key==='d')){
+    e.preventDefault();
+    var bar=document.getElementById('debug-bar');
+    bar.style.display=bar.style.display==='none'?'flex':'none';
+  }
+});
+</script>
+<script src="fotos.js"></script>
+<script src="renders.js"></script>
+<script src="tabs.js"></script>
+<script src="dashboard.js"></script>
+<script src="abrirchamado.js"></script>
+<script src="sidebar.js"></script>
+<script src="eventos.js"></script>
+<script src="utils.js"></script>
+</body>
+</html>

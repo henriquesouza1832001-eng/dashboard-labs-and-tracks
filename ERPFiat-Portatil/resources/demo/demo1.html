@@ -1,0 +1,237 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-sans);}
+.db{background:var(--color-background-tertiary);min-height:640px;}
+.topbar{background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;}
+.brand{display:flex;align-items:center;gap:9px;}
+.bi{width:24px;height:24px;background:var(--color-text-primary);border-radius:5px;display:flex;align-items:center;justify-content:center;}
+.bi i{color:var(--color-background-primary);font-size:12px;}
+.bn{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+.bt{font-size:10px;color:var(--color-text-tertiary);}
+.tr{display:flex;align-items:center;gap:10px;}
+.ttime{font-size:11px;color:var(--color-text-tertiary);font-family:var(--font-mono);}
+.apill{display:flex;align-items:center;gap:6px;border:0.5px solid var(--color-border-tertiary);border-radius:16px;padding:3px 9px 3px 3px;background:var(--color-background-secondary);}
+.av{width:20px;height:20px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:500;color:#0C447C;}
+.avname{font-size:11px;color:var(--color-text-secondary);}
+.layout{display:flex;}
+.sidebar{width:44px;background:var(--color-background-primary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:3px;}
+.sbi{width:30px;height:30px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;color:var(--color-text-tertiary);cursor:pointer;}
+.sbi:hover,.sbi.on{background:var(--color-background-secondary);color:var(--color-text-primary);}
+.sbi i{font-size:15px;}
+.ssep{width:18px;height:0.5px;background:var(--color-border-tertiary);margin:3px 0;}
+.main{flex:1;padding:20px 18px 28px;}
+.greet{margin-bottom:18px;}
+.greet h1{font-size:16px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;}
+.greet p{font-size:11.5px;color:var(--color-text-tertiary);}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.panel{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;cursor:pointer;transition:border-color .15s;}
+.panel:hover{border-color:var(--color-border-secondary);}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;}
+.ph-left{display:flex;align-items:center;gap:8px;}
+.ph-icon{width:28px;height:28px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;}
+.ph-icon i{font-size:14px;}
+.ic-am{background:#FAEEDA;color:#854F0B;}
+.ic-bl{background:#E6F1FB;color:#185FA5;}
+.ic-pu{background:#EEEDFE;color:#3C3489;}
+.ic-gr{background:#EAF3DE;color:#3B6D11;}
+.ph-title{font-size:12.5px;font-weight:500;color:var(--color-text-primary);}
+.ph-link{font-size:10px;color:var(--color-text-tertiary);display:flex;align-items:center;gap:2px;}
+.ph-link i{font-size:11px;}
+.panel:hover .ph-link{color:var(--color-text-info);}
+.pdiv{height:0.5px;background:var(--color-border-tertiary);margin:0 14px;}
+.pkgrid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.pk{padding:10px 14px;border-right:0.5px solid var(--color-border-tertiary);border-bottom:0.5px solid var(--color-border-tertiary);}
+.pk:nth-child(2n){border-right:none;}
+.pk:nth-last-child(-n+2){border-bottom:none;}
+.pk-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-tertiary);margin-bottom:4px;}
+.pk-val{font-size:18px;font-weight:500;font-family:var(--font-mono);color:var(--color-text-primary);}
+.pk-val.am{color:#BA7517;}
+.pk-val.gr{color:#3B6D11;}
+.pk-val.rd{color:#A32D2D;}
+.pk-val.bl{color:#185FA5;}
+.pk-sub{font-size:10px;color:var(--color-text-tertiary);margin-top:2px;}
+.pbar{margin-top:6px;height:2px;background:var(--color-background-tertiary);border-radius:2px;overflow:hidden;}
+.pbar-f{height:100%;border-radius:2px;}
+.pbar-f.am{background:#EF9F27;}
+.pbar-f.gr{background:#639922;}
+.pbar-f.rd{background:#E24B4A;}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:500;}
+.cok{background:#EAF3DE;color:#3B6D11;}
+.cwarn{background:#FAEEDA;color:#854F0B;}
+.cdis{background:var(--color-background-secondary);color:var(--color-text-tertiary);}
+.cdot{width:4px;height:4px;border-radius:50%;background:currentColor;}
+.panel-full{grid-column:1/-1;}
+.panel-dis{opacity:.45;pointer-events:none;}
+</style>
+<h2 class="sr-only">Dashboard ERP Fiat versão B — módulos em painéis agrupados</h2>
+<div class="db">
+  <div class="topbar">
+    <div class="brand">
+      <div class="bi"><i class="ti ti-layout-grid" aria-hidden="true"></i></div>
+      <div><div class="bn">Sistema Intranet</div><div class="bt">ERP Fiat v1.0</div></div>
+    </div>
+    <div class="tr">
+      <span class="ttime" id="tt2">14:03</span>
+      <div class="apill"><div class="av">JC</div><span class="avname">João Carlos</span></div>
+    </div>
+  </div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sbi on"><i class="ti ti-layout-dashboard" aria-hidden="true"></i></div>
+      <div class="sbi"><i class="ti ti-building-factory-2" aria-hidden="true"></i></div>
+      <div class="sbi"><i class="ti ti-lock" aria-hidden="true"></i></div>
+      <div class="sbi"><i class="ti ti-layout-kanban" aria-hidden="true"></i></div>
+      <div class="sbi"><i class="ti ti-chart-bar" aria-hidden="true"></i></div>
+      <div class="ssep"></div>
+      <div class="sbi"><i class="ti ti-settings" aria-hidden="true"></i></div>
+    </aside>
+    <main class="main">
+      <div class="greet">
+        <h1>Boa tarde!</h1>
+        <p>Visão geral do sistema — segunda-feira, 8 de junho</p>
+      </div>
+      <div class="pgrid">
+
+        <div class="panel">
+          <div class="ph">
+            <div class="ph-left">
+              <div class="ph-icon ic-am"><i class="ti ti-building-factory-2" aria-hidden="true"></i></div>
+              <span class="ph-title">Obras</span>
+            </div>
+            <span class="ph-link">Ver módulo <i class="ti ti-arrow-right"></i></span>
+          </div>
+          <div class="pdiv"></div>
+          <div class="pkgrid">
+            <div class="pk">
+              <div class="pk-label">Total</div>
+              <div class="pk-val bl">9</div>
+              <div class="pk-sub">cadastradas</div>
+            </div>
+            <div class="pk">
+              <div class="pk-label">Em andamento</div>
+              <div class="pk-val am">2</div>
+              <div class="pk-sub">em execução</div>
+            </div>
+            <div class="pk">
+              <div class="pk-label">Concluídas</div>
+              <div class="pk-val gr">1</div>
+              <div class="pk-sub">11% do total</div>
+            </div>
+            <div class="pk">
+              <div class="pk-label">Budget</div>
+              <div class="pk-val bl" style="font-size:15px;">R$243k</div>
+              <div class="pbar"><div class="pbar-f am" style="width:62%"></div></div>
+              <div class="pk-sub" style="margin-top:3px;">62% realizado</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="ph">
+            <div class="ph-left">
+              <div class="ph-icon ic-pu"><i class="ti ti-layout-kanban" aria-hidden="true"></i></div>
+              <span class="ph-title">Atividades</span>
+            </div>
+            <span class="ph-link">Ver módulo <i class="ti ti-arrow-right"></i></span>
+          </div>
+          <div class="pdiv"></div>
+          <div class="pkgrid">
+            <div class="pk">
+              <div class="pk-label">Total</div>
+              <div class="pk-val bl">36</div>
+              <div class="pk-sub">registradas</div>
+            </div>
+            <div class="pk">
+              <div class="pk-label">Em aberto</div>
+              <div class="pk-val rd">33</div>
+              <div class="pk-sub">pendentes</div>
+            </div>
+            <div class="pk">
+              <div class="pk-label">Concluídas</div>
+              <div class="pk-val gr">3</div>
+              <div class="pk-sub">8% do total</div>
+            </div>
+            <div class="pk">
+              <div class="pk-label">Vencidas</div>
+              <div class="pk-val rd">1</div>
+              <div class="pk-sub">prazo expirado</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="grid-column:1/2;">
+          <div class="ph">
+            <div class="ph-left">
+              <div class="ph-icon ic-bl"><i class="ti ti-lock" aria-hidden="true"></i></div>
+              <span class="ph-title">Controle de acesso</span>
+            </div>
+            <span class="ph-link">Ver módulo <i class="ti ti-arrow-right"></i></span>
+          </div>
+          <div class="pdiv"></div>
+          <div class="pkgrid">
+            <div class="pk">
+              <div class="pk-label">IDs cadastrados</div>
+              <div class="pk-val bl">2</div>
+              <div class="pk-sub">pessoas</div>
+            </div>
+            <div class="pk">
+              <div class="pk-label">Pontos CODIN</div>
+              <div class="pk-val bl">26</div>
+              <div class="pk-sub">leitores ativos</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="grid-column:2/3;">
+          <div class="ph">
+            <div class="ph-left">
+              <div class="ph-icon ic-gr"><i class="ti ti-chart-bar" aria-hidden="true"></i></div>
+              <span class="ph-title">KPI Dashboard</span>
+            </div>
+            <span class="ph-link">Abrir <i class="ti ti-arrow-right"></i></span>
+          </div>
+          <div class="pdiv"></div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:11px;color:var(--color-text-secondary);">Obras</span>
+              <div style="display:flex;align-items:center;gap:6px;flex:1;margin:0 10px;">
+                <div style="flex:1;height:4px;background:var(--color-background-tertiary);border-radius:2px;overflow:hidden;"><div style="width:11%;height:100%;background:#639922;border-radius:2px;"></div></div>
+              </div>
+              <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);">11%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:11px;color:var(--color-text-secondary);">Budget</span>
+              <div style="display:flex;align-items:center;gap:6px;flex:1;margin:0 10px;">
+                <div style="flex:1;height:4px;background:var(--color-background-tertiary);border-radius:2px;overflow:hidden;"><div style="width:62%;height:100%;background:#EF9F27;border-radius:2px;"></div></div>
+              </div>
+              <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);">62%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:11px;color:var(--color-text-secondary);">Atividades</span>
+              <div style="display:flex;align-items:center;gap:6px;flex:1;margin:0 10px;">
+                <div style="flex:1;height:4px;background:var(--color-background-tertiary);border-radius:2px;overflow:hidden;"><div style="width:8%;height:100%;background:#7F77DD;border-radius:2px;"></div></div>
+              </div>
+              <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);">8%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-dis" style="grid-column:1/-1;">
+          <div class="ph">
+            <div class="ph-left">
+              <div class="ph-icon ic-bl"><i class="ti ti-users" aria-hidden="true"></i></div>
+              <span class="ph-title">Visitantes</span>
+            </div>
+            <span class="chip cdis">Planejado</span>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+<script>
+const el=document.getElementById('tt2');
+if(el){const t=new Date();el.textContent=t.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+</script>

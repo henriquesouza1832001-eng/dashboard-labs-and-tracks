@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conforto</title>
+<link rel="stylesheet" href="conforto.css">
+</head>
+<body>
+<div id="debug-bar" style="position:fixed;bottom:0;left:0;right:0;background:#1a0000;border-top:1px solid #f85149;color:#f85149;font-family:monospace;font-size:11px;padding:6px 12px;z-index:9999;display:none;white-space:pre-wrap;max-height:120px;overflow-y:auto"></div>
+<div class="topbar">
+  <a href="../hub/hub.html" class="topbar-back">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Hub
+  </a>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-title">Conforto</span>
+  <div class="topbar-right">
+    <div class="save-status nosave" id="save-status"><div class="dot"></div><span id="save-txt">sem arquivo</span></div>
+    <span class="file-badge" id="sidebar-arquivo">—</span>
+  </div>
+</div>
+<div id="app">
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">navegação</div>
+        <button class="nav-item active" data-pane="dashboard">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="nav-item" data-pane="limpeza-civil">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Limpeza Civil
+        </button>
+        <button class="nav-item" data-pane="limpeza-tecnica">
+          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          Limpeza Técnica
+        </button>
+        <button class="nav-item" data-pane="ar-condicionado">
+          <svg viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+          Climatização
+        </button>
+        <button class="nav-item" data-pane="rotinas">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+          Rotinas
+        </button>
+        <button class="nav-item" data-pane="cronograma">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Cronograma
+        </button>
+        <button class="nav-item" data-pane="pecas">
+          <svg viewBox="0 0 24 24"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          Peças e Estoque
+        </button>
+        <button class="nav-item" data-pane="cadastros">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Cadastros
+        </button>
+        <button class="nav-item" data-pane="configuracoes">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
+        </button>
+      </div>
+      <div class="sidebar-bottom">
+        <button class="btn btn-secondary btn-sm" id="btn-abrir-arquivo" style="width:100%;opacity:.4;cursor:default" disabled title="Arquivos gerenciados pelo Hub">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Via Hub
+        </button>
+        <div class="sidebar-file" id="sidebar-file-info" style="margin-top:6px">—</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="pane active" id="pane-dashboard">
+        <div class="pane-header">
+          <div><div class="pane-title">Dashboard Conforto</div><div class="pane-sub">Visão consolidada — limpeza civil, técnica e ar-condicionado</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-export-json">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar JSON
+            </button>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpi-grid-dash"></div>
+        <div class="section-mini">resumo limpeza civil</div>
+        <div class="table-wrap" style="margin-bottom:20px">
+          <table>
+            <thead><tr><th>ÁREA</th><th>TIPO</th><th>FREQUÊNCIA</th><th>ÚLTIMA</th><th>PRÓXIMA</th><th>STATUS</th></tr></thead>
+            <tbody id="dash-civil-tbody"></tbody>
+          </table>
+        </div>
+        <div class="section-mini">resumo limpeza técnica</div>
+        <div class="table-wrap" style="margin-bottom:20px">
+          <table>
+            <thead><tr><th>ÁREA</th><th>TIPO</th><th>FREQUÊNCIA</th><th>ÚLTIMA</th><th>PRÓXIMA</th><th>STATUS</th></tr></thead>
+            <tbody id="dash-tec-tbody"></tbody>
+          </table>
+        </div>
+        <div class="section-mini">resumo ar-condicionado</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>UC</th><th>LOCAL</th><th>MODELO</th><th>PRÓX. PREVENTIVA</th><th>MANUTENÇÕES ABERTAS</th><th>STATUS</th></tr></thead>
+            <tbody id="dash-ac-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LIMPEZA CIVIL -->
+      <div class="pane" id="pane-limpeza-civil">
+        <div class="pane-header">
+          <div><div class="pane-title">Limpeza Civil</div><div class="pane-sub">Ordens de serviço de limpeza civil por área</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-nova-os-civil">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova OS
+            </button>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-civil-os">Ordens de Serviço</button>
+          <button class="tab-btn" data-tab="tab-civil-crono">Cronograma</button>
+        </div>
+        <div class="tab-pane active" id="tab-civil-os">
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="civil-search" placeholder="Buscar OS…"></div>
+              <select class="filter-sel" id="civil-filtro-status"><option value="">Todos os status</option><option>Programada</option><option>Em Execução</option><option>Concluída</option><option>Cancelada</option></select>
+              <select class="filter-sel" id="civil-filtro-area"><option value="">Todas as áreas</option></select>
+            </div>
+            <table>
+              <thead><tr><th>OS#</th><th>ÁREA</th><th>RESPONSÁVEL</th><th>PREVISTA</th><th>REALIZADA</th><th>STATUS</th><th>OBSERVAÇÃO</th><th>AÇÕES</th></tr></thead>
+              <tbody id="civil-os-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-civil-crono">
+          <div class="agenda-toolbar">
+            <button class="btn btn-secondary btn-sm" id="civil-agenda-prev">←</button>
+            <span class="agenda-data-lbl" id="civil-agenda-lbl">—</span>
+            <button class="btn btn-secondary btn-sm" id="civil-agenda-next">→</button>
+            <button class="btn btn-secondary btn-sm" id="civil-agenda-hoje">Hoje</button>
+          </div>
+          <div id="agenda-civil"></div>
+        </div>
+      </div>
+
+      <!-- LIMPEZA TÉCNICA -->
+      <div class="pane" id="pane-limpeza-tecnica">
+        <div class="pane-header">
+          <div><div class="pane-title">Limpeza Técnica</div><div class="pane-sub">Ordens de serviço de limpeza técnica especializada</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-nova-os-tec">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova OS
+            </button>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-tec-os">Ordens de Serviço</button>
+          <button class="tab-btn" data-tab="tab-tec-crono">Cronograma</button>
+        </div>
+        <div class="tab-pane active" id="tab-tec-os">
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="tec-search" placeholder="Buscar OS…"></div>
+              <select class="filter-sel" id="tec-filtro-status"><option value="">Todos os status</option><option>Programada</option><option>Em Execução</option><option>Concluída</option><option>Cancelada</option></select>
+              <select class="filter-sel" id="tec-filtro-area"><option value="">Todas as áreas</option></select>
+            </div>
+            <table>
+              <thead><tr><th>OS#</th><th>ÁREA</th><th>RESPONSÁVEL</th><th>PREVISTA</th><th>REALIZADA</th><th>STATUS</th><th>OBSERVAÇÃO</th><th>AÇÕES</th></tr></thead>
+              <tbody id="tec-os-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-tec-crono">
+          <div class="agenda-toolbar">
+            <button class="btn btn-secondary btn-sm" id="tec-agenda-prev">←</button>
+            <span class="agenda-data-lbl" id="tec-agenda-lbl">—</span>
+            <button class="btn btn-secondary btn-sm" id="tec-agenda-next">→</button>
+            <button class="btn btn-secondary btn-sm" id="tec-agenda-hoje">Hoje</button>
+          </div>
+          <div id="agenda-tec"></div>
+        </div>
+      </div>
+
+      <!-- AR-CONDICIONADO -->
+      <div class="pane" id="pane-ar-condicionado">
+        <div class="pane-header">
+          <div><div class="pane-title">Climatização</div><div class="pane-sub">Ar-condicionado, bebedouros e climatizadores — preventivas e manutenções</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-nova-uc">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova UC
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-nova-prev">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova Preventiva
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-nova-man">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova Manutenção
+            </button>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-uc-list">Unidades (UCs)</button>
+          <button class="tab-btn" data-tab="tab-uc-prev">Preventivas</button>
+          <button class="tab-btn" data-tab="tab-uc-man">Manutenções</button>
+        </div>
+        <div class="tab-pane active" id="tab-uc-list">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm uc-filtro-cat active" data-cat="">Todos</button>
+            <button class="btn btn-secondary btn-sm uc-filtro-cat" data-cat="Ar-Condicionado">Ar-Condicionado</button>
+            <button class="btn btn-secondary btn-sm uc-filtro-cat" data-cat="Bebedouro">Bebedouros</button>
+            <button class="btn btn-secondary btn-sm uc-filtro-cat" data-cat="Climatizador">Climatizadores</button>
+          </div>
+          <div class="uc-grid" id="uc-grid"></div>
+        </div>
+        <div class="tab-pane" id="tab-uc-prev">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>PREV#</th><th>UC</th><th>TÉCNICO</th><th>PREVISTA</th><th>REALIZADA</th><th>CHECKLIST</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+              <tbody id="prev-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-uc-man">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>MAN#</th><th>UC</th><th>FALHA</th><th>TÉCNICO</th><th>ABERTURA</th><th>FECHAMENTO</th><th>PEÇAS USADAS</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+              <tbody id="man-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROTINAS -->
+      <div class="pane" id="pane-rotinas">
+        <div class="pane-header">
+          <div><div class="pane-title">Rotinas</div><div class="pane-sub">Cadastro de rotinas recorrentes — civil, técnica e AR-condicionado</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary" id="btn-nova-rotina">+ Nova Rotina</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead><tr>
+            <th>Nome</th><th>Tipo</th><th>Área</th><th>Responsável</th>
+            <th>Frequência</th><th>Dias</th><th>Status</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="rotinas-tbody"><tr class="empty-row"><td colspan="8">Nenhuma rotina cadastrada</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- CRONOGRAMA -->
+      <div class="pane" id="pane-cronograma">
+        <div class="pane-header">
+          <div><div class="pane-title">Cronograma</div><div class="pane-sub">Visão mensal de limpeza civil, técnica e ar-condicionado</div></div>
+          <div class="pane-actions">
+            <div class="field" style="gap:4px"><label>Mês</label><input type="month" id="crono-mes"></div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-crono-civil">Civil</button>
+          <button class="tab-btn" data-tab="tab-crono-tec">Técnica</button>
+          <button class="tab-btn" data-tab="tab-crono-ac">AC</button>
+          <button class="tab-btn" data-tab="tab-crono-consolidado">Consolidado</button>
+        </div>
+        <div class="tab-pane active" id="tab-crono-civil"><div id="crono-civil-full"></div></div>
+        <div class="tab-pane" id="tab-crono-tec"><div id="crono-tec-full"></div></div>
+        <div class="tab-pane" id="tab-crono-ac"><div id="crono-ac-full"></div></div>
+        <div class="tab-pane" id="tab-crono-consolidado"><div id="crono-consolidado-full"></div></div>
+      </div>
+
+      <!-- PEÇAS E ESTOQUE -->
+      <div class="pane" id="pane-pecas">
+        <div class="pane-header">
+          <div><div class="pane-title">Peças e Estoque</div><div class="pane-sub">Catálogo de peças e requisições de materiais</div></div>
+          <div class="pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-nova-peca">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova Peça
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-nova-req">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova Requisição
+            </button>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-pecas-cat">Catálogo</button>
+          <button class="tab-btn" data-tab="tab-pecas-req">Requisições</button>
+        </div>
+        <div class="tab-pane active" id="tab-pecas-cat">
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="pecas-search" placeholder="Buscar peça…"></div>
+              <select class="filter-sel" id="pecas-filtro-cat"><option value="">Todas as categorias</option><option>Filtros</option><option>Compressores</option><option>Elétrico</option><option>Hidráulico</option><option>Mecânico</option><option>EPI</option><option>Material de Limpeza</option><option>Outros</option></select>
+            </div>
+            <table>
+              <thead><tr><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>CATEGORIA</th><th>FABRICANTE</th><th>REFERÊNCIA</th><th>UNID</th><th>ESTQ. ATUAL</th><th>ESTQ. MÍNIMO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+              <tbody id="pecas-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-pecas-req">
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="req-search" placeholder="Buscar requisição…"></div>
+              <select class="filter-sel" id="req-filtro-status"><option value="">Todos os status</option><option>Solicitado</option><option>Aprovado</option><option>Entregue</option><option>Cancelado</option></select>
+            </div>
+            <table>
+              <thead><tr><th>REQ#</th><th>PEÇA</th><th>QTD</th><th>DESTINO</th><th>SOLICITANTE</th><th>DATA</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+              <tbody id="req-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CADASTROS -->
+      <div class="pane" id="pane-cadastros">
+        <div class="pane-header">
+          <div><div class="pane-title">Cadastros</div><div class="pane-sub">Áreas, fornecedores e técnicos/responsáveis</div></div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-cad-areas">Áreas</button>
+          <button class="tab-btn" data-tab="tab-cad-forn">Fornecedores</button>
+          <button class="tab-btn" data-tab="tab-cad-tec">Técnicos/Responsáveis</button>
+        </div>
+        <div class="tab-pane active" id="tab-cad-areas">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <button class="btn btn-primary btn-sm" id="btn-nova-area">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova Área
+            </button>
+          </div>
+          <div class="areas-grid" id="areas-grid"></div>
+        </div>
+        <div class="tab-pane" id="tab-cad-forn">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <button class="btn btn-primary btn-sm" id="btn-novo-forn">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Fornecedor
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>NOME</th><th>TIPO</th><th>CONTATO</th><th>SERVIÇO</th><th>ATIVO</th><th>AÇÕES</th></tr></thead>
+              <tbody id="forn-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-cad-tec">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <button class="btn btn-primary btn-sm" id="btn-novo-tec">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Técnico
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>NOME</th><th>MATRÍCULA</th><th>ESPECIALIDADE</th><th>TURNO</th><th>AÇÕES</th></tr></thead>
+              <tbody id="tec-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONFIGURAÇÕES -->
+      <div class="pane" id="pane-configuracoes">
+        <div class="pane-header">
+          <div><div class="pane-title">Configurações</div><div class="pane-sub">Frequências padrão, parâmetros de AC e checklist de preventiva</div></div>
+        </div>
+
+        <div class="modulo-section">
+          <div class="modulo-section-title">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Frequências Padrão por Tipo de Área
+          </div>
+          <div id="cfg-frequencias-list"></div>
+        </div>
+
+        <div class="modulo-section">
+          <div class="modulo-section-title">
+            <svg viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+            Ar-Condicionado
+          </div>
+          <div class="config-item">
+            <div><div class="config-label">Ciclo de Troca de Filtro</div><div class="config-sub">Periodicidade padrão para novas UCs (dias)</div></div>
+            <input type="number" class="config-input-sm" id="cfg-ciclo-filtro" min="1">
+          </div>
+          <div class="config-item">
+            <div><div class="config-label">Alerta de Preventiva</div><div class="config-sub">Dias de antecedência para sinalizar preventiva próxima</div></div>
+            <input type="number" class="config-input-sm" id="cfg-alerta-prev" min="1">
+          </div>
+        </div>
+
+        <div class="modulo-section">
+          <div class="modulo-section-title">
+            <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Checklist Padrão de Preventiva AC
+          </div>
+          <div id="checklist-config"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-add-checklist" style="margin-top:8px">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar Item
+          </button>
+        </div>
+
+        <div class="modulo-section">
+          <div class="modulo-section-title">
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Alertas Gerais
+          </div>
+          <div class="config-item">
+            <div><div class="config-label">Alerta de Limpeza</div><div class="config-sub">Dias de antecedência para sinalizar OS de limpeza próxima</div></div>
+            <input type="number" class="config-input-sm" id="cfg-alerta-limp" min="1">
+          </div>
+          <div class="config-item">
+            <div><div class="config-label">Alerta de Manutenção</div><div class="config-sub">Dias para sinalizar manutenção aberta há muito tempo</div></div>
+            <input type="number" class="config-input-sm" id="cfg-alerta-man" min="1">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OS -->
+<div class="modal-overlay" id="modal-os">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-os-title">Nova Ordem de Serviço</span><button class="modal-close" id="modal-os-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Tipo *</label><select id="os-tipo"><option>Limpeza Civil</option><option>Limpeza Técnica</option></select></div><div class="field"><label>Área *</label><select id="os-area"><option value="">—</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Responsável</label><select id="os-resp"><option value="">—</option></select></div><div class="field"><label>Status *</label><select id="os-status"><option>Programada</option><option>Em Execução</option><option>Concluída</option><option>Cancelada</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Data Prevista</label><input type="date" id="os-prevista"></div><div class="field"><label>Data Realizada</label><input type="date" id="os-realizada"></div></div>
+      <div class="form-row"><div class="field"><label>Hora Início</label><input type="time" id="os-hora-inicio" value="08:00"></div><div class="field"><label>Hora Fim</label><input type="time" id="os-hora-fim" value="09:00"></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="os-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="os-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-os-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-os">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL UC -->
+<div class="modal-overlay" id="modal-uc">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-uc-title">Nova Unidade de Climatização</span><button class="modal-close" id="modal-uc-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Categoria *</label><select id="uc-categoria"><option>Ar-Condicionado</option><option>Bebedouro</option><option>Climatizador</option></select></div><div class="field"><label>Código *</label><input type="text" id="uc-codigo" placeholder="UC-004"></div></div>
+      <div class="form-row"><div class="field"><label>Tipo</label><select id="uc-tipo"><option>Split</option><option>Cassete</option><option>Chiller</option><option>Fan Coil</option><option>Central</option><option>Bebedouro Pressão</option><option>Bebedouro Refrigerado</option><option>Climatizador Evaporativo</option><option>Climatizador Industrial</option></select></div><div class="field"><label>Capacidade (BTU / L/h)</label><input type="number" id="uc-btu" min="0"></div></div>
+      <div class="form-row full"><div class="field"><label>Nome / Local *</label><input type="text" id="uc-nome"></div></div>
+      <div class="form-row"><div class="field"><label>Modelo / Marca</label><input type="text" id="uc-modelo"></div><div class="field"><label>Capacidade (BTU)</label><input type="number" id="uc-btu" min="0"></div></div>
+      <div class="form-row"><div class="field"><label>Data de Instalação</label><input type="date" id="uc-data-inst"></div><div class="field"><label>Ciclo do Filtro (dias)</label><input type="number" id="uc-ciclo-filtro" min="1"></div></div>
+      <div class="form-row"><div class="field"><label>Localização Detalhada</label><input type="text" id="uc-local-detalhe"></div><div class="field"><label>Responsável Técnico</label><select id="uc-resp"><option value="">—</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="uc-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="uc-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-uc-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-uc">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL PREVENTIVA -->
+<div class="modal-overlay" id="modal-preventiva">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-preventiva-title">Nova Preventiva</span><button class="modal-close" id="modal-preventiva-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>UC *</label><select id="prev-uc"><option value="">—</option></select></div><div class="field"><label>Técnico</label><select id="prev-tec"><option value="">—</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Data Prevista</label><input type="date" id="prev-prevista"></div><div class="field"><label>Data Realizada</label><input type="date" id="prev-realizada"></div></div>
+      <div class="form-row full"><div class="field"><label>Status</label><select id="prev-status"><option>Programada</option><option>Realizada</option><option>Atrasada</option></select></div></div>
+      <div class="field">
+        <label>Checklist</label>
+        <div id="prev-checklist" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px"></div>
+      </div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="prev-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="prev-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-preventiva-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-prev">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL MANUTENÇÃO -->
+<div class="modal-overlay" id="modal-manutencao">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-manutencao-title">Nova Manutenção Corretiva</span><button class="modal-close" id="modal-manutencao-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>UC *</label><select id="man-uc"><option value="">—</option></select></div><div class="field"><label>Técnico</label><select id="man-tec"><option value="">—</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Falha Relatada *</label><input type="text" id="man-falha"></div></div>
+      <div class="form-row"><div class="field"><label>Data de Abertura</label><input type="date" id="man-abertura"></div><div class="field"><label>Data de Fechamento</label><input type="date" id="man-fechamento"></div></div>
+      <div class="form-row"><div class="field"><label>Status</label><select id="man-status"><option>Aberta</option><option>Em Andamento</option><option>Concluída</option><option>Aguardando Peça</option></select></div><div class="field"><label>Custo Estimado (R$)</label><input type="number" id="man-custo" min="0" step="0.01"></div></div>
+      <div class="form-row full"><div class="field"><label>Peças Utilizadas</label><textarea id="man-pecas" rows="2" placeholder="Lista livre de peças utilizadas"></textarea></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="man-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="man-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-manutencao-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-man">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL PEÇA -->
+<div class="modal-overlay" id="modal-peca">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-peca-title">Nova Peça</span><button class="modal-close" id="modal-peca-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Código *</label><input type="text" id="peca-codigo" placeholder="PC-003" style="text-transform:uppercase"></div><div class="field"><label>Categoria</label><select id="peca-cat"><option>Filtros</option><option>Compressores</option><option>Elétrico</option><option>Hidráulico</option><option>Mecânico</option><option>EPI</option><option>Material de Limpeza</option><option>Outros</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Descrição *</label><input type="text" id="peca-desc"></div></div>
+      <div class="form-row"><div class="field"><label>Fabricante</label><input type="text" id="peca-fab"></div><div class="field"><label>Referência do Fabricante</label><input type="text" id="peca-ref"></div></div>
+      <div class="form-row cols3"><div class="field"><label>Unidade</label><input type="text" id="peca-unid" placeholder="Pç, m, kg, L, Caixa"></div><div class="field"><label>Estoque Atual</label><input type="number" id="peca-estq-atual" min="0"></div><div class="field"><label>Estoque Mínimo</label><input type="number" id="peca-estq-min" min="0"></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="peca-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="peca-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-peca-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-peca">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL REQUISIÇÃO -->
+<div class="modal-overlay" id="modal-requisicao">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-requisicao-title">Nova Requisição de Peça</span><button class="modal-close" id="modal-requisicao-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Peça *</label><select id="req-peca"><option value="">—</option></select></div><div class="field"><label>Quantidade *</label><input type="number" id="req-qtd" min="1"></div></div>
+      <div class="form-row"><div class="field"><label>Destino (UC/Área)</label><input type="text" id="req-destino"></div><div class="field"><label>Solicitante</label><select id="req-sol"><option value="">—</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Data de Necessidade</label><input type="date" id="req-data"></div><div class="field"><label>Status</label><select id="req-status"><option>Solicitado</option><option>Aprovado</option><option>Entregue</option><option>Cancelado</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="req-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="req-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-requisicao-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-req">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL ÁREA -->
+<div class="modal-overlay" id="modal-area">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-area-title">Nova Área</span><button class="modal-close" id="modal-area-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Nome da Área *</label><input type="text" id="area-nome"></div><div class="field"><label>Tipo</label><select id="area-tipo"><option>Escritório</option><option>Banheiro</option><option>Refeitório</option><option>Área Técnica</option><option>Corredor</option><option>Almoxarifado</option><option>Laboratório</option><option>Externo</option><option>Outros</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Localização / Bloco</label><input type="text" id="area-local"></div><div class="field"><label>Metragem (m²)</label><input type="number" id="area-metragem" min="0"></div></div>
+      <div class="form-row"><div class="field"><label>Frequência Civil</label><select id="area-freq-civil"><option>Diário</option><option>Semanal</option><option>Quinzenal</option><option>Mensal</option><option>Sob Demanda</option></select></div><div class="field"><label>Frequência Técnica</label><select id="area-freq-tec"><option>Diário</option><option>Semanal</option><option>Quinzenal</option><option>Mensal</option><option>Sob Demanda</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Responsável</label><select id="area-resp"><option value="">—</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="area-obs" rows="2"></textarea></div></div>
+      <div class="field-err" id="area-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-area-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-area">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL FORNECEDOR -->
+<div class="modal-overlay" id="modal-fornecedor">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-fornecedor-title">Novo Fornecedor</span><button class="modal-close" id="modal-fornecedor-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="field"><label>Nome *</label><input type="text" id="forn-nome"></div></div>
+      <div class="form-row"><div class="field"><label>CNPJ</label><input type="text" id="forn-cnpj"></div><div class="field"><label>Tipo de Serviço</label><select id="forn-tipo"><option>Limpeza Civil</option><option>Limpeza Técnica</option><option>Ambos</option><option>Peças AC</option><option>Manutenção AC</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Contato</label><input type="text" id="forn-contato"></div><div class="field"><label>Telefone</label><input type="text" id="forn-tel"></div></div>
+      <div class="form-row"><div class="field"><label>E-mail</label><input type="text" id="forn-email"></div><div class="field"><label>Ativo</label><select id="forn-ativo"><option>Sim</option><option>Não</option></select></div></div>
+      <div class="field-err" id="forn-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-fornecedor-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-forn">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL TÉCNICO -->
+<div class="modal-overlay" id="modal-tecnico">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-title" id="modal-tecnico-title">Novo Técnico</span><button class="modal-close" id="modal-tecnico-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="field"><label>Nome *</label><input type="text" id="tec-nome"></div></div>
+      <div class="form-row"><div class="field"><label>Matrícula</label><input type="text" id="tec-matricula"></div><div class="field"><label>Turno</label><select id="tec-turno"><option>Manhã</option><option>Tarde</option><option>Noite</option><option>Flex</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Especialidade</label><select id="tec-especialidade"><option>Limpeza</option><option>AC Preventiva</option><option>AC Corretiva</option><option>Ambos</option></select></div></div>
+      <div class="field-err" id="tec-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-tecnico-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-tec">Salvar</button></div>
+  </div>
+</div>
+<!-- MODAL ROTINA -->
+<div class="modal-overlay" id="modal-rotina">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-rotina-title">Nova Rotina</span>
+      <button class="modal-close" id="modal-rotina-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="field"><label>Nome *</label><input type="text" id="rot-nome" placeholder="Ex: Limpeza Banheiros Diária"></div></div>
+      <div class="form-row">
+        <div class="field"><label>Tipo *</label>
+          <select id="rot-tipo">
+            <option value="civil">Limpeza Civil</option>
+            <option value="tecnica">Limpeza Técnica</option>
+            <option value="ac">AR-Condicionado</option>
+          </select>
+        </div>
+        <div class="field"><label>Área</label><select id="rot-area"><option value="">— Selecione —</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Responsável</label><select id="rot-resp"><option value="">— Selecione —</option></select></div>
+        <div class="field"><label>Frequência *</label>
+          <select id="rot-freq" onchange="toggleDiasSemana()">
+            <option value="Diario">Diário</option>
+            <option value="Semanal">Semanal</option>
+            <option value="Quinzenal">Quinzenal</option>
+            <option value="Mensal">Mensal</option>
+          </select>
+        </div>
+      </div>
+      <div id="rot-dias-wrap" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Dias da semana</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <label><input type="checkbox" class="rot-dia-check" value="0"> Dom</label>
+          <label><input type="checkbox" class="rot-dia-check" value="1"> Seg</label>
+          <label><input type="checkbox" class="rot-dia-check" value="2"> Ter</label>
+          <label><input type="checkbox" class="rot-dia-check" value="3"> Qua</label>
+          <label><input type="checkbox" class="rot-dia-check" value="4"> Qui</label>
+          <label><input type="checkbox" class="rot-dia-check" value="5"> Sex</label>
+          <label><input type="checkbox" class="rot-dia-check" value="6"> Sáb</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Hora Início</label><input type="time" id="rot-hora-ini" value="08:00"></div>
+        <div class="field"><label>Hora Fim</label><input type="time" id="rot-hora-fim" value="09:00"></div>
+        <div class="field"><label>Status</label>
+          <select id="rot-ativa"><option value="true">Ativa</option><option value="false">Inativa</option></select>
+        </div>
+      </div>
+      <div class="field-err" id="rot-err"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-rotina-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-rotina">Salvar</button>
+    </div>
+  </div>
+</div>
+<script src="../js/neutralino.js"></script>
+<script src="conforto.js"></script>
+</body>
+</html>

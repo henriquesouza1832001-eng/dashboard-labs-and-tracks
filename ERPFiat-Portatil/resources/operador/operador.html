@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operador — Facilities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="../operador/operador.css" rel="stylesheet"></style>
+</head>
+<body>
+<!-- ── NOTIF BANNER ── -->
+<div class="notif-banner" id="notif-banner" onclick="focarNovos()">
+  <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  <span id="notif-txt">Novo chamado registrado!</span>
+  <span class="notif-ids" id="notif-ids"></span>
+  <button class="notif-close" onclick="event.stopPropagation(); fecharBanner()">✕</button>
+</div>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="chamados.html" class="back-btn">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Admin
+    </a>
+    <div class="page-title">Operador <span>— Service Desk</span></div>
+  </div>
+  <div class="topbar-right">
+    <div class="poll-indicator" title="Verificando novos chamados a cada 30s">
+      <div class="poll-dot"></div>
+      <span id="poll-label">monitorando</span>
+    </div>
+    <div class="save-status saved" id="save-status">
+      <span class="save-dot"></span>
+      <span id="save-label">cache local</span>
+    </div>
+  </div>
+</div>
+
+<!-- PERMISSÃO NOTIFICAÇÃO -->
+<div class="notif-perm-box" id="notif-perm-box" style="display:none">
+  <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  <span>Ative as notificações para ser alertado quando um novo chamado for aberto.</span>
+  <button onclick="pedirPermissao()">Ativar alertas</button>
+</div>
+
+<!-- ── LAYOUT ── -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="sb-filtro-ativo" id="sb-filtro-ativo" style="display:none">
+      <span id="sb-filtro-txt">—</span>
+      <button onclick="limparFiltros()">✕</button>
+    </div>
+
+    <div class="sb-group-title">Status</div>
+    <div class="sb-chips">
+      <button class="sb-chip active" data-filter="status" data-val="">
+        <span class="sb-chip-label">Todos</span>
+        <span class="sb-chip-count" id="cnt-todos">0</span>
+      </button>
+      <button class="sb-chip sb-chip-aberto" data-filter="status" data-val="Aberto">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Aberto</span>
+        <span class="sb-chip-count" id="cnt-aberto">0</span>
+      </button>
+      <button class="sb-chip sb-chip-andamento" data-filter="status" data-val="Em Andamento">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Em Andamento</span>
+        <span class="sb-chip-count" id="cnt-andamento">0</span>
+      </button>
+      <button class="sb-chip sb-chip-concluido" data-filter="status" data-val="Concluído">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Concluído</span>
+        <span class="sb-chip-count" id="cnt-concluido">0</span>
+      </button>
+      <button class="sb-chip sb-chip-cancelado" data-filter="status" data-val="Cancelado">
+        <span class="sb-chip-dot"></span>
+        <span class="sb-chip-label">Cancelado</span>
+        <span class="sb-chip-count" id="cnt-cancelado">0</span>
+      </button>
+    </div>
+
+    <div class="sb-group-title">Categoria</div>
+    <div class="sb-chips">
+      <button class="sb-chip" data-filter="cat" data-val="">
+        <span class="sb-chip-label">Todas</span>
+        <span class="sb-chip-count" id="cnt-call">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="INF">
+        <span class="cat-dot c-INF"></span>
+        <span class="sb-chip-label">Infraestrutura</span>
+        <span class="sb-chip-count" id="cnt-INF">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="ELE">
+        <span class="cat-dot c-ELE"></span>
+        <span class="sb-chip-label">Elétrica</span>
+        <span class="sb-chip-count" id="cnt-ELE">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="HID">
+        <span class="cat-dot c-HID"></span>
+        <span class="sb-chip-label">Hidráulica</span>
+        <span class="sb-chip-count" id="cnt-HID">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="LMP">
+        <span class="cat-dot c-LMP"></span>
+        <span class="sb-chip-label">Limpeza</span>
+        <span class="sb-chip-count" id="cnt-LMP">0</span>
+      </button>
+      <button class="sb-chip" data-filter="cat" data-val="AR">
+        <span class="cat-dot c-AR"></span>
+        <span class="sb-chip-label">Ar Cond.</span>
+        <span class="sb-chip-count" id="cnt-AR">0</span>
+      </button>
+    </div>
+
+    <!-- RESUMO -->
+    <div class="sb-group-title" style="margin-top:auto">Atenção</div>
+    <div class="sb-resumo">
+      <div class="sb-resumo-row">
+        <span>Abertos hoje</span>
+        <strong id="stat-hoje">0</strong>
+      </div>
+      <div class="sb-resumo-row">
+        <span>Em andamento</span>
+        <strong id="stat-andamento">0</strong>
+      </div>
+      <div class="sb-resumo-row sb-resumo-alerta" id="row-sem-resp">
+        <span>Sem responsável</span>
+        <strong id="stat-sem-resp">0</strong>
+      </div>
+      <div class="sb-resumo-row sb-resumo-alerta" id="row-criticos">
+        <span>Críticos abertos</span>
+        <strong id="stat-criticos">0</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="main-toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="search-input" placeholder="Buscar por ID, título, local, responsável…">
+      </div>
+      <select class="toolbar-sel" id="filtro-data">
+        <option value="">Qualquer data</option>
+        <option value="hoje">Hoje</option>
+        <option value="semana">Esta semana</option>
+        <option value="mes">Este mês</option>
+        <option value="atrasado">Fora do SLA</option>
+      </select>
+      <select class="toolbar-sel" id="ordenar-por">
+        <option value="data-desc">Mais recentes</option>
+        <option value="prio">Prioridade</option>
+        <option value="sla">SLA</option>
+        <option value="data-asc">Mais antigos</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table class="chamados-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título / Tipo</th>
+            <th>Categoria</th>
+            <th>Local</th>
+            <th>Status</th>
+            <th>Prioridade</th>
+            <th>SLA</th>
+            <th>Responsável</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody id="chamados-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL VER / EDITAR (OPERADOR) ── -->
+<div class="modal-overlay" id="modal-ver">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="mv-titulo">—</div>
+        <div class="modal-subtitle" id="mv-subtitle"></div>
+      </div>
+      <button class="modal-close" id="mv-close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Info somente-leitura -->
+      <div class="op-modal-section">
+        <div class="op-info-grid">
+          <div class="op-info-item">
+            <div class="op-info-label">ID</div>
+            <div class="op-info-val" id="mv-id" style="font-family:var(--mono)">—</div>
+          </div>
+          <div class="op-info-item">
+            <div class="op-info-label">Data de abertura</div>
+            <div class="op-info-val" id="mv-data">—</div>
+          </div>
+          <div class="op-info-item">
+            <div class="op-info-label">Categoria</div>
+            <div class="op-info-val" id="mv-cat-info">—</div>
+          </div>
+          <div class="op-info-item">
+            <div class="op-info-label">Local</div>
+            <div class="op-info-val" id="mv-local-info">—</div>
+          </div>
+          <div class="op-info-item">
+            <div class="op-info-label">Solicitante</div>
+            <div class="op-info-val" id="mv-solicitante-info">—</div>
+          </div>
+          <div class="op-info-item">
+            <div class="op-info-label">Prioridade</div>
+            <div class="op-info-val" id="mv-prio-info">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Descrição -->
+      <div class="op-modal-section">
+        <div class="section-label">Descrição</div>
+        <div class="op-desc-box" id="mv-desc-box">—</div>
+      </div>
+
+      <!-- Fotos -->
+      <div class="op-modal-section" id="mv-fotos-section" style="display:none">
+        <div class="section-label">Fotos</div>
+        <div class="fotos-readonly" id="mv-fotos-readonly"></div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- CAMPOS EDITÁVEIS -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-control" id="mv-status">
+            <option value="Aberto">Aberto</option>
+            <option value="Em Andamento">Em Andamento</option>
+            <option value="Concluído">Concluído</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Responsável</label>
+          <input type="text" class="form-control" id="mv-responsavel" placeholder="Nome do técnico responsável">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">ID no Service Desk</label>
+          <input type="text" class="form-control" id="mv-idext" placeholder="Ex: GLPI #4521 / INC-0042">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data de Conclusão</label>
+          <input type="datetime-local" class="form-control" id="mv-dataconclusao">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Observação / Atualização</label>
+        <textarea class="form-control" id="mv-obs" rows="3" placeholder="Andamento, ação tomada, pendências…"></textarea>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Timeline -->
+      <div class="section-label">Histórico</div>
+      <div class="timeline" id="mv-timeline"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="mv-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="mv-salvar">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Foto Viewer -->
+<div class="foto-viewer" id="foto-viewer">
+  <button class="foto-viewer-close" id="foto-viewer-close">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <img id="foto-viewer-img" src="" alt="">
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" id="toast-icon"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toast-msg"></span>
+</div>
+<script src="../chamados/SLA.js"></script>
+<script src="operador.js"></script>
+</body>
+</html>

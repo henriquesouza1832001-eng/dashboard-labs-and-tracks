@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Acesso — ERP Fiat</title>
+  <link rel="stylesheet" href="codin.css">
+  <style>
+    .pt-senha-block{display:none;flex-direction:column;gap:8px;padding:12px 14px;background:var(--purple-bg);border:1px solid #a855f730;border-radius:var(--radius);margin-top:4px}
+    .pt-senha-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    #ac-senhas-restritas{display:none;flex-direction:column;gap:10px;padding:12px 14px;background:var(--purple-bg);border:1px solid #a855f730;border-radius:var(--radius);margin-top:8px}
+    .senha-ponto-item{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--purple)}
+    .senha-ponto-item input{background:var(--bg3);border-color:#a855f740}
+    .busca-rapida{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px}
+    .busca-rapida-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+    .busca-rapida-row{display:flex;gap:10px;flex-wrap:wrap}
+    .busca-rapida input,.busca-rapida select{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-family:var(--font);font-size:13px;flex:1;min-width:180px}
+    .busca-rapida input:focus,.busca-rapida select:focus{outline:none;border-color:var(--blue)}
+    .resultado-busca{margin-top:12px;font-size:12px}
+    .resultado-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-top:8px}
+    .abas{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+    .aba-btn{background:none;border:none;border-bottom:2px solid transparent;padding:10px 18px;color:var(--text2);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;transition:all 0.15s;margin-bottom:-1px}
+    .aba-btn:hover{color:var(--text)}
+    .aba-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .aba-content{display:none}.aba-content.active{display:block}
+    /* SELEÇÃO POR LEITOR */
+    .leitor-selector{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .leitor-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:12px;font-family:var(--mono);cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:all 0.12s;user-select:none}
+    .leitor-chip:hover{border-color:var(--blue);color:var(--blue)}
+    .leitor-chip.selected{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+    .pontos-do-leitor{margin-top:12px}
+    .pontos-do-leitor-title{font-size:11px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px}
+    .ponto-item-leitor{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;font-size:12px}
+    .ponto-item-leitor label{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1}
+    .ponto-item-leitor .ponto-nome{font-weight:500}
+    .ponto-item-leitor .ponto-codin{font-family:var(--mono);font-size:11px;color:var(--text2)}
+    .modo-selector{display:flex;gap:6px;margin-bottom:16px}
+    .modo-btn{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-family:var(--font);cursor:pointer;transition:all 0.12s}
+    .modo-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+    .modo-panel{display:none}.modo-panel.active{display:block}
+    .senha-inline-block{margin-top:8px;padding:10px 12px;background:var(--purple-bg);border:1px solid #a855f730;border-radius:var(--radius)}
+  </style>
+</head>
+<body>
+  <div id="debug-bar" style="position:fixed;bottom:0;left:0;right:0;background:#1a0000;border-top:1px solid #f85149;color:#f85149;font-family:monospace;font-size:11px;padding:6px 12px;z-index:9999;display:none;white-space:pre-wrap;max-height:120px;overflow-y:auto"></div>
+<!-- TOPBAR -->
+<div style="background:#161b22;border-bottom:1px solid #30363d;padding:0 24px;height:48px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:999">
+  <a href="../hub/hub.html" style="display:flex;align-items:center;gap:6px;color:#8b949e;font-size:13px;text-decoration:none">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Hub
+  </a>
+  <span style="color:#30363d">/</span>
+  <span style="font-size:13px;color:#e6edf3;font-weight:600">Controle de Acesso</span>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+    <div id="save-indicator" class="save-indicator">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span id="save-text">Salvo</span>
+    </div>
+    <span id="sidebar-arquivo" style="font-size:11px;color:#8b949e;font-family:monospace">sem arquivo</span>
+  </div>
+</div>
+<!-- TELA INÍCIO (oculta por padrão — app.js carrega automaticamente) -->
+<div id="tela-inicio" style="display:none;align-items:center;justify-content:center;min-height:calc(100vh - 48px)">
+  <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px 48px;text-align:center;max-width:440px;width:100%;display:flex;flex-direction:column;gap:16px">
+    <div style="width:56px;height:56px;background:var(--blue);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto;font-family:monospace;font-size:20px;font-weight:600;color:#fff">CA</div>
+    <div style="font-size:20px;font-weight:600">Controle de Acesso</div>
+    <div style="font-size:13px;color:#8b949e" id="inicio-status">Selecione o arquivo dados-codin.json para começar.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary btn-lg" id="btn-abrir-dados">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Selecionar dados-codin.json
+      </button>
+      <button class="btn btn-outline btn-sm" id="btn-comecar-vazio">Usar sem arquivo (temporário)</button>
+    </div>
+  </div>
+</div>
+<!-- APP -->
+<div id="app-shell" style="display:none;flex-direction:column">
+  <div style="display:flex;height:calc(100vh - 48px)">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <nav class="nav" style="padding-top:8px">
+        <button class="nav-item active" data-page="dashboard">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Painel
+        </button>
+        <button class="nav-item" data-page="pessoas">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          IDs / Pessoas
+        </button>
+        <button class="nav-item" data-page="pontos">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Pontos CODIN
+        </button>
+        <button class="nav-item" data-page="acessos">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          Permissões
+        </button>
+        <button class="nav-item" data-page="busca">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Busca Rápida
+        </button>
+        <button class="nav-item" data-page="matriz">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+          Matriz
+        </button>
+        <button class="nav-item" data-page="config">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-trocar" id="btn-trocar-arquivo">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Trocar arquivo
+        </button>
+      </div>
+    </aside>
+    <main class="main-content">
+      <!-- PAINEL -->
+      <section class="page active" id="page-dashboard">
+        <div class="page-header"><div><h1>Painel Resumo</h1><p class="page-desc">Indicadores do controle de acesso</p></div></div>
+        <div class="metrics-grid">
+          <div class="metric-card"><div class="metric-label">IDs Cadastrados</div><div class="metric-value" id="m-total">0</div></div>
+          <div class="metric-card"><div class="metric-label">Ativos</div><div class="metric-value text-green" id="m-ativos">0</div></div>
+          <div class="metric-card"><div class="metric-label">Bloqueados</div><div class="metric-value text-red" id="m-bloqueados">0</div></div>
+          <div class="metric-card"><div class="metric-label">Temporários</div><div class="metric-value text-orange" id="m-temp">0</div></div>
+          <div class="metric-card"><div class="metric-label">Pontos CODIN</div><div class="metric-value" id="m-pontos">0</div></div>
+          <div class="metric-card"><div class="metric-label">Restritos</div><div class="metric-value text-purple" id="m-restritos">0</div></div>
+        </div>
+      </section>
+      <!-- IDs / PESSOAS -->
+      <section class="page" id="page-pessoas">
+        <div class="page-header">
+          <div><h1>IDs / Pessoas</h1><p class="page-desc">Cadastro de titulares de crachá e rede</p></div>
+          <button class="btn btn-primary" id="btn-nova-pessoa">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo cadastro
+          </button>
+        </div>
+        <div class="toolbar">
+          <input class="search-input" id="busca-pessoas" placeholder="Buscar por nome, ID, cargo ou setor…">
+          <select class="filter-select" id="filtro-status-pessoa">
+            <option value="">Todos os status</option>
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+            <option value="Bloqueado">Bloqueado</option>
+            <option value="Temporário">Temporário</option>
+          </select>
+        </div>
+        <div class="card p-0">
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>ID</th><th>Nome</th><th>Cargo</th><th>Setor</th><th>Status</th><th>Lib.</th><th>Obs</th><th></th></tr></thead>
+              <tbody id="tbody-pessoas"><tr><td colspan="8" class="empty-state">Nenhum ID cadastrado.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <!-- PONTOS CODIN -->
+      <section class="page" id="page-pontos">
+        <div class="page-header">
+          <div><h1>Pontos CODIN</h1><p class="page-desc">Portas e entradas — Público ou Restrito</p></div>
+          <button class="btn btn-primary" id="btn-novo-ponto">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo ponto
+          </button>
+        </div>
+        <div class="toolbar">
+          <input class="search-input" id="busca-pontos" placeholder="Buscar por nome ou CODIN…" oninput="filtrarPontos()">
+        </div>
+        <div class="card p-0">
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>#</th><th>Nome do Ponto</th><th>ID CODIN</th><th>Tipo</th><th>Leitores</th><th></th></tr></thead>
+              <tbody id="tbody-pontos"><tr><td colspan="6" class="empty-state">Nenhum ponto cadastrado.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <!-- PERMISSÕES -->
+      <section class="page" id="page-acessos">
+        <div class="page-header">
+          <div><h1>Permissões</h1><p class="page-desc">Quais pontos cada pessoa pode acessar</p></div>
+          <button class="btn btn-primary" id="btn-novo-acesso">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Atribuir permissão
+          </button>
+        </div>
+        <div class="toolbar">
+          <input class="search-input" id="busca-acessos" placeholder="Buscar por nome ou ID…" oninput="filtrarAcessos()">
+        </div>
+        <div class="card p-0">
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>ID</th><th>Nome</th><th>Pontos Públicos</th><th>Pontos Restritos</th><th>Vigência</th><th></th></tr></thead>
+              <tbody id="tbody-acessos"><tr><td colspan="6" class="empty-state">Nenhuma permissão atribuída.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <!-- BUSCA RÁPIDA -->
+      <section class="page" id="page-busca">
+        <div class="page-header"><div><h1>Busca Rápida</h1><p class="page-desc">Encontre permissões por pessoa ou por ponto CODIN</p></div></div>
+        <div class="abas">
+          <button class="aba-btn active" data-aba="por-pessoa">Por Pessoa / ID</button>
+          <button class="aba-btn" data-aba="por-codin">Por CODIN</button>
+          <button class="aba-btn" data-aba="por-permissao">Por Permissão</button>
+        </div>
+        <div class="aba-content active" id="aba-por-pessoa">
+          <div class="busca-rapida">
+            <div class="busca-rapida-title">Buscar pessoa</div>
+            <div class="busca-rapida-row">
+              <input type="text" id="bq-pessoa" placeholder="Nome ou ID da pessoa…" oninput="buscaPorPessoa()">
+              <select id="bq-pessoa-sel" onchange="buscaPorPessoa()"><option value="">— ou selecione —</option></select>
+            </div>
+            <div id="resultado-pessoa" class="resultado-busca"></div>
+          </div>
+        </div>
+        <div class="aba-content" id="aba-por-codin">
+          <div class="busca-rapida">
+            <div class="busca-rapida-title">Buscar por ponto CODIN</div>
+            <div class="busca-rapida-row">
+              <input type="text" id="bq-codin" placeholder="ID do CODIN (ex: 270)…" oninput="buscaPorCodin()">
+              <select id="bq-codin-sel" onchange="buscaPorCodinSel()"><option value="">— ou selecione ponto —</option></select>
+            </div>
+            <div id="resultado-codin" class="resultado-busca"></div>
+          </div>
+        </div>
+        <div class="aba-content" id="aba-por-permissao">
+          <div class="busca-rapida">
+            <div class="busca-rapida-title">Filtrar por tipo de acesso</div>
+            <div class="busca-rapida-row">
+              <select id="bq-tipo-acesso" onchange="buscaPorPermissao()">
+                <option value="">Todos</option>
+                <option value="publico">Apenas acesso público</option>
+                <option value="restrito">Acesso a ponto restrito</option>
+                <option value="sem">Sem permissões atribuídas</option>
+              </select>
+              <select id="bq-ponto-sel" onchange="buscaPorPermissao()"><option value="">Qualquer ponto</option></select>
+            </div>
+            <div id="resultado-permissao" class="resultado-busca"></div>
+          </div>
+        </div>
+      </section>
+      <!-- MATRIZ -->
+      <section class="page" id="page-matriz">
+        <div class="page-header"><div><h1>Matriz Pontos × Leitores</h1><p class="page-desc">Visão cruzada de habilitações</p></div></div>
+        <div class="card p-0"><div class="table-wrap" id="matriz-wrap"><div class="empty-state" style="padding:48px">Configure pontos e leitores para visualizar.</div></div></div>
+      </section>
+      <!-- CONFIG -->
+      <section class="page" id="page-config">
+        <div class="page-header"><div><h1>Configurações</h1><p class="page-desc">Leitores e backup de dados</p></div></div>
+        <div class="config-grid">
+          <div class="card">
+            <div class="card-title">Leitores disponíveis</div>
+            <p class="text-muted mb-12">Leitores que aparecem nas opções dos pontos.</p>
+            <div class="inline-form">
+              <input id="novo-leitor-inp" placeholder="Ex: 200 ou 200,270,396">
+              <button class="btn btn-primary" id="btn-add-leitor">Adicionar</button>
+            </div>
+            <div id="leitores-list" class="chip-list mt-10"></div>
+          </div>
+          <div class="card" style="grid-column:1/-1">
+            <div class="card-title">Backup manual</div>
+            <div class="form-actions">
+              <button class="btn btn-primary" id="btn-exportar">Exportar backup (.json)</button>
+              <button class="btn" id="btn-importar">Importar backup (.json)</button>
+              <input type="file" id="input-importar" accept=".json" style="display:none">
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<!-- MODAL PESSOA -->
+<div class="modal-overlay" id="modal-pessoa">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-pessoa-title">Novo cadastro</span><button class="modal-close" data-close="modal-pessoa">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>ID (Crachá/Rede) *</label><input id="p-id" placeholder="Ex: C-0001"></div>
+        <div class="form-group"><label>Nome completo *</label><input id="p-nome" placeholder="Nome completo"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Cargo</label><input id="p-cargo" placeholder="Ex: Analista"></div>
+        <div class="form-group"><label>Setor</label><input id="p-setor" placeholder="Ex: TI"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Status</label>
+          <select id="p-status"><option>Ativo</option><option>Inativo</option><option>Bloqueado</option><option>Temporário</option></select>
+        </div>
+        <div class="form-group"><label>Data liberação</label><input type="date" id="p-lib"></div>
+      </div>
+      <div class="form-group"><label>Observações</label><textarea id="p-obs" rows="2"></textarea></div>
+      <div class="form-msg" id="p-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" data-close="modal-pessoa">Cancelar</button><button class="btn btn-primary" id="btn-salvar-pessoa">Salvar</button></div>
+  </div>
+</div>
+<!-- MODAL PONTO -->
+<div class="modal-overlay" id="modal-ponto">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="modal-ponto-title">Novo ponto</span><button class="modal-close" data-close="modal-ponto">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Nome do ponto *</label><input id="pt-nome" placeholder="Ex: Entrada Social G78"></div>
+      <div class="form-row">
+        <div class="form-group"><label>ID CODIN</label><input id="pt-codin" placeholder="Ex: 270"></div>
+        <div class="form-group"><label>Tipo</label>
+          <select id="pt-tipo"><option value="Público">Público</option><option value="Restrito">Restrito (exige senha)</option></select>
+        </div>
+      </div>
+      <div id="pt-senha-block" class="pt-senha-block">
+        <div style="display:flex;align-items:center;gap:7px;color:var(--purple);font-size:12px;font-weight:500">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span class="senha-titulo-codin">Senha do ponto</span>
+        </div>
+        <div id="pt-senha-status" style="font-size:11px;margin-bottom:4px"></div>
+        <div class="pt-senha-row">
+          <div class="form-group" style="margin:0"><label>Nova senha</label><input type="password" id="pt-senha-nova" placeholder="••••••••"></div>
+          <div class="form-group" style="margin:0"><label>Confirmar</label><input type="password" id="pt-senha-conf" placeholder="••••••••"></div>
+        </div>
+      </div>
+      <div class="form-group mt-10">
+        <label>Leitores associados</label>
+        <div id="pt-leitores-check" class="check-grid mt-8"></div>
+      </div>
+      <div class="form-msg" id="pt-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" data-close="modal-ponto">Cancelar</button><button class="btn btn-primary" id="btn-salvar-ponto">Salvar</button></div>
+  </div>
+</div>
+<!-- MODAL PERMISSÃO — com seleção por leitor -->
+<div class="modal-overlay" id="modal-acesso">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="modal-acesso-title">Atribuir permissão</span><button class="modal-close" data-close="modal-acesso">✕</button></div>
+    <div class="modal-body">
+
+      <div class="form-group"><label>Pessoa (ID) *</label><select id="ac-pessoa"><option value="">— selecione —</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label>Vigência — início</label><input type="date" id="ac-ini"></div>
+        <div class="form-group"><label>Vigência — fim</label><input type="date" id="ac-fim"></div>
+      </div>
+      <!-- Modo de seleção -->
+      <div class="form-group" style="margin-top:4px">
+        <label style="margin-bottom:8px;display:block">Modo de seleção de pontos</label>
+        <div class="modo-selector">
+          <button class="modo-btn active" data-modo="leitor" onclick="setModoAcesso('leitor')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            Por Leitor
+          </button>
+          <button class="modo-btn" data-modo="manual" onclick="setModoAcesso('manual')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Manual
+          </button>
+        </div>
+      </div>
+      <!-- MODO LEITOR -->
+      <div class="modo-panel active" id="modo-leitor">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Selecione um leitor — os pontos associados a ele aparecerão automaticamente.</div>
+        <div class="leitor-selector" id="leitor-chips"></div>
+        <div class="pontos-do-leitor" id="pontos-do-leitor" style="display:none">
+          <div class="pontos-do-leitor-title" id="pontos-leitor-title">Pontos do leitor selecionado</div>
+          <div id="lista-pontos-leitor"></div>
+          <div id="ac-senhas-restritas-leitor" style="display:none;flex-direction:column;gap:10px;padding:12px 14px;background:var(--purple-bg);border:1px solid #a855f730;border-radius:var(--radius);margin-top:8px"></div>
+        </div>
+      </div>
+      <!-- MODO MANUAL -->
+      <div class="modo-panel" id="modo-manual">
+        <div class="form-group"><label>Pontos públicos</label><div id="ac-pontos-pub" class="check-grid mt-8"></div></div>
+        <div class="form-group">
+          <label>Pontos restritos <span class="badge badge-restrito">senha por ponto</span></label>
+          <div id="ac-pontos-priv" class="check-grid mt-8 restricted-grid"></div>
+          <div id="ac-senhas-restritas"></div>
+        </div>
+      </div>
+
+      <div class="form-msg" id="ac-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" data-close="modal-acesso">Cancelar</button><button class="btn btn-primary" id="btn-salvar-acesso">Salvar</button></div>
+  </div>
+</div>
+<!-- MODAL CONFIRMAR -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal modal-sm">
+    <div class="modal-header"><span class="modal-title">Confirmar exclusão</span><button class="modal-close" data-close="modal-confirm">✕</button></div>
+    <div class="modal-body"><p id="confirm-msg" style="color:var(--text2);line-height:1.5"></p></div>
+    <div class="modal-footer"><button class="btn" data-close="modal-confirm">Cancelar</button><button class="btn btn-danger" id="btn-confirm-del">Excluir</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../js/neutralino.js"></script>
+<script src="codin.js"></script>
+</body>
+</html>

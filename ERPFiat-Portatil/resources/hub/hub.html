@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Controler</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="hub.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logos" id="logos-wrap">
+  </div>
+  <div class="topbar-right">
+    <a href="config.html" target="_blank" class="btn-cfg">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Config
+    </a>
+    <div class="tb-time">
+      <div class="tb-date" id="el-date">—</div>
+      <div class="tb-clock" id="el-clock">--:--:--</div>
+    </div>
+    <div class="user-pill">
+      <div class="avatar" id="el-avatar">HS</div>
+      <div class="user-info">
+        <div class="user-name" id="el-uname">Henrique Souza</div>
+        <div class="user-role" id="el-urole">Analista de Facilities</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-mark"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+      <div><div class="sb-name" id="el-brand">Controler</div><div class="sb-env" id="el-brand-env">ERP Facilities</div></div>
+    </div>
+
+    <div class="sb-sec">Institucional</div>
+    <div class="sb-inst">
+      <div class="sb-inst-name" id="el-inst-nome">Stellantis SA</div>
+      <div class="sb-inst-sub" id="el-inst-sub">Infraestrutura Facilities</div>
+<span class="sb-badge" id="el-inst-badge">ISO 55001</span>
+    </div>
+
+    <div class="sb-sec">Atividades do Turno</div>
+    <div class="acts" id="el-acts"></div>
+
+    <div class="sb-meters">
+      <div class="sb-m-row"><span class="sb-m-lbl">Uptime</span><span class="sb-m-val" style="color:var(--gn)">97.4%</span></div>
+      <div class="mbar"><div class="mfill" style="background:var(--gn);width:0" data-w="97"></div></div>
+      <div class="sb-m-row"><span class="sb-m-lbl">Tarefas</span><span class="sb-m-val" style="color:var(--bl)" id="el-act-pct">0/0</span></div>
+      <div class="mbar"><div class="mfill" style="background:var(--bl);width:0" id="el-act-bar"></div></div>
+    </div>
+  </aside>
+
+  <!-- CONTENT GRID 2x2 -->
+  <div class="content">
+
+    <!-- TOP-LEFT: vazio — card institucional simples -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-ttl">Indicadores do Sistema</div>
+        <span style="font-size:9px;color:var(--td);font-family:var(--mono)" id="el-now-lbl">—</span>
+      </div>
+      <div class="card-body" style="padding:10px 12px">
+        <div class="kpi-grid" id="el-kpi-mini"></div>
+        <div class="kpi-section-ttl" style="margin-top:10px">Acesso rápido</div>
+        <div class="mod-pills">
+          <a class="mod-pill" href="../obras/obras.html">Obras</a>
+          <a class="mod-pill" href="../chamados/chamados.html">Chamados</a>
+          <a class="mod-pill" href="../atividades/atividades.html">Atividades</a>
+          <a class="mod-pill" href="../codins/codin.html">Acesso</a>
+          <a class="mod-pill" href="../kpi/kpi.html">KPI Dashboard</a>
+          <a class="mod-pill" href="../conforto/conforto.html">Conforto</a>
+        </div>
+        <div class="kpi-section-ttl" style="margin-top:10px">Arquivos</div>
+        <div style="display:flex;flex-direction:column;gap:4px" id="el-file-rows"></div>
+      </div>
+    </div>
+    <!-- TOP-RIGHT: Ações Futuras -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-ttl">Ações Futuras</div>
+        <span style="background:rgba(210,153,34,.1);color:var(--yw);font-size:8.5px;padding:1px 7px;border-radius:3px;font-family:var(--mono)" id="el-acoes-count">0</span>
+      </div>
+      <div class="card-body" style="padding:10px 12px">
+        <div class="acoes-grid" id="el-acoes"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM-LEFT: Vídeo / GIF -->
+    <div class="card video-card" id="video-card">
+      <div class="card-hdr">
+        <div class="card-ttl" id="el-video-ttl">Vídeo / GIF</div>
+        <button class="video-upload-btn" id="btn-gif-upload">+ Carregar GIF</button>
+<button class="video-upload-btn" id="btn-kpi-toggle" style="right:110px">⊞ KPIs</button>
+      </div>
+      <div class="video-inner" id="video-inner">
+        <div class="video-placeholder" id="video-placeholder">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Clique para carregar</span>
+        </div>
+        <img id="video-gif" class="video-gif" src="" alt="">
+        <div class="video-overlay" id="video-overlay">
+  <div class="vid-kpi-grid" id="vid-kpis-1"></div>
+</div>
+      </div>
+      <!-- Metrics panel -->
+      <div class="metrics-panel" id="metrics-panel">
+        <button class="mp-close" id="btn-mp-close">×</button>
+        <div class="mp-ttl">Indicadores de Facilities</div>
+        <div class="kpi-grid" id="el-mp-kpis"></div>
+        <div class="kpi-section-ttl">Carregar dados</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap" id="el-mp-files"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM-RIGHT: Val / OBJ / Missão / Metas -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-ttl">Estratégia &amp; Metas</div>
+      </div>
+      <div class="vmo-grid" id="el-vmo"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="hub.js"></script>
+</body>
+</html>
