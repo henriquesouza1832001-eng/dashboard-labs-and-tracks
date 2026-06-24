@@ -2,27 +2,19 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from databricks import sql
-from databricks.sdk import WorkspaceClient
 import os, json
 
 app = FastAPI()
 
-HOST          = os.getenv("DATABRICKS_HOST", "")
-CLIENT_ID     = os.getenv("DATABRICKS_CLIENT_ID", "")
-CLIENT_SECRET = os.getenv("DATABRICKS_CLIENT_SECRET", "")
-WAREHOUSE_ID  = "d523a4cf58739a90"
+HOST         = os.getenv("DATABRICKS_HOST", "")
+TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
+WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "d523a4cf58739a90")
 
 def get_conn():
-    w = WorkspaceClient(
-        host          = f"https://{HOST}",
-        client_id     = CLIENT_ID,
-        client_secret = CLIENT_SECRET,
-    )
-    token = w.config.authenticate()["Authorization"].replace("Bearer ", "")
     return sql.connect(
         server_hostname = HOST,
         http_path       = f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-        access_token    = token,
+        access_token    = TOKEN,
     )
 
 def db_get(schema, table, chave):
