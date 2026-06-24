@@ -2,23 +2,27 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from databricks import sql
+from databricks.sdk import WorkspaceClient
 import os, json
 
 app = FastAPI()
 
-# ── Conexão Delta Lake via OAuth (Client Credentials) ──
-HOST         = os.getenv("DATABRICKS_HOST", "")
-CLIENT_ID    = os.getenv("DATABRICKS_CLIENT_ID", "")
-CLIENT_SECRET= os.getenv("DATABRICKS_CLIENT_SECRET", "")
-WAREHOUSE_ID = "d523a4cf58739a90"
+HOST          = os.getenv("DATABRICKS_HOST", "")
+CLIENT_ID     = os.getenv("DATABRICKS_CLIENT_ID", "")
+CLIENT_SECRET = os.getenv("DATABRICKS_CLIENT_SECRET", "")
+WAREHOUSE_ID  = "d523a4cf58739a90"
 
 def get_conn():
+    w = WorkspaceClient(
+        host          = f"https://{HOST}",
+        client_id     = CLIENT_ID,
+        client_secret = CLIENT_SECRET,
+    )
+    token = w.config.authenticate()["Authorization"].replace("Bearer ", "")
     return sql.connect(
-        server_hostname    = HOST,
-        http_path          = f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-        client_id          = CLIENT_ID,
-        client_secret      = CLIENT_SECRET,
-        auth_type          = "databricks-oauth",
+        server_hostname = HOST,
+        http_path       = f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+        access_token    = token,
     )
 
 def db_get(schema, table, chave):
@@ -67,12 +71,10 @@ S_CONFORTO   = "eng_lab.dashboard_labs_and_tracks_conforto"
 S_ATIVIDADES = "eng_lab.dashboard_labs_and_tracks_atividades"
 S_HUB        = "eng_lab.dashboard_labs_and_tracks_hub"
 
-# ── HEALTH ─────────────────────────────────────────────
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
-# ── CHAMADOS ───────────────────────────────────────────
 @app.get("/api/chamados")
 async def get_chamados():
     dados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal")
@@ -84,7 +86,6 @@ async def save_chamados(request: Request):
     ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
-# ── OBRAS ──────────────────────────────────────────────
 @app.get("/api/obras")
 async def get_obras():
     dados = db_get(S_OBRAS, "obras_completo", "obras_principal")
@@ -96,7 +97,6 @@ async def save_obras(request: Request):
     ok = db_save(S_OBRAS, "obras_completo", "obras_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
-# ── CODIN ──────────────────────────────────────────────
 @app.get("/api/codin")
 async def get_codin():
     dados = db_get(S_CODIN, "codin_completo", "codin_principal")
@@ -108,7 +108,6 @@ async def save_codin(request: Request):
     ok = db_save(S_CODIN, "codin_completo", "codin_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
-# ── CONFORTO ───────────────────────────────────────────
 @app.get("/api/conforto")
 async def get_conforto():
     dados = db_get(S_CONFORTO, "conforto_completo", "conforto_principal")
@@ -120,7 +119,6 @@ async def save_conforto(request: Request):
     ok = db_save(S_CONFORTO, "conforto_completo", "conforto_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
-# ── ATIVIDADES ─────────────────────────────────────────
 @app.get("/api/atividades")
 async def get_atividades():
     dados = db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal")
@@ -132,7 +130,6 @@ async def save_atividades(request: Request):
     ok = db_save(S_ATIVIDADES, "atividades_completo", "atividades_principal", dados, get_usuario(request))
     return JSONResponse({"ok": ok})
 
-# ── HUB CONFIG ─────────────────────────────────────────
 @app.get("/api/hub/config")
 async def get_hub_config(request: Request):
     usuario = get_usuario(request)
@@ -162,7 +159,6 @@ async def save_hub_config(request: Request):
         print(f"hub config error: {e}")
         return JSONResponse({"ok": False})
 
-# ── HUB DADOS ──────────────────────────────────────────
 @app.get("/api/hub/dados")
 async def get_hub_dados():
     chamados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal") or {"chamados": []}
@@ -186,7 +182,6 @@ async def get_hub_dados():
         }
     })
 
-# ── KPI ────────────────────────────────────────────────
 @app.get("/api/kpi/dados")
 async def get_kpi():
     return JSONResponse({
@@ -196,7 +191,6 @@ async def get_kpi():
         "conforto":   db_get(S_CONFORTO,   "conforto_completo",   "conforto_principal")   or {},
     })
 
-# ── PÁGINAS HTML ───────────────────────────────────────
 @app.get("/")
 async def root():
     return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
@@ -229,5 +223,4 @@ async def atividades_page():
 async def kpi_page():
     return FileResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
 
-# ── STATIC (sempre por último) ─────────────────────────
 app.mount("/", StaticFiles(directory="ERPFiat-Portatil/resources", html=True), name="static")
