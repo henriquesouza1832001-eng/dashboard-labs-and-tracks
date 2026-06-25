@@ -330,6 +330,10 @@ async def kpi_page():
 async def admin_page():
     return FileResponse("ERPFiat-Portatil/resources/admin/admin.html")
 
+@app.get("/login")
+async def login_page():
+    return FileResponse("ERPFiat-Portatil/resources/login/login.html")
+
 @app.get("/sw.js")
 async def service_worker():
     return FileResponse(

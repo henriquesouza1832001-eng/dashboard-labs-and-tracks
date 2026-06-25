@@ -1,13 +1,12 @@
 'use strict';
 (function () {
   const token = sessionStorage.getItem('ctrl-token');
-  const _loginPath = location.pathname.includes('/hub/') ? '../login/login.html' : '../login/login.html';
-if (!token) { window.location.href = _loginPath; return; }
+  if (!token) { window.location.href = '/login'; return; }
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload.exp && Date.now() / 1000 > payload.exp) {
       sessionStorage.removeItem('ctrl-token');
-      window.location.href = '../login/login.html';
+      window.location.href = '/login';
       return;
     }
     window.__authUser = {
@@ -18,6 +17,6 @@ if (!token) { window.location.href = _loginPath; return; }
     };
   } catch {
     sessionStorage.removeItem('ctrl-token');
-    window.location.href = '../login/login.html';
+    window.location.href = '/login';
   }
 })();
