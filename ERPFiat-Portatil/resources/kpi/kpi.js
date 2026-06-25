@@ -1,5 +1,13 @@
 const CACHES = {obras:'obras',capex:'obras',chamados:'chamados',codin:'codin',conforto:'conforto',ergonomia:null,acesso:'codin'};
-function lerCache(mod){ if(!mod)return null; return window['_kpiDados_'+(mod)]||null; }
+function lerCache(mod){
+  if(!mod)return null;
+  if(window['_kpiDados_'+mod])return window['_kpiDados_'+mod];
+  try{
+    const raw=sessionStorage.getItem('_kpi_'+mod);
+    if(raw)return JSON.parse(raw);
+  }catch(e){}
+  return null;
+}
 'use strict';
 window.onerror=function(msg,src,line,col,err){var b=document.getElementById('debug-bar');if(b){b.style.display='block';b.textContent+='ERRO linha '+line+': '+msg+'\n';}};
 window.addEventListener('unhandledrejection',function(e){var b=document.getElementById('debug-bar');if(b){b.style.display='block';b.textContent+='PROMISE: '+(e.reason?.stack||e.reason)+'\n';}});
@@ -17,6 +25,10 @@ async function preencherMicroCards(){
 window._kpiDados_chamados = d.chamados || null;
 window._kpiDados_codin    = d.codin    || null;
 window._kpiDados_conforto = d.conforto || null;
+try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras));}catch(e){}
+  try{if(d.chamados)sessionStorage.setItem('_kpi_chamados',JSON.stringify(d.chamados));}catch(e){}
+  try{if(d.codin)   sessionStorage.setItem('_kpi_codin',   JSON.stringify(d.codin));}catch(e){}
+  try{if(d.conforto)sessionStorage.setItem('_kpi_conforto',JSON.stringify(d.conforto));}catch(e){}
   const dOb=d.obras||null;
   const dCap=d.capex||null;
   const dCod=d.codin||null;
