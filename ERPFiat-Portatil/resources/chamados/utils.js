@@ -32,7 +32,7 @@ function setSave(state, label) {
   el.className = 'save-status ' + state;
   $('save-label').textContent = label;
 }
-carregar('chamados', () => API.chamados.listar(), d => {
+carregar('chamados', () => window.__DADOS__ ? Promise.resolve(window.__DADOS__) : API.chamados.listar(), d => {
   allChamados = d.chamados || [];
   setSave('saved', 'carregado');
   atualizarContadores();
@@ -41,7 +41,7 @@ carregar('chamados', () => API.chamados.listar(), d => {
 });
 async function tentarCarregarCache(){
   try {
-    const d = await fetch('/api/chamados').then(r=>r.json());
+    const d = window.__DADOS__ || await fetch('/api/chamados').then(r=>r.json());
     if(d) { chamados = d.chamados || []; setSave('saved','carregado'); }
   } catch(e) { setSave('nosave','erro'); }
 }

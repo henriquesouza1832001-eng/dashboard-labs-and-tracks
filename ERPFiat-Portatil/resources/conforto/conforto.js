@@ -1425,7 +1425,7 @@ function exportarJSON() {
 }
 
 async function tentarCarregar(){
-  const d = await API.conforto.listar();
+  const d = window.__DADOS__ || await API.conforto.listar();
   if(d&&d.modulo==='conforto')carregarDeJSON(JSON.stringify(d));
 }
 

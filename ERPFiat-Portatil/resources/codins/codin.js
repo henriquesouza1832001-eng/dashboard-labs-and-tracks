@@ -39,7 +39,7 @@ function carregarDeJSON(json){
 }
 async function abrirArquivo(){ return false; }
 async function carregarDados(){
-  const d = await API.codin.listar();
+  const d = window.__DADOS__ || await API.codin.listar();
   if(d)carregarDeJSON(JSON.stringify(d));
 }
 function aplicarFiltroURL(){

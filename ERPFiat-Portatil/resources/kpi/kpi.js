@@ -20,7 +20,7 @@ const fmtDate=s=>{if(!s)return'—';const p=s.split('-');return p.length===3?p[2
 function tick(){const n=new Date();$('clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
 tick();setInterval(tick,1000);
 async function preencherMicroCards(){
-  const d=await(await fetch('/api/kpi/dados')).json();
+  const d=window.__DADOS__||await(await fetch('/api/kpi/dados')).json();
   window._kpiDados_obras    = d.obras    || null;
 window._kpiDados_chamados = d.chamados || null;
 window._kpiDados_codin    = d.codin    || null;
