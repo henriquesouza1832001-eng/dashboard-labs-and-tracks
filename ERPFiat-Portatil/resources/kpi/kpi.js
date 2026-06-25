@@ -854,7 +854,7 @@ function abrirDetalheObra(cod){
           const obs=ta.value.trim();
           const obras=_obrasData.obras||[];
           const ob=obras.find(x=>x.cod==='${cod}');
-          if(ob){ob.observacao=obs; await API.obras.salvar(_obrasData);}
+          if(ob){ob.observacao=obs; API.obras.salvar(_obrasData);}
           ta.readOnly=true;ta.style.background='var(--bg)';ta.style.borderColor='var(--border)';btn.textContent='✏️ editar';
         }
       " style="font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);cursor:pointer;font-family:var(--font)">✏️ editar</button>
@@ -1020,7 +1020,7 @@ function renderAtividades(container,d){
 /* ══════════════════════════════════════════════
    CHAMADOS
 ══════════════════════════════════════════════ */
-function renderChamados(container,d){
+async function renderChamados(container,d){
   const cham=d?.chamados||(Array.isArray(d)?d:[]);
   if(!d){container.innerHTML='<div class="sem-dados">Nenhum arquivo de chamados carregado.<br><span style="font-size:10px">Selecione o arquivo no hub principal.</span></div>';return;}
   const total=cham.length;
