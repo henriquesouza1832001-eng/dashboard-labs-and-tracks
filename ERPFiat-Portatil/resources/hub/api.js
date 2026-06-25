@@ -8,7 +8,7 @@ async function req(endpoint, opts = {}, ttl = 0) {
     return _mem[endpoint];
   }
   const res = await fetch('/api' + endpoint, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (sessionStorage.getItem('ctrl-token') || ''), ...(opts.headers || {}) },
     ...opts
   });
   if (!res.ok) throw new Error('API ' + endpoint + ': ' + res.status);

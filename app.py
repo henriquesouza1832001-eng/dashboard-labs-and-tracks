@@ -4,6 +4,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from databricks import sql
 import os, json
 import asyncio
+import hashlib, jwt, datetime
+JWT_SECRET = os.getenv("JWT_SECRET")
 
 
 app = FastAPI()
@@ -202,7 +204,39 @@ async def get_kpi():
         "atividades": db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal") or {},
         "conforto":   db_get(S_CONFORTO,   "conforto_completo",   "conforto_principal")   or {},
     })
-
+@app.post("/api/auth/login")
+async def login(request: Request):
+    try:
+        body = await request.json()
+        email = body.get("email", "").strip().lower()
+        senha = body.get("senha", "")
+        if not email or not senha:
+            return JSONResponse({"erro": "credenciais inválidas"}, status_code=401)
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT nome, email, senha_hash, role, ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email = ? LIMIT 1",
+                    [email]
+                )
+                row = cur.fetchone()
+        if not row:
+            return JSONResponse({"erro": "credenciais inválidas"}, status_code=401)
+        nome, db_email, senha_hash, role, ativo = row
+        if not ativo:
+            return JSONResponse({"erro": "usuário inativo"}, status_code=403)
+        if hashlib.sha256(senha.encode()).hexdigest() != senha_hash:
+            return JSONResponse({"erro": "credenciais inválidas"}, status_code=401)
+        payload = {
+            "nome": nome,
+            "email": db_email,
+            "role": role,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=12)
+        }
+        token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+        return JSONResponse({"token": token})
+    except Exception as e:
+        print(f"login error: {e}")
+        return JSONResponse({"erro": "erro interno"}, status_code=500)
 @app.get("/")
 async def root():
     return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")

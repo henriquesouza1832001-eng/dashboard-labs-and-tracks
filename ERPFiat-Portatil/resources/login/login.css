@@ -1,0 +1,12 @@
+:root{--bg:#0d1117;--sur:#161b22;--bor:#21262d;--tx:#e6edf3;--td:#8b949e;--bl:#58a6ff;--rd:#f85149;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--font);height:100vh;display:flex;align-items:center;justify-content:center}
+.login-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;max-width:340px;padding:0 20px}
+.login-brand{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--tx)}
+.login-sub{font-size:11px;color:var(--td);margin-bottom:24px;font-family:var(--mono)}
+.login-box{display:flex;flex-direction:column;gap:10px;width:100%}
+.login-box input{background:var(--sur);border:1px solid var(--bor);border-radius:6px;color:var(--tx);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s}
+.login-box input:focus{border-color:var(--bl)}
+.login-box button{background:var(--bl);border:none;border-radius:6px;color:#0d1117;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;padding:10px;transition:opacity .15s}
+.login-box button:hover{opacity:.85}
+.login-err{color:var(--rd);font-size:11px;text-align:center;min-height:16px;font-family:var(--mono)}

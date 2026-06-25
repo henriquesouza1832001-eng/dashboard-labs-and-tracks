@@ -1,4 +1,5 @@
 'use strict';
+const user = window.__authUser || { nome: '—', role: '—', avatar: '?' };
 const $=id=>document.getElementById(id);
 const fmtRK=v=>{if(!v&&v!==0)return'—';const n=+v;if(Math.abs(n)>=1e6)return'R$'+(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return'R$'+(n/1e3).toFixed(1)+'k';return'R$'+Math.round(n);};
 
@@ -301,6 +302,9 @@ buildVidKpis();
 buildAcoes();
 buildVMO();
 loadCache();
+if ($('el-avatar')) $('el-avatar').textContent = user.avatar;
+if ($('el-uname'))  $('el-uname').textContent  = user.nome;
+if ($('el-urole'))  $('el-urole').textContent  = user.role;
 async function loadCache(){
   const d = await API.hub.dados();
   if(d.obras)atualizarObras({obras:d.obras,budget:d.budget||[],lancamentos:d.lancamentos||[]});
