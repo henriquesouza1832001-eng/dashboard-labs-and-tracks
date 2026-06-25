@@ -180,6 +180,7 @@ function buildVMO(){
 
 let gifLoaded=false;
 function dbg(){}
+const savedGif = CFG.gif || null;
 if(savedGif){
   const img=$('video-gif');
   img.dataset.src=savedGif;
