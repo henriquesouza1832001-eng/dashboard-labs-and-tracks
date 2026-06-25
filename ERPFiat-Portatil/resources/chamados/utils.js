@@ -36,8 +36,8 @@ carregar('chamados', () => API.chamados.listar(), d => {
   allChamados = d.chamados || [];
   setSave('saved', 'carregado');
   atualizarContadores();
-  if (typeof atualizarBadgeFiltroAtivo === 'function') atualizarBadgeFiltroAtivo();
-  aplicarFiltros();
+  if (typeof atualizarBadgeFiltroAtivo === 'function') if (typeof atualizarBadgeFiltroAtivo === 'function') atualizarBadgeFiltroAtivo();
+  if (typeof aplicarFiltros === 'function') if (typeof aplicarFiltros === 'function') aplicarFiltros();
 });
 async function tentarCarregarCache(){
   try {

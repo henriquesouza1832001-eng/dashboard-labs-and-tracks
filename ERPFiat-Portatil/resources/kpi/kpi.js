@@ -116,11 +116,11 @@ function desenharMicroDonut(id,labels,vals,cores){
   pai.id=pai.id||'donut-'+id;
   desenharDonutSVG(pai.id,labels,vals,cores);
 }
-(function loadLogos(){
+(async function loadLogos(){
   const wrap=document.getElementById('kpi-logos');if(!wrap)return;
   try{const cfg = await API.hub.config.ler();(cfg.logos||[]).forEach(src=>{if(!src)return;const img=document.createElement('img');img.src=src;img.style.cssText='height:32px;width:auto;max-width:100px;object-fit:contain;border-radius:4px';wrap.appendChild(img);});}catch(e){}
 })();
-(function loadSidebar(){
+(async function loadSidebar(){
   try{
     const cfg = await API.hub.config.ler();
     const id=cfg.identidade||{};
