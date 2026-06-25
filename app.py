@@ -327,6 +327,21 @@ async def kpi_page():
 async def admin_page():
     return FileResponse("ERPFiat-Portatil/resources/admin/admin.html")
 
+app.get("/sw.js")
+async def service_worker():
+    return FileResponse(
+        "ERPFiat-Portatil/resources/sw.js",
+        media_type="application/javascript",
+        headers={"Service-Worker-Allowed": "/"}
+    )
+ 
+@app.get("/manifest.json")
+async def manifest():
+    return FileResponse(
+        "ERPFiat-Portatil/resources/manifest.json",
+        media_type="application/manifest+json"
+    )
+
 @app.on_event("startup")
 async def prefetch():
     loop = asyncio.get_event_loop()
