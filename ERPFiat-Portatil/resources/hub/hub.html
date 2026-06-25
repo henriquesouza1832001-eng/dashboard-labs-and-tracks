@@ -6,7 +6,24 @@
 <title>Controler</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link href="hub.css" rel="stylesheet">
-<link rel="manifest" href="/app.webmanifest">
+<script>
+const _m=document.createElement('link');
+_m.rel='manifest';
+_m.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify({
+  name:'Controler — ERP Facilities',
+  short_name:'Controler',
+  start_url:'/',
+  scope:'/',
+  display:'standalone',
+  background_color:'#0d1117',
+  theme_color:'#161b22',
+  icons:[
+    {src:'/icons/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+    {src:'/icons/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+  ]
+}));
+document.head.appendChild(_m);
+</script>
 <meta name="theme-color" content="#161b22">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
