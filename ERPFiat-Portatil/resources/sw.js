@@ -5,29 +5,22 @@ const CACHE_NAME = 'controler-v1';
 // Arquivos shell do app — sempre em cache
 const SHELL = [
   '/',
-  '/hub',
-  '/chamados',
-  '/obras',
-  '/conforto',
-  '/atividades',
-  '/kpi',
+  '/hub/hub.html',
   '/hub/hub.css',
   '/hub/hub.js',
   '/hub/auth.js',
   '/hub/api.js',
+  '/hub/cache.js',
+  '/chamados/chamados.html',
   '/chamados/chamados.css',
-  '/chamados/chamados.js',
+  '/obras/obras.html',
   '/obras/obras.css',
-  '/obras/obras.js',
+  '/conforto/conforto.html',
   '/conforto/conforto.css',
-  '/conforto/conforto.js',
-  '/atividades/atividades.css',
-  '/atividades/atividades.js',
+  '/atividades/atividades.html',
+  '/kpi/kpi.html',
   '/kpi/kpi.css',
   '/kpi/kpi.js',
-  '/admin/admin.css',
-  '/admin/admin.js',
-  'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap'
 ];
 
 // ── INSTALL: pré-carrega o shell ─────────────────────────────────────────────

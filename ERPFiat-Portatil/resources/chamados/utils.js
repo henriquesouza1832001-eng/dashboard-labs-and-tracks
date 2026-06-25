@@ -39,6 +39,12 @@ carregar('chamados', () => API.chamados.listar(), d => {
   atualizarBadgeFiltroAtivo();
   aplicarFiltros();
 });
+async function tentarCarregarCache(){
+  try {
+    const d = await fetch('/api/chamados').then(r=>r.json());
+    if(d) { chamados = d.chamados || []; setSave('saved','carregado'); }
+  } catch(e) { setSave('nosave','erro'); }
+}
 function atualizarContadores() {
   const hoje = new Date().toDateString();
   $('cnt-todos').textContent     = allChamados.length;

@@ -292,73 +292,55 @@ async def admin_reset_senha(uid: int, request: Request):
             cur.execute("UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET senha_hash=? WHERE id=?", [nova_hash, uid])
     return JSONResponse({"ok": True})   
 
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 @app.get("/")
 async def root():
-     return RedirectResponse("ERPFiat-Portatil/resources/hub/hub.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
 
 @app.get("/hub")
 async def hub():
-     return RedirectResponse("ERPFiat-Portatil/resources/hub/hub.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
 
 @app.get("/chamados")
 async def chamados_page():
-     return RedirectResponse("ERPFiat-Portatil/resources/chamados/chamados.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/chamados/chamados.html")
 
 @app.get("/obras")
 async def obras_page():
-     return RedirectResponse("ERPFiat-Portatil/resources/obras/obras.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/obras/obras.html")
 
 @app.get("/codin")
 async def codin_page():
-     return RedirectResponse("ERPFiat-Portatil/resources/codins/codin.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/codins/codin.html")
 
 @app.get("/conforto")
 async def conforto_page():
-    return RedirectResponse("/conforto/conforto.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/conforto/conforto.html")
 
 @app.get("/atividades")
 async def atividades_page():
-     return RedirectResponse("ERPFiat-Portatil/resources/atividades/atividades.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/atividades/atividades.html")
 
 @app.get("/kpi")
 async def kpi_page():
-     return RedirectResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
 
 @app.get("/admin")
 async def admin_page():
-     return RedirectResponse("ERPFiat-Portatil/resources/admin/admin.html")
-
-from fastapi.responses import RedirectResponse
+    return FileResponse("ERPFiat-Portatil/resources/admin/admin.html")
 
 @app.get("/sw.js")
 async def service_worker():
-     return RedirectResponse(
+    return FileResponse(
         "ERPFiat-Portatil/resources/sw.js",
         media_type="application/javascript",
         headers={"Service-Worker-Allowed": "/"}
     )
- 
+
 @app.get("/manifest.json")
 async def manifest():
-     return RedirectResponse(
+    return FileResponse(
         "ERPFiat-Portatil/resources/manifest.json",
         media_type="application/manifest+json"
     )

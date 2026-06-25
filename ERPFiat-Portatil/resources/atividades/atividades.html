@@ -260,7 +260,7 @@ let saveTimeout = null;
 let editId = null;
 let viewAtual = 'kanban';
 const usuarioAtual = JSON.parse(sessionStorage.getItem('usuario-atual')||'null');
-const usuarios = JSON.parse(localStorage.getItem('hub-usuarios')||'[]');
+const usuarios = [];
 
 if(usuarioAtual) $('user-logado').textContent = '● ' + usuarioAtual.nome;
 function setSaveStatus(s,txt){
@@ -275,35 +275,15 @@ function carregarDeJSON(txt){
   }catch(e){ return false; }
 }
 async function salvarDados(){
-  localStorage.setItem('hub-atividades', JSON.stringify(atividades));
-  setSaveStatus('saved', 'cache local');
+  try {
+    await fetch('/api/atividades', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({atividades})});
+    setSaveStatus('saved','salvo');
+  } catch(e) { setSaveStatus('nosave','erro ao salvar'); }
 }
 function agendarSalvamento(){
   setSaveStatus('saving','salvando…');
   clearTimeout(saveTimeout);
   saveTimeout=setTimeout(()=>salvarDados(),400);
-}
-async function abrirArquivo(){
-  const path = await neuAbrirArquivo('Selecionar dados-atividades.json');
-  if(!path) return false;
-  const txt = await neuLerArquivo(path);
-  if(!txt || !carregarDeJSON(txt)){ alert('Arquivo inválido.'); return false; }
-  fileHandle = path;
-  salvarPath('ativ', path);
-  localStorage.setItem('hub-atividades', JSON.stringify(atividades));
-  $('arquivo-nome').textContent = path.split(/[\\/]/).pop();
-  setSaveStatus('saved','salvo');
-  return true;
-}
-async function criarArquivo(){
-  const path = await neuSalvarDialogo('dados-atividades.json');
-  if(!path) return false;
-  fileHandle = path;
-  salvarPath('ativ', path);
-  atividades = [];
-  $('arquivo-nome').textContent = path.split(/[\\/]/).pop();
-  await salvarDados();
-  return true;
 }
 function aplicarFiltroURL(){
   const p = new URLSearchParams(location.search);
@@ -335,7 +315,7 @@ function popularFiltros(){
     usuarios.map(u=>`<option value="${u.id}">${u.nome}</option>`).join('');
   $('a-resp').innerHTML='<option value="">—</option>'+
     usuarios.map(u=>`<option value="${u.id}">${u.nome}</option>`).join('');
-  const obrasCache=JSON.parse(localStorage.getItem('obras-dados-cache')||'{}');
+  const obrasCache={};
   const obras=obrasCache.obras||[];
   $('filtro-obra').innerHTML='<option value="">Todas as obras</option>'+
     obras.map(o=>`<option value="${o.cod}">${o.cod} — ${o.nome}</option>`).join('');
