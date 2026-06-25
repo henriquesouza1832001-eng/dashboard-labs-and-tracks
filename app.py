@@ -1,53 +1,58 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from databricks import sql
 import os, json, asyncio, hashlib, jwt, datetime, threading, time
 
-# ─── Auth ────────────────────────────────────────────────────────────────────
+# ─── Auth ─────────────────────────────────────────────────────────────────────
 JWT_SECRET = os.getenv("JWT_SECRET")
 
 def verificar_admin(request: Request):
     try:
-        auth = request.headers.get("Authorization", "")
-        token = auth.replace("Bearer ", "")
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        if payload.get("role") != "admin":
-            return None
-        return payload
+        return payload if payload.get("role") == "admin" else None
     except:
         return None
 
 app = FastAPI()
 
-# ─── Databricks connection ────────────────────────────────────────────────────
+# ─── Databricks connection ─────────────────────────────────────────────────────
 HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
 WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "d523a4cf58739a90")
 
-_conn_cache = None
-_conn_lock  = threading.Lock()
+_conn      = None
+_conn_lock = threading.Lock()
 
 def get_conn():
-    global _conn_cache
+    global _conn
     with _conn_lock:
         try:
-            if _conn_cache and _conn_cache.open:
-                return _conn_cache
+            if _conn and _conn.open:
+                return _conn
         except:
             pass
-        _conn_cache = sql.connect(
-            server_hostname = HOST,
-            http_path       = f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-            access_token    = TOKEN,
+        _conn = sql.connect(
+            server_hostname=HOST,
+            http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+            access_token=TOKEN,
         )
-        return _conn_cache
+        return _conn
 
-# ─── Cache em RAM — thread-safe ───────────────────────────────────────────────
-_cache      = {}
-_cache_lock = threading.Lock()
+def run_query(sql_str, params=None):
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute(sql_str, params or [])
+        cols = [d[0] for d in cur.description]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
 
-# Schemas
+def run_exec(sql_str, params=None):
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute(sql_str, params or [])
+
+# ─── Schemas ───────────────────────────────────────────────────────────────────
 S_CHAMADOS   = "eng_lab.dashboard_labs_and_tracks_chamados"
 S_OBRAS      = "eng_lab.dashboard_labs_and_tracks_obras"
 S_CODIN      = "eng_lab.dashboard_labs_and_tracks_codin"
@@ -55,417 +60,569 @@ S_CONFORTO   = "eng_lab.dashboard_labs_and_tracks_conforto"
 S_ATIVIDADES = "eng_lab.dashboard_labs_and_tracks_atividades"
 S_HUB        = "eng_lab.dashboard_labs_and_tracks_hub"
 
-# Todos os módulos que devem ser pre-aquecidos
-MODULOS = [
-    (S_CHAMADOS,   "chamados_completo",   "chamados_principal"),
-    (S_OBRAS,      "obras_completo",      "obras_principal"),
-    (S_CODIN,      "codin_completo",      "codin_principal"),
-    (S_CONFORTO,   "conforto_completo",   "conforto_principal"),
-    (S_ATIVIDADES, "atividades_completo", "atividades_principal"),
-]
+# ─── Cache RAM ─────────────────────────────────────────────────────────────────
+_cache      = {}
+_cache_lock = threading.Lock()
 
-def _warm(schema, table, chave):
-    """Busca do Databricks e salva no cache. Seguro para threads."""
-    key = f"{table}/{chave}"
-    try:
-        conn = get_conn()
-        with conn.cursor() as cur:
-            cur.execute(
-                f"SELECT dados_json FROM {schema}.{table} WHERE chave = ? LIMIT 1",
-                [chave]
-            )
-            row = cur.fetchone()
-            if row:
-                dados = json.loads(row[0])
-                with _cache_lock:
-                    _cache[key] = dados
-                return dados
-    except Exception as e:
-        print(f"[warm] erro [{key}]: {e}")
-    return None
-
-def _background_refresh(intervalo=300):
-    """Daemon: refresca todos os módulos a cada `intervalo` segundos (padrão 5 min)."""
-    while True:
-        time.sleep(intervalo)
-        print("[cache] iniciando refresh em background...")
-        threads = [
-            threading.Thread(target=_warm, args=(s, t, c), daemon=True)
-            for s, t, c in MODULOS
-        ]
-        for th in threads:
-            th.start()
-        for th in threads:
-            th.join()
-        print("[cache] refresh concluído.")
-
-def db_get(schema, table, chave):
-    """Lê do cache RAM. Só vai ao Databricks se não estiver em cache (cold start)."""
-    key = f"{table}/{chave}"
+def cache_get(key):
     with _cache_lock:
-        if key in _cache:
-            return _cache[key]
-    # Cache miss — busca síncrona (só no cold start ou após falha)
-    return _warm(schema, table, chave)
+        return _cache.get(key)
 
-def db_save(schema, table, chave, dados, usuario="sistema"):
-    """Persiste no Databricks e atualiza o cache RAM imediatamente."""
-    key = f"{table}/{chave}"
+def cache_set(key, value):
+    with _cache_lock:
+        _cache[key] = value
+
+def cache_invalidate(*keys):
+    with _cache_lock:
+        for k in keys:
+            _cache.pop(k, None)
+
+def _jloads(s):
+    if not s:
+        return []
     try:
-        j = json.dumps(dados, ensure_ascii=False)
-        conn = get_conn()
-        with conn.cursor() as cur:
-            cur.execute(f"""
-                MERGE INTO {schema}.{table} AS t
-                USING (SELECT ? AS chave, ? AS dados_json, ? AS atualizado_por) AS s
-                ON t.chave = s.chave
-                WHEN MATCHED THEN UPDATE SET
-                    dados_json     = s.dados_json,
-                    atualizado_por = s.atualizado_por,
-                    atualizado_em  = current_timestamp()
-                WHEN NOT MATCHED THEN INSERT (chave, dados_json, atualizado_por, atualizado_em)
-                    VALUES (s.chave, s.dados_json, s.atualizado_por, current_timestamp())
-            """, [chave, j, usuario])
-        with _cache_lock:
-            _cache[key] = dados
-        return True
-    except Exception as e:
-        print(f"[db_save] erro: {e}")
-        return False
+        return json.loads(s)
+    except:
+        return []
+
+def _jdumps(obj):
+    return json.dumps(obj, ensure_ascii=False)
+
+def _ts(v):
+    if v and hasattr(v, "isoformat"):
+        return v.isoformat()
+    return v
 
 def get_usuario(request):
     return request.headers.get("X-Forwarded-User", "dev@local")
 
-# ─── Startup: aquece tudo em paralelo + lança daemon de refresh ──────────────
+# ─── Loaders ───────────────────────────────────────────────────────────────────
+def _load_chamados():
+    rows = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados ORDER BY dataAbertura DESC")
+    for r in rows:
+        r["fotos"]     = _jloads(r.get("fotos"))
+        r["historico"] = _jloads(r.get("historico"))
+        for f in ("dataAbertura","dataConclusao","atualizado_em"):
+            r[f] = _ts(r.get(f))
+    payload = {"chamados": rows}
+    cache_set("chamados", payload)
+    return payload
+
+def _load_obras():
+    obras = run_query(f"SELECT * FROM {S_OBRAS}.obras")
+    for o in obras:
+        o["etapas"]       = _jloads(o.get("etapas"))
+        o["atualizado_em"]= _ts(o.get("atualizado_em"))
+
+    budget = run_query(f"SELECT * FROM {S_OBRAS}.budget")
+    for b in budget:
+        b["atualizado_em"] = _ts(b.get("atualizado_em"))
+
+    lancs = run_query(f"SELECT * FROM {S_OBRAS}.lancamentos ORDER BY dtLanc DESC")
+    for l in lancs:
+        l["atualizado_em"] = _ts(l.get("atualizado_em"))
+
+    payload = {"versao":"2.0","obras":obras,"budget":budget,"lancamentos":lancs,"revisoes":[]}
+    cache_set("obras", payload)
+    return payload
+
+def _load_codin():
+    pessoas = run_query(f"SELECT * FROM {S_CODIN}.pessoas")
+    pontos  = run_query(f"SELECT * FROM {S_CODIN}.pontos")
+    for p in pontos:
+        p["leitores"] = _jloads(p.get("leitores"))
+    for x in pessoas + pontos:
+        x["atualizado_em"] = _ts(x.get("atualizado_em"))
+    payload = {"pessoas":pessoas,"pontos":pontos,"acessos":[],"leitores":[]}
+    cache_set("codin", payload)
+    return payload
+
+def _load_atividades():
+    rows = run_query(f"SELECT * FROM {S_ATIVIDADES}.atividades ORDER BY criadoEm DESC")
+    for r in rows:
+        r["comentarios"]  = _jloads(r.get("comentarios"))
+        r["atualizado_em"]= _ts(r.get("atualizado_em"))
+    payload = {"versao":"2.0","atividades":rows}
+    cache_set("atividades", payload)
+    return payload
+
+def _load_conforto():
+    try:
+        rows = run_query(f"SELECT chave, valor_json FROM {S_CONFORTO}.config")
+        config = {}
+        for r in rows:
+            try:
+                config[r["chave"]] = json.loads(r["valor_json"])
+            except:
+                config[r["chave"]] = r["valor_json"]
+    except:
+        config = {}
+    payload = {
+        "versao":"2.0","ordens":[],"ucs":[],"preventivas":[],
+        "manutencoes":[],"pecas":[],"requisicoes":[],"areas":[],
+        "fornecedores":[],"tecnicos":[],"rotinas":[],"config":config
+    }
+    cache_set("conforto", payload)
+    return payload
+
+LOADERS = {
+    "chamados":   _load_chamados,
+    "obras":      _load_obras,
+    "codin":      _load_codin,
+    "atividades": _load_atividades,
+    "conforto":   _load_conforto,
+}
+
+def get_cached(modulo):
+    v = cache_get(modulo)
+    if v is not None:
+        return v
+    return LOADERS[modulo]()
+
+# ─── Startup ───────────────────────────────────────────────────────────────────
+def _background_refresh(intervalo=300):
+    while True:
+        time.sleep(intervalo)
+        print("[cache] refresh iniciado...")
+        for nome, fn in LOADERS.items():
+            try:
+                fn()
+            except Exception as e:
+                print(f"[cache] erro ao refrescar {nome}: {e}")
+        print("[cache] refresh concluido.")
+
 @app.on_event("startup")
 async def prefetch():
     loop = asyncio.get_event_loop()
     print("[startup] aquecendo cache em paralelo...")
-    futures = [
-        loop.run_in_executor(None, _warm, s, t, c)
-        for s, t, c in MODULOS
-    ]
-    await asyncio.gather(*futures)
-    print("[startup] cache aquecido. Lançando refresh daemon (5 min).")
+    await asyncio.gather(*[loop.run_in_executor(None, fn) for fn in LOADERS.values()])
+    print("[startup] cache aquecido.")
     threading.Thread(target=_background_refresh, args=(300,), daemon=True).start()
 
-# ─── Health ──────────────────────────────────────────────────────────────────
+# ─── HTML injection ────────────────────────────────────────────────────────────
+def inject(html_path, dados):
+    with open(html_path, "r", encoding="utf-8") as f:
+        html = f.read()
+    script = f'<script>window.__DADOS__={json.dumps(dados, ensure_ascii=False, default=str)};</script>'
+    return HTMLResponse(html.replace("</body>", f"{script}\n</body>"))
+
+# ─── Health ────────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
     with _cache_lock:
         keys = list(_cache.keys())
-    return {"status": "ok", "cache_keys": keys}
+    return {"status": "ok", "cache": keys}
 
-# ─── API: Chamados ────────────────────────────────────────────────────────────
+# ─── Chamados ─────────────────────────────────────────────────────────────────
 @app.get("/api/chamados")
 async def get_chamados():
-    dados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal")
-    return JSONResponse(dados if dados else {"chamados": []})
+    return JSONResponse(get_cached("chamados"))
 
 @app.post("/api/chamados")
-async def save_chamados(request: Request):
-    dados = await request.json()
-    ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, get_usuario(request))
-    return JSONResponse({"ok": ok})
+async def create_chamado(request: Request):
+    body = await request.json()
+    u = get_usuario(request)
+    run_exec(f"""
+        INSERT INTO {S_CHAMADOS}.chamados
+            (id,titulo,categoria,tipo,prioridade,local,setor,solicitante,
+             dataDesejada,descricao,status,responsavel,idExterno,
+             dataAbertura,dataConclusao,fotos,historico,atualizado_por)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, [
+        body["id"],body.get("titulo"),body.get("categoria"),body.get("tipo"),
+        body.get("prioridade"),body.get("local"),body.get("setor"),
+        body.get("solicitante"),body.get("dataDesejada"),body.get("descricao"),
+        body.get("status","Aberto"),body.get("responsavel"),body.get("idExterno"),
+        body.get("dataAbertura"),body.get("dataConclusao"),
+        _jdumps(body.get("fotos",[])),_jdumps(body.get("historico",[])),u
+    ])
+    cache_invalidate("chamados")
+    return JSONResponse({"ok": True})
 
 @app.put("/api/chamados/{cid}")
 async def update_chamado(cid: str, request: Request):
-    dados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal") or {"chamados": []}
-    lista = dados.get("chamados", [])
-    body  = await request.json()
-    idx   = next((i for i, c in enumerate(lista) if str(c.get("id")) == str(cid)), None)
-    if idx is None:
-        return JSONResponse({"ok": False, "erro": "não encontrado"}, status_code=404)
-    lista[idx]       = body
-    dados["chamados"] = lista
-    ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, get_usuario(request))
-    return JSONResponse({"ok": ok})
+    body = await request.json()
+    u = get_usuario(request)
+    run_exec(f"""
+        MERGE INTO {S_CHAMADOS}.chamados AS t
+        USING (SELECT ? AS id) AS s ON t.id = s.id
+        WHEN MATCHED THEN UPDATE SET
+            titulo=?,categoria=?,tipo=?,prioridade=?,local=?,setor=?,
+            solicitante=?,dataDesejada=?,descricao=?,status=?,responsavel=?,
+            idExterno=?,dataAbertura=?,dataConclusao=?,
+            fotos=?,historico=?,atualizado_em=current_timestamp(),atualizado_por=?
+    """, [
+        cid,
+        body.get("titulo"),body.get("categoria"),body.get("tipo"),
+        body.get("prioridade"),body.get("local"),body.get("setor"),
+        body.get("solicitante"),body.get("dataDesejada"),body.get("descricao"),
+        body.get("status"),body.get("responsavel"),body.get("idExterno"),
+        body.get("dataAbertura"),body.get("dataConclusao"),
+        _jdumps(body.get("fotos",[])),_jdumps(body.get("historico",[])),u
+    ])
+    cache_invalidate("chamados")
+    return JSONResponse({"ok": True})
 
 @app.delete("/api/chamados/{cid}")
 async def delete_chamado(cid: str, request: Request):
-    dados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal") or {"chamados": []}
-    lista = dados.get("chamados", [])
-    dados["chamados"] = [c for c in lista if str(c.get("id")) != str(cid)]
-    ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, get_usuario(request))
-    return JSONResponse({"ok": ok})
+    run_exec(f"DELETE FROM {S_CHAMADOS}.chamados WHERE id = ?", [cid])
+    cache_invalidate("chamados")
+    return JSONResponse({"ok": True})
 
 @app.get("/api/chamados/sla")
 async def get_sla():
-    cfg = db_get(S_HUB, "config", "sla_global") or {"Crítica": 1, "Alta": 3, "Média": 5, "Baixa": 7}
-    return JSONResponse(cfg)
+    v = cache_get("sla")
+    if v:
+        return JSONResponse(v)
+    try:
+        rows = run_query(f"SELECT dados_json FROM {S_HUB}.config WHERE chave='sla_global' LIMIT 1")
+        if rows:
+            cfg = json.loads(rows[0]["dados_json"])
+            cache_set("sla", cfg)
+            return JSONResponse(cfg)
+    except:
+        pass
+    return JSONResponse({"Critica":1,"Alta":3,"Media":5,"Baixa":7})
 
 @app.post("/api/chamados/sla")
 async def save_sla(request: Request):
     cfg = await request.json()
-    ok  = db_save(S_HUB, "config", "sla_global", cfg, get_usuario(request))
-    return JSONResponse({"ok": ok})
+    u = get_usuario(request)
+    run_exec(f"""
+        MERGE INTO {S_HUB}.config AS t
+        USING (SELECT 'sla_global' AS chave) AS s ON t.chave = s.chave
+        WHEN MATCHED THEN UPDATE SET dados_json=?,atualizado_por=?,atualizado_em=current_timestamp()
+        WHEN NOT MATCHED THEN INSERT (chave,dados_json,atualizado_por,atualizado_em)
+            VALUES ('sla_global',?,?,current_timestamp())
+    """, [_jdumps(cfg),u,_jdumps(cfg),u])
+    cache_set("sla", cfg)
+    return JSONResponse({"ok": True})
 
-# ─── API: Obras ───────────────────────────────────────────────────────────────
+# ─── Obras ────────────────────────────────────────────────────────────────────
 @app.get("/api/obras")
 async def get_obras():
-    dados = db_get(S_OBRAS, "obras_completo", "obras_principal")
-    return JSONResponse(dados if dados else {"obras": [], "lancamentos": [], "budget": [], "revisoes": []})
+    return JSONResponse(get_cached("obras"))
 
 @app.post("/api/obras")
 async def save_obras(request: Request):
-    dados = await request.json()
-    ok = db_save(S_OBRAS, "obras_completo", "obras_principal", dados, get_usuario(request))
-    return JSONResponse({"ok": ok})
+    body = await request.json()
+    u = get_usuario(request)
+    for o in body.get("obras", []):
+        run_exec(f"""
+            MERGE INTO {S_OBRAS}.obras AS t
+            USING (SELECT ? AS cod) AS s ON t.cod = s.cod
+            WHEN MATCHED THEN UPDATE SET
+                nome=?,tipo=?,local=?,responsavel=?,respNome=?,cresp=?,status=?,
+                dtInicioPrev=?,dtFimPrev=?,dtInicioReal=?,dtFimReal=?,obs=?,etapas=?,
+                atualizado_em=current_timestamp(),atualizado_por=?
+            WHEN NOT MATCHED THEN INSERT
+                (cod,nome,tipo,local,responsavel,respNome,cresp,status,
+                 dtInicioPrev,dtFimPrev,dtInicioReal,dtFimReal,obs,etapas,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, [
+            o["cod"],
+            o.get("nome"),o.get("tipo"),o.get("local"),o.get("responsavel"),
+            o.get("respNome"),o.get("cresp"),o.get("status"),
+            o.get("dtInicioPrev"),o.get("dtFimPrev"),o.get("dtInicioReal"),o.get("dtFimReal"),
+            o.get("obs"),_jdumps(o.get("etapas",[])),u,
+            o["cod"],o.get("nome"),o.get("tipo"),o.get("local"),o.get("responsavel"),
+            o.get("respNome"),o.get("cresp"),o.get("status"),
+            o.get("dtInicioPrev"),o.get("dtFimPrev"),o.get("dtInicioReal"),o.get("dtFimReal"),
+            o.get("obs"),_jdumps(o.get("etapas",[])),u
+        ])
+    for l in body.get("lancamentos", []):
+        run_exec(f"""
+            MERGE INTO {S_OBRAS}.lancamentos AS t
+            USING (SELECT ? AS id) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET
+                obraCod=?,cresp=?,categoria=?,subcategoria=?,descricao=?,unid=?,
+                qtd=?,precoUnit=?,nfDoc=?,dtLanc=?,fornecedor=?,obs=?,
+                atualizado_em=current_timestamp(),atualizado_por=?
+            WHEN NOT MATCHED THEN INSERT
+                (id,obraCod,cresp,categoria,subcategoria,descricao,unid,
+                 qtd,precoUnit,nfDoc,dtLanc,fornecedor,obs,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, [
+            l["id"],
+            l.get("obraCod"),l.get("cresp"),l.get("categoria"),l.get("subcategoria"),
+            l.get("descricao"),l.get("unid"),l.get("qtd"),l.get("precoUnit"),
+            l.get("nfDoc"),l.get("dtLanc"),l.get("fornecedor"),l.get("obs"),u,
+            l["id"],l.get("obraCod"),l.get("cresp"),l.get("categoria"),l.get("subcategoria"),
+            l.get("descricao"),l.get("unid"),l.get("qtd"),l.get("precoUnit"),
+            l.get("nfDoc"),l.get("dtLanc"),l.get("fornecedor"),l.get("obs"),u
+        ])
+    cache_invalidate("obras")
+    return JSONResponse({"ok": True})
 
-# ─── API: CODIN ───────────────────────────────────────────────────────────────
+# ─── CODIN ────────────────────────────────────────────────────────────────────
 @app.get("/api/codin")
 async def get_codin():
-    dados = db_get(S_CODIN, "codin_completo", "codin_principal")
-    return JSONResponse(dados if dados else {"pessoas": [], "pontos": [], "acessos": [], "leitores": []})
+    return JSONResponse(get_cached("codin"))
 
 @app.post("/api/codin")
 async def save_codin(request: Request):
-    dados = await request.json()
-    ok = db_save(S_CODIN, "codin_completo", "codin_principal", dados, get_usuario(request))
-    return JSONResponse({"ok": ok})
+    body = await request.json()
+    u = get_usuario(request)
+    for p in body.get("pessoas", []):
+        run_exec(f"""
+            MERGE INTO {S_CODIN}.pessoas AS t
+            USING (SELECT ? AS id) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET
+                nome=?,cargo=?,setor=?,status=?,lib=?,obs=?,
+                atualizado_em=current_timestamp(),atualizado_por=?
+            WHEN NOT MATCHED THEN INSERT (id,nome,cargo,setor,status,lib,obs,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?)
+        """, [
+            p["id"],p.get("nome"),p.get("cargo"),p.get("setor"),
+            p.get("status"),p.get("lib"),p.get("obs"),u,
+            p["id"],p.get("nome"),p.get("cargo"),p.get("setor"),
+            p.get("status"),p.get("lib"),p.get("obs"),u
+        ])
+    cache_invalidate("codin")
+    return JSONResponse({"ok": True})
 
-# ─── API: Conforto ────────────────────────────────────────────────────────────
+# ─── Conforto ─────────────────────────────────────────────────────────────────
 @app.get("/api/conforto")
 async def get_conforto():
-    dados = db_get(S_CONFORTO, "conforto_completo", "conforto_principal")
-    return JSONResponse(dados if dados else {"areas": [], "ucs": [], "ordens": []})
+    return JSONResponse(get_cached("conforto"))
 
 @app.post("/api/conforto")
 async def save_conforto(request: Request):
-    dados = await request.json()
-    ok = db_save(S_CONFORTO, "conforto_completo", "conforto_principal", dados, get_usuario(request))
-    return JSONResponse({"ok": ok})
+    body = await request.json()
+    u = get_usuario(request)
+    if "config" in body:
+        run_exec(f"""
+            MERGE INTO {S_CONFORTO}.config AS t
+            USING (SELECT 'config_geral' AS chave) AS s ON t.chave = s.chave
+            WHEN MATCHED THEN UPDATE SET valor_json=?,atualizado_por=?,atualizado_em=current_timestamp()
+            WHEN NOT MATCHED THEN INSERT (chave,valor_json,atualizado_por)
+                VALUES ('config_geral',?,?)
+        """, [_jdumps(body["config"]),_jdumps(body["config"]),u])
+    cache_invalidate("conforto")
+    return JSONResponse({"ok": True})
 
-# ─── API: Atividades ──────────────────────────────────────────────────────────
+# ─── Atividades ───────────────────────────────────────────────────────────────
 @app.get("/api/atividades")
 async def get_atividades():
-    dados = db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal")
-    return JSONResponse(dados if dados else {"atividades": []})
+    return JSONResponse(get_cached("atividades"))
 
 @app.post("/api/atividades")
 async def save_atividades(request: Request):
-    dados = await request.json()
-    ok = db_save(S_ATIVIDADES, "atividades_completo", "atividades_principal", dados, get_usuario(request))
-    return JSONResponse({"ok": ok})
+    body = await request.json()
+    u = get_usuario(request)
+    for a in body.get("atividades", []):
+        run_exec(f"""
+            MERGE INTO {S_ATIVIDADES}.atividades AS t
+            USING (SELECT ? AS id) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET
+                titulo=?,desc=?,status=?,prioridade=?,responsavel=?,obra=?,
+                prazo=?,progresso=?,tags=?,criadoPor=?,criadoEm=?,comentarios=?,
+                atualizado_em=current_timestamp(),atualizado_por=?
+            WHEN NOT MATCHED THEN INSERT
+                (id,titulo,desc,status,prioridade,responsavel,obra,
+                 prazo,progresso,tags,criadoPor,criadoEm,comentarios,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, [
+            a["id"],
+            a.get("titulo"),a.get("desc"),a.get("status"),a.get("prioridade"),
+            a.get("responsavel"),a.get("obra"),a.get("prazo"),a.get("progresso",0),
+            a.get("tags"),a.get("criadoPor"),a.get("criadoEm"),
+            _jdumps(a.get("comentarios",[])),u,
+            a["id"],
+            a.get("titulo"),a.get("desc"),a.get("status"),a.get("prioridade"),
+            a.get("responsavel"),a.get("obra"),a.get("prazo"),a.get("progresso",0),
+            a.get("tags"),a.get("criadoPor"),a.get("criadoEm"),
+            _jdumps(a.get("comentarios",[])),u
+        ])
+    cache_invalidate("atividades")
+    return JSONResponse({"ok": True})
 
-# ─── API: Hub ─────────────────────────────────────────────────────────────────
+# ─── Hub ──────────────────────────────────────────────────────────────────────
 @app.get("/api/hub/config")
 async def get_hub_config(request: Request):
     usuario = get_usuario(request)
-    dados   = db_get(S_HUB, "config", f"config_{usuario}")
-    return JSONResponse(dados if dados else {})
+    key = f"hub_config_{usuario}"
+    v = cache_get(key)
+    if v is not None:
+        return JSONResponse(v)
+    try:
+        rows = run_query(f"SELECT dados_json FROM {S_HUB}.config WHERE chave=? LIMIT 1", [f"config_{usuario}"])
+        dados = json.loads(rows[0]["dados_json"]) if rows else {}
+    except:
+        dados = {}
+    cache_set(key, dados)
+    return JSONResponse(dados)
 
 @app.post("/api/hub/config")
 async def save_hub_config(request: Request):
     dados   = await request.json()
     usuario = get_usuario(request)
-    try:
-        j    = json.dumps(dados, ensure_ascii=False)
-        conn = get_conn()
-        with conn.cursor() as cur:
-            cur.execute(f"""
-                MERGE INTO {S_HUB}.config AS t
-                USING (SELECT ? AS usuario, ? AS config_json) AS s
-                ON t.usuario = s.usuario
-                WHEN MATCHED THEN UPDATE SET
-                    config_json   = s.config_json,
-                    atualizado_em = current_timestamp()
-                WHEN NOT MATCHED THEN INSERT (usuario, config_json, atualizado_em)
-                    VALUES (s.usuario, s.config_json, current_timestamp())
-            """, [usuario, j])
-        return JSONResponse({"ok": True})
-    except Exception as e:
-        print(f"[hub config] erro: {e}")
-        return JSONResponse({"ok": False})
+    run_exec(f"""
+        MERGE INTO {S_HUB}.config AS t
+        USING (SELECT ? AS chave) AS s ON t.chave = s.chave
+        WHEN MATCHED THEN UPDATE SET dados_json=?,atualizado_por=?,atualizado_em=current_timestamp()
+        WHEN NOT MATCHED THEN INSERT (chave,dados_json,atualizado_por,atualizado_em)
+            VALUES (?,?,?,current_timestamp())
+    """, [f"config_{usuario}",_jdumps(dados),usuario,f"config_{usuario}",_jdumps(dados),usuario])
+    cache_set(f"hub_config_{usuario}", dados)
+    return JSONResponse({"ok": True})
 
 @app.get("/api/hub/dados")
 async def get_hub_dados():
-    chamados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal") or {"chamados": []}
-    obras    = db_get(S_OBRAS,    "obras_completo",    "obras_principal")    or {"obras": [], "lancamentos": []}
-    c = chamados.get("chamados", [])
-    o = obras.get("obras", [])
-    l = obras.get("lancamentos", [])
+    ch = get_cached("chamados")
+    ob = get_cached("obras")
+    c  = ch.get("chamados", [])
+    o  = ob.get("obras", [])
+    l  = ob.get("lancamentos", [])
     return JSONResponse({
         "chamados": {
             "total":      len(c),
-            "abertos":    len([x for x in c if x.get("status") == "Aberto"]),
-            "andamento":  len([x for x in c if x.get("status") == "Em Andamento"]),
-            "concluidos": len([x for x in c if x.get("status") == "Concluído"]),
-            "criticos":   len([x for x in c if x.get("prioridade") == "Crítica" and x.get("status") not in ["Concluído", "Cancelado"]]),
+            "abertos":    len([x for x in c if x.get("status")=="Aberto"]),
+            "andamento":  len([x for x in c if x.get("status")=="Em Andamento"]),
+            "concluidos": len([x for x in c if x.get("status")=="Concluido"]),
+            "criticos":   len([x for x in c if x.get("prioridade")=="Critica"
+                               and x.get("status") not in ["Concluido","Cancelado"]]),
         },
         "obras": {
             "total":       len(o),
-            "andamento":   len([x for x in o if x.get("status") == "Em Andamento"]),
-            "concluidas":  len([x for x in o if x.get("status") == "Concluído"]),
-            "gasto_total": sum(x.get("precoUnit", 0) * x.get("qtd", 1) for x in l),
+            "andamento":   len([x for x in o if x.get("status")=="Em Andamento"]),
+            "concluidas":  len([x for x in o if x.get("status")=="Concluido"]),
+            "gasto_total": sum(x.get("precoUnit",0)*x.get("qtd",1) for x in l),
         }
     })
 
-# ─── API: KPI (agrega tudo — servido do cache, instantâneo) ──────────────────
 @app.get("/api/kpi/dados")
 async def get_kpi():
     return JSONResponse({
-        "chamados":   db_get(S_CHAMADOS,   "chamados_completo",   "chamados_principal")   or {},
-        "obras":      db_get(S_OBRAS,      "obras_completo",      "obras_principal")      or {},
-        "atividades": db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal") or {},
-        "conforto":   db_get(S_CONFORTO,   "conforto_completo",   "conforto_principal")   or {},
+        "chamados":   get_cached("chamados"),
+        "obras":      get_cached("obras"),
+        "atividades": get_cached("atividades"),
+        "conforto":   get_cached("conforto"),
     })
 
-# ─── API: Auth ────────────────────────────────────────────────────────────────
+# ─── Auth ─────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/login")
 async def login(request: Request):
     try:
         body  = await request.json()
-        email = body.get("email", "").strip().lower()
-        senha = body.get("senha", "")
+        email = body.get("email","").strip().lower()
+        senha = body.get("senha","")
         if not email or not senha:
-            return JSONResponse({"erro": "credenciais inválidas"}, status_code=401)
-        conn = get_conn()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT nome, email, senha_hash, role, ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email = ? LIMIT 1",
-                [email]
-            )
-            row = cur.fetchone()
-        if not row:
-            return JSONResponse({"erro": "credenciais inválidas"}, status_code=401)
-        nome, db_email, senha_hash, role, ativo = row
-        if not ativo:
-            return JSONResponse({"erro": "usuário inativo"}, status_code=403)
-        if hashlib.sha256(senha.encode()).hexdigest() != senha_hash:
-            return JSONResponse({"erro": "credenciais inválidas"}, status_code=401)
-        payload = {
-            "nome":  nome,
-            "email": db_email,
-            "role":  role,
-            "exp":   datetime.datetime.utcnow() + datetime.timedelta(hours=12)
-        }
-        token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+            return JSONResponse({"erro":"credenciais invalidas"}, status_code=401)
+        rows = run_query(
+            "SELECT nome,email,senha_hash,role,ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email=? LIMIT 1",
+            [email]
+        )
+        if not rows:
+            return JSONResponse({"erro":"credenciais invalidas"}, status_code=401)
+        r = rows[0]
+        if not r["ativo"]:
+            return JSONResponse({"erro":"usuario inativo"}, status_code=403)
+        if hashlib.sha256(senha.encode()).hexdigest() != r["senha_hash"]:
+            return JSONResponse({"erro":"credenciais invalidas"}, status_code=401)
+        token = jwt.encode({
+            "nome":r["nome"],"email":r["email"],"role":r["role"],
+            "exp":datetime.datetime.utcnow()+datetime.timedelta(hours=12)
+        }, JWT_SECRET, algorithm="HS256")
         return JSONResponse({"token": token})
     except Exception as e:
         print(f"[login] erro: {e}")
-        return JSONResponse({"erro": "erro interno"}, status_code=500)
+        return JSONResponse({"erro":"erro interno"}, status_code=500)
 
-# ─── API: Admin ───────────────────────────────────────────────────────────────
+# ─── Admin ────────────────────────────────────────────────────────────────────
 @app.get("/api/admin/usuarios")
 async def admin_listar(request: Request):
-    token_data = verificar_admin(request)
-    if not token_data:
-        return JSONResponse({"erro": "sem permissão"}, status_code=403)
-    conn = get_conn()
-    with conn.cursor() as cur:
-        cur.execute("SELECT id, nome, email, role, ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios ORDER BY id")
-        cols = [d[0] for d in cur.description]
-        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-    return JSONResponse(rows)
+    if not verificar_admin(request):
+        return JSONResponse({"erro":"sem permissao"}, status_code=403)
+    return JSONResponse(run_query("SELECT id,nome,email,role,ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios ORDER BY id"))
 
 @app.post("/api/admin/usuarios")
 async def admin_criar(request: Request):
-    token_data = verificar_admin(request)
-    if not token_data:
-        return JSONResponse({"erro": "sem permissão"}, status_code=403)
-    body       = await request.json()
-    senha_hash = hashlib.sha256(body["senha"].encode()).hexdigest()
-    conn = get_conn()
-    with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO eng_lab.`dashboard-labs-and-tracks`.usuarios (nome, email, senha_hash, role, ativo) VALUES (?,?,?,?,true)",
-            [body["nome"], body["email"].lower(), senha_hash, body.get("role", "visualizador")]
-        )
+    if not verificar_admin(request):
+        return JSONResponse({"erro":"sem permissao"}, status_code=403)
+    body = await request.json()
+    run_exec(
+        "INSERT INTO eng_lab.`dashboard-labs-and-tracks`.usuarios (nome,email,senha_hash,role,ativo) VALUES (?,?,?,?,true)",
+        [body["nome"],body["email"].lower(),hashlib.sha256(body["senha"].encode()).hexdigest(),body.get("role","visualizador")]
+    )
     return JSONResponse({"ok": True})
 
 @app.put("/api/admin/usuarios/{uid}")
 async def admin_toggle(uid: int, request: Request):
-    token_data = verificar_admin(request)
-    if not token_data:
-        return JSONResponse({"erro": "sem permissão"}, status_code=403)
+    if not verificar_admin(request):
+        return JSONResponse({"erro":"sem permissao"}, status_code=403)
     body = await request.json()
-    conn = get_conn()
-    with conn.cursor() as cur:
-        cur.execute(
-            "UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET ativo=? WHERE id=?",
-            [body["ativo"], uid]
-        )
+    run_exec("UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET ativo=? WHERE id=?", [body["ativo"],uid])
     return JSONResponse({"ok": True})
 
 @app.put("/api/admin/usuarios/{uid}/senha")
 async def admin_reset_senha(uid: int, request: Request):
-    token_data = verificar_admin(request)
-    if not token_data:
-        return JSONResponse({"erro": "sem permissão"}, status_code=403)
-    body      = await request.json()
-    nova_hash = hashlib.sha256(body["senha"].encode()).hexdigest()
-    conn = get_conn()
-    with conn.cursor() as cur:
-        cur.execute(
-            "UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET senha_hash=? WHERE id=?",
-            [nova_hash, uid]
-        )
+    if not verificar_admin(request):
+        return JSONResponse({"erro":"sem permissao"}, status_code=403)
+    body = await request.json()
+    run_exec("UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET senha_hash=? WHERE id=?",
+             [hashlib.sha256(body["senha"].encode()).hexdigest(),uid])
     return JSONResponse({"ok": True})
 
-# ─── Páginas HTML ─────────────────────────────────────────────────────────────
+# ─── Paginas HTML com dados injetados ─────────────────────────────────────────
+BASE = "ERPFiat-Portatil/resources"
+
 @app.get("/")
 async def root():
-    return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
+    return inject(f"{BASE}/hub/hub.html", {})
 
 @app.get("/hub")
 async def hub():
-    return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
+    return inject(f"{BASE}/hub/hub.html", {})
 
 @app.get("/chamados")
 async def chamados_page():
-    return FileResponse("ERPFiat-Portatil/resources/chamados/chamados.html")
+    return inject(f"{BASE}/chamados/chamados.html", get_cached("chamados"))
 
 @app.get("/obras")
 async def obras_page():
-    return FileResponse("ERPFiat-Portatil/resources/obras/obras.html")
+    return inject(f"{BASE}/obras/obras.html", get_cached("obras"))
 
 @app.get("/codin")
 async def codin_page():
-    return FileResponse("ERPFiat-Portatil/resources/codins/codin.html")
+    return inject(f"{BASE}/codins/codin.html", get_cached("codin"))
 
 @app.get("/conforto")
 async def conforto_page():
-    return FileResponse("ERPFiat-Portatil/resources/conforto/conforto.html")
+    return inject(f"{BASE}/conforto/conforto.html", get_cached("conforto"))
 
 @app.get("/atividades")
 async def atividades_page():
-    return FileResponse("ERPFiat-Portatil/resources/atividades/atividades.html")
+    return inject(f"{BASE}/atividades/atividades.html", get_cached("atividades"))
 
 @app.get("/kpi")
 async def kpi_page():
-    return FileResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
+    return inject(f"{BASE}/kpi/kpi.html", {
+        "chamados":   get_cached("chamados"),
+        "obras":      get_cached("obras"),
+        "atividades": get_cached("atividades"),
+        "conforto":   get_cached("conforto"),
+    })
 
 @app.get("/admin")
 async def admin_page():
-    return FileResponse("ERPFiat-Portatil/resources/admin/admin.html")
+    return FileResponse(f"{BASE}/admin/admin.html")
 
 @app.get("/login")
 async def login_page():
-    return FileResponse("ERPFiat-Portatil/resources/login/login.html")
+    return FileResponse(f"{BASE}/login/login.html")
 
-# ─── PWA ─────────────────────────────────────────────────────────────────────
 @app.get("/app.webmanifest")
 async def webmanifest():
-    return FileResponse(
-        "ERPFiat-Portatil/resources/manifest.json",
-        media_type="application/manifest+json"
-    )
+    return FileResponse(f"{BASE}/manifest.json", media_type="application/manifest+json")
 
 @app.get("/sw.js")
 async def service_worker():
-    return FileResponse(
-        "ERPFiat-Portatil/resources/sw.js",
-        media_type="application/javascript",
-        headers={"Service-Worker-Allowed": "/"}
-    )
+    return FileResponse(f"{BASE}/sw.js", media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/"})
 
 @app.get("/manifest.json")
 async def manifest():
-    return FileResponse(
-        "ERPFiat-Portatil/resources/manifest.json",
-        media_type="application/manifest+json"
-    )
+    return FileResponse(f"{BASE}/manifest.json", media_type="application/manifest+json")
 
-# ─── Static fallback (deve ser o último mount) ────────────────────────────────
-app.mount("/", StaticFiles(directory="ERPFiat-Portatil/resources", html=True), name="static")
+app.mount("/", StaticFiles(directory=BASE, html=True), name="static")
