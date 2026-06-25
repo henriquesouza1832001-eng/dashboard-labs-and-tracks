@@ -3,3 +3,5 @@ uvicorn
 databricks-sql-connector
 pandas
 python-multipart
+PyJWT
+bcrypt
