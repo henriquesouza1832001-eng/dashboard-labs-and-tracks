@@ -327,7 +327,7 @@ async def kpi_page():
 async def admin_page():
     return FileResponse("ERPFiat-Portatil/resources/admin/admin.html")
 
-app.get("/sw.js")
+@app.get("/sw.js")
 async def service_worker():
     return FileResponse(
         "ERPFiat-Portatil/resources/sw.js",
@@ -349,7 +349,5 @@ async def prefetch():
     loop.run_in_executor(None, lambda: db_get(S_OBRAS, "obras_completo", "obras_principal"))
     loop.run_in_executor(None, lambda: db_get(S_CONFORTO, "conforto_completo", "conforto_principal"))
     loop.run_in_executor(None, lambda: db_get(S_ATIVIDADES, "atividades_completo", "atividades_principal"))
-
-app.mount("/", StaticFiles(directory="ERPFiat-Portatil/resources", html=True), name="static")
 
 app.mount("/", StaticFiles(directory="ERPFiat-Portatil/resources", html=True), name="static")
