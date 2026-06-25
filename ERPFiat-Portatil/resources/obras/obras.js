@@ -21,7 +21,7 @@ const fmtD = s => s ? s.split('-').reverse().join('/') : '—';
 const hoje = () => new Date().toISOString().slice(0,10);
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
 async function salvarCentral(){
-  await fetch('/api/hub/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(centralToJSON())});
+  await API.hub.config.salvar(centralToJSON());
 }
 function abrirDB(){ return Promise.resolve(); }
 
@@ -71,7 +71,7 @@ function carregarCentral(txt){
 
 async function salvarDados(){
   setSaveStatus('saving','salvando…');
-  await fetch('/api/obras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toJSON())});
+  await API.obras.salvar(toJSON());
   setSaveStatus('saved','salvo');
 }
 function agendarSalvamento(){ setSaveStatus('saving','salvando…'); clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
@@ -563,8 +563,8 @@ window.editarCategoria=editarCategoria; window.excluirCategoria=excluirCategoria
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const [rObras, rCentral] = await Promise.all([
-      fetch('/api/obras'),
-      fetch('/api/hub/config')
+      API.obras.listar(),
+      API.hub.config.ler()
     ]);
     const dObras = await rObras.json();
     const dCentral = await rCentral.json();

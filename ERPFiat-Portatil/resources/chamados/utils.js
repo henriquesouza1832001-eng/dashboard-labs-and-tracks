@@ -32,20 +32,13 @@ function setSave(state, label) {
   el.className = 'save-status ' + state;
   $('save-label').textContent = label;
 }
-async function tentarCarregarCache() {
-  try {
-    const r = await fetch('/api/chamados');
-    const d = await r.json();
-    allChamados = d.chamados || [];
-    setSave('saved', 'carregado');
-    atualizarContadores();
-    atualizarBadgeFiltroAtivo();
-    aplicarFiltros();
-  } catch(e) {
-    setSave('nosave', 'erro ao carregar');
-    renderTabela();
-  }
-}
+carregar('chamados', () => API.chamados.listar(), d => {
+  allChamados = d.chamados || [];
+  setSave('saved', 'carregado');
+  atualizarContadores();
+  atualizarBadgeFiltroAtivo();
+  aplicarFiltros();
+});
 function atualizarContadores() {
   const hoje = new Date().toDateString();
   $('cnt-todos').textContent     = allChamados.length;
@@ -67,4 +60,3 @@ function atualizarContadores() {
   $('stat-criticos').textContent  = allChamados.filter(c=>c.prioridade==='Crítica' && c.status==='Aberto').length;
   $('stat-sem-resp').textContent  = allChamados.filter(c=>!c.responsavel).length;
 }
-tentarCarregarCache();

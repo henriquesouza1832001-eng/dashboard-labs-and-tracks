@@ -1,4 +1,3 @@
-const NOVOS_KEY = 'chamados-novos-pendentes';
 const CATS = {
   INF: { label: 'Infraestrutura', color: '#58a6ff' },
   ELE: { label: 'Elétrica',       color: '#d29922' },
@@ -14,27 +13,14 @@ let filteredList = [];
 let activeStatus = '';
 let activeCat    = '';
 let currentId    = null;
-let idsCienciados = new Set(); // IDs já notificados nesta sessão
-
-// ── CARREGAR DADOS ───────────────────────────────────────────────
-function carregarDados() {
-  try {
-    const txt = localStorage.getItem(DATA_KEY);
-    if (!txt) return [];
-    return JSON.parse(txt).chamados || [];
-  } catch { return []; }
-}
-function salvarDados() {
-  localStorage.setItem(DATA_KEY, JSON.stringify({ chamados: allChamados }, null, 2));
-}
-
-// ── INICIALIZAÇÃO ────────────────────────────────────────────────
-allChamados = carregarDados();
-atualizarContadores();
-aplicarFiltros();
+let idsCienciados = new Set(); 
+carregar('chamados', () => API.chamados.listar(), d => {
+  allChamados = d.chamados || [];
+  atualizarContadores();
+  aplicarFiltros();
+});
 verificarPermissaoNotif();
 
-// ── UTILS ────────────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '–';
   return new Date(iso).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
@@ -266,40 +252,43 @@ function salvarModal() {
   c.idExterno   = extNovo;
   c.dataConclusao = $('mv-dataconclusao').value ? new Date($('mv-dataconclusao').value).toISOString() : c.dataConclusao;
 
-  salvarDados();
+  await API.chamados.atualizar(c.id, c);
+  API.invalidar('/chamados');
   atualizarContadores();
   aplicarFiltros();
   fecharModal();
   showToast('Chamado atualizado!');
 }
 
-// ── FOTO VIEWER ──────────────────────────────────────────────────
+
 function abrirFotoViewer(src) {
   $('foto-viewer-img').src = src;
   $('foto-viewer').classList.add('open');
 }
 
-// ── POLLING DE NOVOS CHAMADOS ────────────────────────────────────
+
 let _snapshotIds = new Set(allChamados.map(c => c.id));
 
-function poll() {
-  const lista = carregarDados();
-  const novosIds = lista.map(c => c.id).filter(id => !_snapshotIds.has(id));
-  if (novosIds.length) {
-    novosIds.forEach(id => _snapshotIds.add(id));
-    allChamados = lista;
-    atualizarContadores();
-    aplicarFiltros();
-    notificarNovos(novosIds, lista);
-  }
-  // Atualizar label de poll
-  const now = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-  $('poll-label').textContent = 'atualizado ' + now;
+async function poll() {
+  try {
+    API.invalidar('/chamados');
+    const d = await API.chamados.listar();
+    const lista = d.chamados || [];
+    const novosIds = lista.map(c => c.id).filter(id => !_snapshotIds.has(id));
+    if (novosIds.length) {
+      novosIds.forEach(id => _snapshotIds.add(id));
+      allChamados = lista;
+      atualizarContadores();
+      aplicarFiltros();
+      notificarNovos(novosIds, lista);
+    }
+    const now = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    $('poll-label').textContent = 'atualizado ' + now;
+  } catch {}
 }
 setInterval(poll, 30000);
 
 function notificarNovos(ids, lista) {
-  // Banner
   const banner = $('notif-banner');
   const txt = ids.length === 1 ? 'Novo chamado registrado!' : `${ids.length} novos chamados registrados!`;
   $('notif-txt').textContent = txt;
@@ -332,24 +321,6 @@ function focarNovos() {
 }
 function fecharBanner() { $('notif-banner').classList.remove('show'); }
 
-// Ler e limpar pendentes do localStorage (gravados pelo abrir.html)
-function verificarPendentesLS() {
-  try {
-    const novos = JSON.parse(localStorage.getItem(NOVOS_KEY)) || [];
-    if (novos.length) {
-      const lista = carregarDados();
-      notificarNovos(novos, lista);
-      localStorage.removeItem(NOVOS_KEY);
-      allChamados = lista;
-      _snapshotIds = new Set(lista.map(c => c.id));
-      atualizarContadores();
-      aplicarFiltros();
-    }
-  } catch {}
-}
-setTimeout(verificarPendentesLS, 1500);
-
-// ── NOTIFICAÇÕES BROWSER ─────────────────────────────────────────
 function verificarPermissaoNotif() {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
@@ -364,16 +335,6 @@ function pedirPermissao() {
   });
 }
 
-function marcarComoLido(id) {
-  try {
-    let novos = JSON.parse(localStorage.getItem(NOVOS_KEY)) || [];
-    novos = novos.filter(x => x !== id);
-    localStorage.setItem(NOVOS_KEY, JSON.stringify(novos));
-    if (!novos.length) fecharBanner();
-  } catch {}
-}
-
-// ── SIDEBAR FILTROS ──────────────────────────────────────────────
 document.querySelectorAll('[data-filter]').forEach(btn => {
   btn.addEventListener('click', () => {
     const type = btn.dataset.filter;

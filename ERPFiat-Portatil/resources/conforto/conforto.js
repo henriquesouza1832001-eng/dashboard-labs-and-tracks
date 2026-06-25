@@ -115,7 +115,7 @@ function carregarDeJSON(txt) {
 }
 
 async function salvarDados(){
-  await fetch('/api/conforto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toJSON())});
+  await API.conforto.salvar(toJSON());
   setSaveStatus('saved','salvo');
 }
 
@@ -1432,7 +1432,7 @@ function exportarJSON() {
 }
 
 async function tentarCarregar(){
-  const d=await(await fetch('/api/conforto')).json();
+  const d = await API.conforto.listar();
   if(d&&d.modulo==='conforto')carregarDeJSON(JSON.stringify(d));
 }
 

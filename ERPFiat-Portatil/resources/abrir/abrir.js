@@ -1,6 +1,3 @@
-const DATA_KEY = 'chamados-facilities-dados';
-const SLA_KEY  = 'chamados-sla-config';
-
 const CATS = {
   INF: 'Infraestrutura',
   ELE: 'Elétrica',
@@ -77,9 +74,9 @@ function removerFoto(i) {
   renderFotos();
 }
 
-// ── Gerar ID (mesmo padrão do chamados.html) ───────────────────
-function gerarId(cat) {
-  const dados = carregarDados();
+
+async function gerarId(cat) {
+  const dados = (await API.chamados.listar()).chamados || [];
   const ano = new Date().getFullYear();
   const prefix = cat + '-' + ano + '-';
   const existentes = dados
@@ -89,20 +86,9 @@ function gerarId(cat) {
   return prefix + String(prox).padStart(3, '0');
 }
 
-function carregarDados() {
-  try {
-    const txt = localStorage.getItem(DATA_KEY);
-    if (!txt) return [];
-    const json = JSON.parse(txt);
-    return json.chamados || [];
-  } catch { return []; }
-}
 
-function salvarDados(lista) {
-  localStorage.setItem(DATA_KEY, JSON.stringify({ chamados: lista }, null, 2));
-}
 
-function registrar() {
+async function registrar() {
   const titulo = document.getElementById('f-titulo').value.trim();
   const local  = document.getElementById('f-local').value.trim();
   const desc   = document.getElementById('f-desc').value.trim();
@@ -115,8 +101,7 @@ function registrar() {
   btn.disabled = true;
   btn.textContent = 'Registrando…';
 
-  const lista = carregarDados();
-  const id = gerarId(catSelecionada);
+  const id = await gerarId(catSelecionada);
 
   const novo = {
     id,
@@ -143,13 +128,8 @@ function registrar() {
     }]
   };
 
-  lista.unshift(novo);
-  salvarDados(lista);
-  const novosKey = 'chamados-novos-pendentes';
-  let novos = [];
-  try { novos = JSON.parse(localStorage.getItem(novosKey)) || []; } catch {}
-  novos.push(id);
-  localStorage.setItem(novosKey, JSON.stringify(novos));
+  await API.chamados.criar(novo);
+  API.invalidar('/chamados');
   setTimeout(() => {
     document.getElementById('tela-form').style.display = 'none';
     document.getElementById('sucesso-id').textContent = id;

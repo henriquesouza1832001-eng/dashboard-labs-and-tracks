@@ -54,8 +54,10 @@ async function registrarChamado() {
       cor: '#58a6ff'
     }]
   };
-  allChamados.unshift(novo);
-  await salvarArquivo();
+  await API.chamados.criar(novo);
+  API.invalidar('/chamados');
+  const dados = await API.chamados.listar();
+  allChamados = dados.chamados || [];
   atualizarContadores();
   aplicarFiltros();
   fecharModalNovo();
@@ -164,7 +166,8 @@ async function salvarChamado() {
   if (obs) c.ultimaObs = obs;
   c.fotos = [...editFotos];
 
-  await salvarArquivo();
+  await API.chamados.atualizar(c.id, c);
+  API.invalidar('/chamados');
   atualizarContadores();
   aplicarFiltros();
   fecharModalVer();
@@ -174,8 +177,10 @@ async function salvarChamado() {
 async function excluirChamado() {
   if (!currentId) return;
   if (!confirm(`Excluir o chamado ${currentId}? Não é possível desfazer.`)) return;
-  allChamados = allChamados.filter(c => c.id !== currentId);
-  await salvarArquivo();
+  await API.chamados.excluir(currentId);
+  API.invalidar('/chamados');
+  const dados = await API.chamados.listar();
+  allChamados = dados.chamados || [];
   atualizarContadores();
   aplicarFiltros();
   fecharModalVer();

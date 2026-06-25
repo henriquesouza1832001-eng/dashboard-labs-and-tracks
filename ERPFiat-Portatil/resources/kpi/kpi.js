@@ -118,11 +118,11 @@ function desenharMicroDonut(id,labels,vals,cores){
 }
 (function loadLogos(){
   const wrap=document.getElementById('kpi-logos');if(!wrap)return;
-  try{const cfg=JSON.parse(localStorage.getItem('hub-config')||'{}');(cfg.logos||[]).forEach(src=>{if(!src)return;const img=document.createElement('img');img.src=src;img.style.cssText='height:32px;width:auto;max-width:100px;object-fit:contain;border-radius:4px';wrap.appendChild(img);});}catch(e){}
+  try{const cfg = await API.hub.config.ler();(cfg.logos||[]).forEach(src=>{if(!src)return;const img=document.createElement('img');img.src=src;img.style.cssText='height:32px;width:auto;max-width:100px;object-fit:contain;border-radius:4px';wrap.appendChild(img);});}catch(e){}
 })();
 (function loadSidebar(){
   try{
-    const cfg=JSON.parse(localStorage.getItem('hub-config')||'{}');
+    const cfg = await API.hub.config.ler();
     const id=cfg.identidade||{};
     const n=$('kpi-inst-nome'),s=$('kpi-inst-sub'),b=$('kpi-inst-badge');
     if(n)n.textContent=id.instNome||id.brand||'—';
@@ -132,7 +132,8 @@ function desenharMicroDonut(id,labels,vals,cores){
   try{
     const wrap=$('kpi-acts');
     if(!wrap)return;
-    const raw=localStorage.getItem('hub-atividades');
+    const d = await API.hub.dados();
+    const ativs = d.atividades || [];
     if(!raw){wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Sem atividades carregadas</div>';return;}
     const data=JSON.parse(raw);
     const ativs=Array.isArray(data)?data:(data.atividades||[]);
@@ -853,7 +854,7 @@ function abrirDetalheObra(cod){
           const obs=ta.value.trim();
           const obras=_obrasData.obras||[];
           const ob=obras.find(x=>x.cod==='${cod}');
-          if(ob){ob.observacao=obs;localStorage.setItem('obras-dados-cache',JSON.stringify(_obrasData));}
+          if(ob){ob.observacao=obs; await API.obras.salvar(_obrasData);}
           ta.readOnly=true;ta.style.background='var(--bg)';ta.style.borderColor='var(--border)';btn.textContent='✏️ editar';
         }
       " style="font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);cursor:pointer;font-family:var(--font)">✏️ editar</button>
@@ -951,7 +952,7 @@ function abrirDetalheObra(cod){
         } else {
           const obs=taObs.value.trim();
           const ob=(_obrasData.obras||[]).find(x=>x.cod===cod);
-          if(ob){ob.observacao=obs;localStorage.setItem('obras-dados-cache',JSON.stringify(_obrasData));}
+          if(ob){ob.observacao=obs; await API.obras.salvar(_obrasData);}
           taObs.readOnly=true;
           taObs.style.background='var(--bg)';
           taObs.style.borderColor='var(--border)';
@@ -1058,10 +1059,8 @@ function renderChamados(container,d){
          <div class="ob-mini-stat"><span class="ob-mini-lbl">Pendentes</span><span class="ob-mini-val c-amarelo">${total-resolvidos}</span></div>`)}
     </div>
   </div>`;
-
-  // SLA rodapé
   const slaKey='chamados-sla-config';
-  const slaCfg=(()=>{try{return JSON.parse(localStorage.getItem(slaKey))||{};}catch(e){return{};}})();
+  const slaCfg = await API.chamados.sla();
   const _slaD=p=>slaCfg[p]||({'Crítica':1,'Alta':3,'Média':5,'Baixa':7}[p]||7);
   const _diasD=c=>{const i=new Date(c.dtAbertura||c.dataAbertura||c.criadoEm||Date.now());const f=c.dataConclusao?new Date(c.dataConclusao):new Date();return Math.max(0,(f-i)/86400000);};
   const comData=cham.filter(x=>x.dtAbertura||x.dataAbertura||x.criadoEm);
@@ -2255,15 +2254,11 @@ function dtRenderErroLista(tipo){
       <div class="dt-err-msg">${e.msg}</div>
     </div>`).join('');
 }
-
-// ── PERFORMANCE ──
 function dtRenderPerf(el){
   const now=Date.now();
   const uptime=((now-_dtInicio)/1000).toFixed(1);
-  const cacheTotal=DT_CACHES.reduce((s,c)=>{const r=localStorage.getItem(c.key);return s+(r?r.length:0);},0);
   const cachekb=Math.round(cacheTotal/1024);
   const modulos=DT_CACHES.slice(0,7);
-  const loaded=modulos.filter(c=>localStorage.getItem(c.key)).length;
   const renders=Object.entries(_dtRenderTimes).sort((a,b)=>b[1]-a[1]);
   const maxMs=renders.length?renders[0][1]:1;
   el.innerHTML=`

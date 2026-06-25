@@ -57,7 +57,6 @@ function buildLogos(){
         const img=$('logo-img-'+i);const ph=$('logo-ph-'+i);
         img.src=src;img.classList.add('loaded');ph.style.display='none';
         saveCFG();
-        syncCentral();
       };r.readAsDataURL(f);
     });
   });
@@ -101,7 +100,6 @@ function buildActs(){
     this.querySelector('.chk').className='chk done';
     this.querySelector('.at').classList.add('done-t');
     updateActPct(CFG.atividades.filter(a=>a.estado==='done').length,CFG.atividades.length);
-    syncCentral();
   }));
 }
 function updateActPct(d,t){
@@ -206,6 +204,8 @@ $('btn-gif-upload').addEventListener('click',e=>{e.stopPropagation();const inp=d
   img.classList.add('loaded');
   $('video-placeholder').style.display='none';
   gifLoaded=true;
+  CFG.gif = src;
+  saveCFG();
 };;r.readAsDataURL(f);};inp.click();});
 function openMetrics(){$('metrics-panel').classList.add('open');}
 $('btn-mp-close').addEventListener('click',()=>$('metrics-panel').classList.remove('open'));
@@ -233,79 +233,6 @@ $('btn-kpi-toggle').addEventListener('click',e=>{
   e.stopPropagation();
   $('video-overlay').classList.toggle('open');
 });
-
-// ── METRICS PANEL KPIs ──
-function buildMetricsPanel(){
-  const kpis=CFG.kpisMini||[];
-  $('el-mp-kpis').innerHTML=kpis.map((k,i)=>`
-    <div class="kpi-box">
-      <div class="kpi-lbl">${k.lbl}</div>
-      <div class="kpi-val ${k.cls}" id="mp-kpi-val-${i}">${k.val}</div>
-      <div class="kpi-sub" id="mp-kpi-sub-${i}">${k.sub}</div>
-      <div class="kpi-bar"><div class="kpi-bar-fill" id="mp-kpi-bar-${i}" style="width:${k.bar}%;background:${k.barCor}"></div></div>
-    </div>`).join('');
-  const ffiles=[
-    {key:'obras',cache:'obras-dados-cache',lbl:'obras.json',fn:atualizarObras},
-    {key:'cham',cache:'chamados-facilities-dados',lbl:'chamados.json',fn:atualizarCham},
-    {key:'ativ',cache:'hub-atividades',lbl:'atividades.json',fn:atualizarAtiv},
-    {key:'codin',cache:'controle-acesso-dados',lbl:'codin.json',fn:atualizarCodin},
-    {key:'conforto',cache:'conforto-dados-cache',lbl:'conforto-dados.json',fn:atualizarConforto}
-  ];
-  $('el-mp-files').innerHTML=ffiles.map(f=>`<button class="mod-pill" data-key="${f.key}" style="cursor:pointer">📂 ${f.lbl}</button>`).join('');
-  $('el-mp-files').querySelectorAll('button').forEach((btn,i)=>{
-    btn.addEventListener('click',()=>loadFile(ffiles[i]));
-  });
-  // File rows no top-left
-  $('el-file-rows').innerHTML=ffiles.map(f=>`
-  <div style="display:flex;align-items:center;gap:6px">
-    <div style="width:5px;height:5px;border-radius:50%;background:var(--bor);flex-shrink:0" id="fdot-${f.key}"></div>
-    <span style="font-size:10px;color:var(--td);font-family:var(--mono);flex:1" id="fname-${f.key}">${f.lbl}</span>
-    <button style="background:none;border:1px solid var(--bor);border-radius:4px;color:var(--td);font-size:9px;padding:2px 6px;cursor:pointer;font-family:var(--mono)" onclick="loadFileByKey('${f.key}')">📂</button>
-  </div>`).join('');
-
-const centralRow=document.createElement('div');
-centralRow.style.cssText='display:flex;align-items:center;gap:6px';
-centralRow.innerHTML=`
-  <div style="width:5px;height:5px;border-radius:50%;background:var(--gn);flex-shrink:0" id="fdot-central"></div>
-  <span style="font-size:10px;color:var(--td);font-family:var(--mono);flex:1" id="fname-central">${localStorage.getItem('neu-name-central')||'central.json'}</span>
-  <button style="background:none;border:1px solid var(--bor);border-radius:4px;color:var(--td);font-size:9px;padding:2px 6px;cursor:pointer;font-family:var(--mono)" onclick="loadCentral()">📂</button>`;
-$('el-file-rows').appendChild(centralRow);
-const expRow=document.createElement('div');
-expRow.style.cssText='display:flex;justify-content:flex-end;margin-top:4px';
-expRow.innerHTML=`<button style="background:none;border:1px solid var(--bor);border-radius:4px;color:var(--td);font-size:9px;padding:2px 8px;cursor:pointer;font-family:var(--mono)" onclick="exportarCentral()">⬇ exportar central</button>`;
-$('el-file-rows').appendChild(expRow);
-const imgRow=document.createElement('div');
-imgRow.style.cssText='display:flex;align-items:center;gap:6px;margin-top:2px';
-imgRow.innerHTML=`
-  <div style="width:5px;height:5px;border-radius:50%;background:${(CFG.logos||[]).some(l=>l)||localStorage.getItem('hub-gif')?'var(--gn)':'var(--bor)'};flex-shrink:0" id="fdot-imagens"></div>
-  <span style="font-size:10px;color:var(--td);font-family:var(--mono);flex:1" id="fname-imagens">${localStorage.getItem('neu-name-imagens')||'imagens.json'}</span>
-  <button style="background:none;border:1px solid var(--bor);border-radius:4px;color:var(--td);font-size:9px;padding:2px 6px;cursor:pointer;font-family:var(--mono)" onclick="loadImagens()">📂</button>
-  <button style="background:none;border:1px solid var(--bor);border-radius:4px;color:var(--td);font-size:9px;padding:2px 6px;cursor:pointer;font-family:var(--mono)" onclick="exportarImagens()">⬇</button>`;
-$('el-file-rows').appendChild(imgRow);
-}
-
-function loadFile(ff){
-  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
-  inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);localStorage.setItem(ff.cache,e.target.result);localStorage.setItem('neu-cache-'+ff.key,e.target.result);localStorage.setItem('neu-name-'+ff.key,f.name);ff.fn(d);const c=JSON.parse(localStorage.getItem('intranet-central')||'{}');
-if(ff.key==='obras'){c.obras=d.obras;c.budget=d.budget;c.lancamentos=d.lancamentos;}
-if(ff.key==='cham')c.chamados=d.chamados||(Array.isArray(d)?d:[]);
-if(ff.key==='ativ')c.atividades=Array.isArray(d)?d:(d.atividades||[]);
-if(ff.key==='codin')c.pessoas=d.pessoas||[];
-if(ff.key==='conforto'){c.conforto={ordens:d.ordens||[],ucs:d.ucs||[],preventivas:d.preventivas||[],manutencoes:d.manutencoes||[]};}
-localStorage.setItem('intranet-central',JSON.stringify(c));}catch(err){console.error('Error loading file:',err);}};r.readAsText(f);};inp.click();
-}
-const FILE_MAP={
-  obras:{cache:'obras-dados-cache',fn:atualizarObras},
-  cham:{cache:'chamados-facilities-dados',fn:atualizarCham},
-  ativ:{cache:'hub-atividades',fn:atualizarAtiv},
-  codin:{cache:'controle-acesso-dados',fn:atualizarCodin},
-  conforto:{cache:'conforto-dados-cache',fn:atualizarConforto}
-};
-window.loadFileByKey=key=>{const ff=FILE_MAP[key];if(ff)loadFile({key,...ff,lbl:key+'.json'});};
-function setDot(key,ok){const e=$('fdot-'+key);if(e)e.style.background=ok?'var(--gn)':'var(--bor)';}
-function setFname(key,n){const e=$('fname-'+key);if(e)e.textContent=n;}
-
-// ── KPI UPDATERS ──
 function setKpi(i,val,sub,bar){
   const update=prefix=>{
     const v=$(prefix+'kpi-val-'+i);const s=$(prefix+'kpi-sub-'+i);const b=$(prefix+'kpi-bar-'+i);
@@ -352,127 +279,20 @@ function atualizarConforto(d){
   const hoje_=new Date().toISOString().slice(0,10);
   const prevAtrasadas=prev.filter(p=>p.status!=='Realizada'&&p.dataPrevista&&p.dataPrevista<hoje_).length;
   const manAbertas=man.filter(m=>m.status==='Aberta'||m.status==='Em Andamento').length;
-  localStorage.setItem('conforto-hub-resumo', JSON.stringify({
-    ordensAbertas: ordens.filter(o=>o.status==='Programada'||o.status==='Em Execução').length,
-    totalUCs: ucs.length,
-    prevAtrasadas,
-    manAbertas
-  }));
 }
-
-// ── CARREGAR CACHE ──
-function loadCache(){
-     const central=localStorage.getItem('intranet-central');
-  if(central)try{
-    const d=JSON.parse(central);
-    if(d.obras)atualizarObras({obras:d.obras,budget:d.budget||[],lancamentos:d.lancamentos||[]});
-if(d.chamados)atualizarCham({chamados:d.chamados});
-if(d.atividades)atualizarAtiv(d.atividades);
-if(d.pessoas)atualizarCodin({pessoas:d.pessoas});
-if(d.atividades_turno){CFG.atividades=d.atividades_turno;buildActs();}
-if(d.logos){CFG.logos=d.logos;buildLogos();saveCFG();}
-if(d.acoes){CFG.acoes=d.acoes;buildAcoes();}
-if(d.identidade){CFG.identidade=Object.assign({},CFG.identidade,d.identidade);applyIdent();}
-if(d.painelEsq){CFG.painelEsq=Object.assign({},CFG.painelEsq,d.painelEsq);buildVMO();}
-  }catch(e){}
-  const m=[
-    {key:'obras',cache:'obras-dados-cache',fn:atualizarObras},
-    {key:'cham',cache:'chamados-facilities-dados',fn:atualizarCham},
-    {key:'ativ',cache:'hub-atividades',fn:a=>atualizarAtiv(JSON.parse(a))},
-    {key:'codin',cache:'controle-acesso-dados',fn:atualizarCodin}
-  ];
-  m.forEach(({key,cache,fn})=>{
-    const txt=localStorage.getItem('neu-cache-'+key)||localStorage.getItem(cache);
-    const nm=localStorage.getItem('neu-name-'+key);
-    if(!txt)return;
-    if(nm)setFname(key,nm);setDot(key,true);
-    try{fn(JSON.parse(txt));}catch(e){}
-  });
-}
-window.loadCentral=()=>{
-  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
-  inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();
-    r.onload=e=>{try{
-      const d=JSON.parse(e.target.result);
-      localStorage.setItem('intranet-central',e.target.result);
-      localStorage.setItem('neu-name-central',f.name);
-const dot=$('fdot-central');if(dot)dot.style.background='var(--gn)';
-const nm=$('fname-central');if(nm)nm.textContent=f.name;
-      if(d.obras)atualizarObras({obras:d.obras,budget:d.budget||[],lancamentos:d.lancamentos||[]});
-if(d.chamados)atualizarCham({chamados:d.chamados});
-if(d.atividades)atualizarAtiv(d.atividades);
-if(d.pessoas)atualizarCodin({pessoas:d.pessoas});
-if(d.atividades_turno){CFG.atividades=d.atividades_turno;buildActs();}
-if(d.logos){CFG.logos=d.logos;buildLogos();saveCFG();}
-if(d.acoes){CFG.acoes=d.acoes;buildAcoes();}
-if(d.identidade){CFG.identidade=Object.assign({},CFG.identidade,d.identidade);applyIdent();}
-if(d.painelEsq){CFG.painelEsq=Object.assign({},CFG.painelEsq,d.painelEsq);buildVMO();}
-if(d.gif){localStorage.setItem('hub-gif',d.gif);}
-    }catch(ex){}};r.readAsText(f);};inp.click();
+window.exportarCentral = () => {
+  const c = {};
+  c.logos = CFG.logos || [];
+  c.gif = CFG.gif || '';
+  c.atividades_turno = CFG.atividades;
+  c.acoes = CFG.acoes;
+  c.identidade = CFG.identidade;
+  c.painelEsq = CFG.painelEsq;
+  const b = new Blob([JSON.stringify(c,null,2)],{type:'application/json'});
+  const a = document.createElement('a');a.href=URL.createObjectURL(b);a.download='central.json';a.click();
 };
-window.exportarImagens=()=>{
-  const obj={
-    logos:CFG.logos||['','','',''],
-    gif:localStorage.getItem('hub-gif')||''
-  };
-  const b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='imagens.json';a.click();
-};
-window.loadImagens=()=>{
-  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
-  inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();
-    r.onload=e=>{try{
-      const d=JSON.parse(e.target.result);
-      if(d.logos){CFG.logos=d.logos;buildLogos();saveCFG();}
-      if(d.gif){
-        localStorage.setItem('hub-gif',d.gif);
-        const img=$('video-gif');
-        img.dataset.src=d.gif;
-        img.removeAttribute('src');
-        $('video-placeholder').style.display='none';
-        gifLoaded=true;
-        let cv=$('gif-canvas');
-        if(!cv){cv=document.createElement('canvas');cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover';cv.id='gif-canvas';$('video-inner').insertBefore(cv,$('video-gif'));}
-        const tmp=new Image();
-        tmp.onload=()=>{cv.width=tmp.naturalWidth;cv.height=tmp.naturalHeight;cv.getContext('2d').drawImage(tmp,0,0);};
-        tmp.src=d.gif;
-      }
-      const dot=$('fdot-imagens');if(dot)dot.style.background='var(--gn)';
-      const nm=$('fname-imagens');if(nm)nm.textContent=f.name;
-      localStorage.setItem('neu-name-imagens',f.name);
-    }catch(ex){}};r.readAsText(f);};inp.click();
-};
-window.exportarCentral=()=>{
-  const c=JSON.parse(localStorage.getItem('intranet-central')||'{}');
-  if(CFG.logos&&CFG.logos.some(l=>l))c.logos=CFG.logos;
-  c.atividades_turno=CFG.atividades;
-  c.acoes=CFG.acoes;
-  c.identidade=Object.assign({},c.identidade||{},CFG.identidade);
-  c.painelEsq=Object.assign({},c.painelEsq||{},CFG.painelEsq);
-  const b=new Blob([JSON.stringify(c,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='central.json';a.click();
-};
-
-// ── ANIMAÇÕES ──
 setTimeout(()=>{document.querySelectorAll('[data-w]').forEach(el=>{el.style.transition='width 1s ease';el.style.width=el.getAttribute('data-w')+'%';});},400);
-function syncCentral(){
-  const c=JSON.parse(localStorage.getItem('intranet-central')||'{}');
-  if(CFG.logos&&CFG.logos.some(l=>l))c.logos=CFG.logos;
-  c.atividades_turno=CFG.atividades;
-  c.acoes=CFG.acoes;
-  c.identidade=Object.assign({},c.identidade||{},CFG.identidade);
-  c.painelEsq=Object.assign({},c.painelEsq||{},CFG.painelEsq);
-  const gif=localStorage.getItem('hub-gif');
-  if(gif)c.gif=gif;
-  try{
-    localStorage.setItem('intranet-central',JSON.stringify(c));
-  }catch(err){
-    alert('Central.json muito grande para o localStorage. Use Exportar para salvar em arquivo.');
-  }
-}
-async function saveCFG(){await fetch('/api/hub/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(CFG)});}
-
-// ── INIT ──
+async function saveCFG(){ await API.hub.config.salvar(CFG); }
 applyIdent();
 buildLogos();
 buildActs();
@@ -480,30 +300,9 @@ buildKpiMini();
 buildVidKpis();
 buildAcoes();
 buildVMO();
-buildMetricsPanel();
 loadCache();
-window.addEventListener('storage', e => {
-  const mapaInverso = {
-    'obras-dados-cache': 'obras',
-    'neu-cache-obras': 'obras',
-    'chamados-facilities-dados': 'cham',
-    'hub-atividades': 'ativ',
-    'controle-acesso-dados': 'codin',
-    'conforto-dados-cache': 'conforto',
-    'neu-cache-conforto': 'conforto'
-  };
-  const mod = mapaInverso[e.key];
-  if (!mod || !e.newValue) return;
-  const ff = ffiles?.find ? ffiles.find(f => f.key === mod) : null;
-  if (!ff) return;
-  try {
-    const d = JSON.parse(e.newValue);
-    if (ff.fn) ff.fn(d);
-    buildMetricsPanel();
-  } catch(err) {}
-});
 async function loadCache(){
-  const d=await(await fetch('/api/hub/dados')).json();
+  const d = await API.hub.dados();
   if(d.obras)atualizarObras({obras:d.obras,budget:d.budget||[],lancamentos:d.lancamentos||[]});
   if(d.chamados)atualizarCham({chamados:d.chamados});
   if(d.atividades)atualizarAtiv(d.atividades);

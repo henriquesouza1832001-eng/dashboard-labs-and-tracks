@@ -1,4 +1,3 @@
-// ── DEBUG BAR ──────────────────────────────────────────────
 (function(){
   var _logs=[], _erros=0;
   function _bar(){ return document.getElementById('debug-bar'); }
@@ -52,8 +51,16 @@ const CATS = {
   LMP: { label: 'Limpeza',        prefix: 'LMP', color: '#bc8cff' },
   AR:  { label: 'Ar Cond.',       prefix: 'AR',  color: '#39c5cf' },
 };
+let _slaCache = {};
+async function carregarSLA() {
+  try {
+    const d = await API.chamados.sla();
+    _slaCache = d || {};
+    carregarCamposSLA();
+  } catch {}
+}
 function lerSLA() {
-  return {};
+  return _slaCache;
 }
 function slaParaPrio(prio) {
   const sla = lerSLA();
@@ -75,7 +82,9 @@ async function salvarSLA() {
     'Média':   parseInt($('sla-media').value)   || 5,
     'Baixa':   parseInt($('sla-baixa').value)   || 7,
   };
-  await fetch('/api/hub/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sla: cfg})});
+  await API.chamados.salvarSla(cfg);
+  API.invalidar('/chamados/sla');
+  _slaCache = cfg;
   showToast('SLA salvo!');
   renderDashboard();
 }
@@ -92,6 +101,5 @@ let activeStatus   = '';
 let activeCat      = '';
 let activePrio     = '';
 let currentId      = null;  
-let fileHandle     = null;   
 let novasFotos     = [];    
 let editFotos      = [];     

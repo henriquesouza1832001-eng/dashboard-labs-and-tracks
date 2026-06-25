@@ -24,7 +24,7 @@ function formatDate(d){ if(!d)return'—'; const[y,m,dia]=d.split('-'); return`$
 function badge(s){ const map={'Ativo':'badge-ativo','Inativo':'badge-inativo','Bloqueado':'badge-bloqueado','Temporário':'badge-temp'}; return`<span class="badge ${map[s]||'badge-inativo'}">${s}</span>`; }
 function badgePonto(t){ return t==='Restrito'?'<span class="badge badge-restrito">🔒 Restrito</span>':'<span class="badge badge-publico">Público</span>'; }
 async function salvarDados(){
-  await fetch('/api/codin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+  await API.codin.salvar(state);
   setSaveStatus('ok');
 }
 function agendarSalvamento(){ clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
@@ -39,7 +39,7 @@ function carregarDeJSON(json){
 }
 async function abrirArquivo(){ return false; }
 async function carregarDados(){
-  const d=await(await fetch('/api/codin')).json();
+  const d = await API.codin.listar();
   if(d)carregarDeJSON(JSON.stringify(d));
 }
 function aplicarFiltroURL(){
