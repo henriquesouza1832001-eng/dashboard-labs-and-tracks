@@ -334,6 +334,13 @@ async def admin_page():
 async def login_page():
     return FileResponse("ERPFiat-Portatil/resources/login/login.html")
 
+@app.get("/app.webmanifest")
+async def webmanifest():
+    return FileResponse(
+        "ERPFiat-Portatil/resources/manifest.json",
+        media_type="application/manifest+json"
+    )
+
 @app.get("/sw.js")
 async def service_worker():
     return FileResponse(

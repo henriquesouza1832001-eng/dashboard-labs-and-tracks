@@ -1,5 +1,5 @@
 'use strict';
-const CACHE_NAME = 'controler-v2';
+const CACHE_NAME = 'controler-v3';
 
 const SHELL = [
   '/',
@@ -58,15 +58,19 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(
-    caches.match(e.request)
-      .then(cached => cached || fetch(e.request).then(res => {
+  caches.match(e.request)
+    .then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(res => {
         if (res.ok) {
-          caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return res;
-      }))
-      .catch(() => caches.match('/'))
-  );
+      });
+    })
+    .catch(() => caches.match('/'))
+);
 });
 self.addEventListener('push', e => {
   let data = { title: 'Controler', body: 'Nova notificação', icon: '/icons/icon-192.png' };
