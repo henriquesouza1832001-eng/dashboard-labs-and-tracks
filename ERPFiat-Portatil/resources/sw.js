@@ -1,5 +1,5 @@
 'use strict';
-const CACHE_NAME = 'controler-v6';
+const CACHE_NAME = 'controler-v7';
 
 const SHELL = [
   '/',
