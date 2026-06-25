@@ -291,45 +291,66 @@ async def admin_reset_senha(uid: int, request: Request):
         with conn.cursor() as cur:
             cur.execute("UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET senha_hash=? WHERE id=?", [nova_hash, uid])
     return JSONResponse({"ok": True})   
+
+from fastapi.responses import RedirectResponse
+
 @app.get("/")
 async def root():
-    return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/hub/hub.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/hub")
 async def hub():
-    return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/hub/hub.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/chamados")
 async def chamados_page():
-    return FileResponse("ERPFiat-Portatil/resources/chamados/chamados.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/chamados/chamados.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/obras")
 async def obras_page():
-    return FileResponse("ERPFiat-Portatil/resources/obras/obras.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/obras/obras.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/codin")
 async def codin_page():
-    return FileResponse("ERPFiat-Portatil/resources/codins/codin.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/codins/codin.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/conforto")
 async def conforto_page():
-    return FileResponse("ERPFiat-Portatil/resources/conforto/conforto.html")
+    return RedirectResponse("/conforto/conforto.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/atividades")
 async def atividades_page():
-    return FileResponse("ERPFiat-Portatil/resources/atividades/atividades.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/atividades/atividades.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/kpi")
 async def kpi_page():
-    return FileResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/admin")
 async def admin_page():
-    return FileResponse("ERPFiat-Portatil/resources/admin/admin.html")
+     return RedirectResponse("ERPFiat-Portatil/resources/admin/admin.html")
+
+from fastapi.responses import RedirectResponse
 
 @app.get("/sw.js")
 async def service_worker():
-    return FileResponse(
+     return RedirectResponse(
         "ERPFiat-Portatil/resources/sw.js",
         media_type="application/javascript",
         headers={"Service-Worker-Allowed": "/"}
@@ -337,10 +358,42 @@ async def service_worker():
  
 @app.get("/manifest.json")
 async def manifest():
-    return FileResponse(
+     return RedirectResponse(
         "ERPFiat-Portatil/resources/manifest.json",
         media_type="application/manifest+json"
     )
+
+@app.put("/api/chamados/{cid}")
+async def update_chamado(cid: str, request: Request):
+    dados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal") or {"chamados": []}
+    lista = dados.get("chamados", [])
+    body = await request.json()
+    idx = next((i for i, c in enumerate(lista) if str(c.get("id")) == str(cid)), None)
+    if idx is None:
+        return JSONResponse({"ok": False, "erro": "não encontrado"}, status_code=404)
+    lista[idx] = body
+    dados["chamados"] = lista
+    ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, get_usuario(request))
+    return JSONResponse({"ok": ok})
+
+@app.delete("/api/chamados/{cid}")
+async def delete_chamado(cid: str, request: Request):
+    dados = db_get(S_CHAMADOS, "chamados_completo", "chamados_principal") or {"chamados": []}
+    lista = dados.get("chamados", [])
+    dados["chamados"] = [c for c in lista if str(c.get("id")) != str(cid)]
+    ok = db_save(S_CHAMADOS, "chamados_completo", "chamados_principal", dados, get_usuario(request))
+    return JSONResponse({"ok": ok})
+
+@app.get("/api/chamados/sla")
+async def get_sla():
+    cfg = db_get(S_HUB, "config", "sla_global") or {"Crítica":1,"Alta":3,"Média":5,"Baixa":7}
+    return JSONResponse(cfg)
+
+@app.post("/api/chamados/sla")
+async def save_sla(request: Request):
+    cfg = await request.json()
+    ok = db_save(S_HUB, "config", "sla_global", cfg, get_usuario(request))
+    return JSONResponse({"ok": ok})
 
 @app.on_event("startup")
 async def prefetch():

@@ -309,7 +309,11 @@ if ($('el-urole'))  $('el-urole').textContent  = user.role;
 if (user.role === 'admin') { const p = $('pill-admin'); if(p) p.style.display = ''; }
 async function loadCache(){
   const d = await API.hub.dados();
-  if(d.obras)atualizarObras({obras:d.obras,budget:d.budget||[],lancamentos:d.lancamentos||[]});
-  if(d.chamados)atualizarCham({chamados:d.chamados});
-  if(d.atividades)atualizarAtiv(d.atividades);
+  if(d.obras) {
+    setKpi(0, d.obras.andamento, d.obras.total + ' cadastradas', d.obras.total ? Math.round(d.obras.andamento/d.obras.total*100) : 0);
+    setKpi(3, d.obras.gasto_total ? (Math.round(d.obras.gasto_total/1000)+'k') : '—', 'budget executado', 0);
+  }
+  if(d.chamados) {
+    setKpi(1, d.chamados.abertos, d.chamados.total + ' total', d.chamados.total ? Math.round(d.chamados.abertos/d.chamados.total*100) : 0);
+  }
 }

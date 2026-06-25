@@ -1059,7 +1059,7 @@ function renderChamados(container,d){
          <div class="ob-mini-stat"><span class="ob-mini-lbl">Pendentes</span><span class="ob-mini-val c-amarelo">${total-resolvidos}</span></div>`)}
     </div>
   </div>`;
-  const slaKey='chamados-sla-config';
+
   const slaCfg = await API.chamados.sla();
   const _slaD=p=>slaCfg[p]||({'Crítica':1,'Alta':3,'Média':5,'Baixa':7}[p]||7);
   const _diasD=c=>{const i=new Date(c.dtAbertura||c.dataAbertura||c.criadoEm||Date.now());const f=c.dataConclusao?new Date(c.dataConclusao):new Date();return Math.max(0,(f-i)/86400000);};
