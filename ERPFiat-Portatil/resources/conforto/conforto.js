@@ -11,7 +11,7 @@ function fmtR(v) { return v != null && v !== '' ? 'R$ ' + Number(v).toLocaleStri
 function fmtD(d) { if (!d) return '—'; const [y, m, day] = d.split('-'); return `${day}/${m}/${y}`; }
 function hoje() { return new Date().toISOString().slice(0, 10); }
 
-// ── ESTADO ──
+let saveTimeout = null;
 let state = {
   ordens: [],
   ucs: [],
@@ -57,7 +57,7 @@ let state = {
   editIdx_rotina: -1
 };
 
-// ── SAVE STATUS ──
+
 function setSaveStatus(s, txt) {
   const el = $('save-status');
   if (!el) return;
@@ -66,11 +66,8 @@ function setSaveStatus(s, txt) {
   if (t) t.textContent = txt;
 }
 
-// ── MODAL ──
 function abrirModal(id) { const el = $(id); if (el) el.classList.add('open'); }
 function fecharModal(id) { const el = $(id); if (el) el.classList.remove('open'); }
-
-// ── PERSISTÊNCIA ──
 function toJSON() {
   return {
     versao: '1.0', modulo: 'conforto',
