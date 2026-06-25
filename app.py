@@ -323,6 +323,10 @@ async def atividades_page():
 async def kpi_page():
     return FileResponse("ERPFiat-Portatil/resources/kpi/kpi.html")
 
+@app.get("/admin")
+async def admin_page():
+    return FileResponse("ERPFiat-Portatil/resources/admin/admin.html")
+
 @app.on_event("startup")
 async def prefetch():
     loop = asyncio.get_event_loop()
