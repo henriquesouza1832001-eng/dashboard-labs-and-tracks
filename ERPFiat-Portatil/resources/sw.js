@@ -52,11 +52,17 @@ self.addEventListener('fetch', e => {
 }
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-        caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
-        return res;
-      }))
-    );
+  caches.match(e.request).then(cached => {
+    if (cached) return cached;
+    return fetch(e.request).then(res => {
+      if (res && res.ok && res.status < 400) {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+      }
+      return res;
+    });
+  }).catch(() => caches.match('/'))
+);
     return;
   }
   e.respondWith(

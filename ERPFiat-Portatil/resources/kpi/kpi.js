@@ -136,7 +136,7 @@ function desenharMicroDonut(id,labels,vals,cores){
     const ativs = d.atividades || [];
     if(!raw){wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Sem atividades carregadas</div>';return;}
     const data=JSON.parse(raw);
-    const ativs=Array.isArray(data)?data:(data.atividades||[]);
+    const ativsLocal=Array.isArray(data)?data:(data.atividades||[]);
     if(!ativs.length){wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Nenhuma atividade encontrada</div>';return;}
     const hoje=new Date().toISOString().slice(0,10);
     const amanha=new Date(Date.now()+86400000).toISOString().slice(0,10);
