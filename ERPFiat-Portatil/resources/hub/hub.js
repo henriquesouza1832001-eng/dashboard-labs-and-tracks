@@ -305,6 +305,7 @@ loadCache();
 if ($('el-avatar')) $('el-avatar').textContent = user.avatar;
 if ($('el-uname'))  $('el-uname').textContent  = user.nome;
 if ($('el-urole'))  $('el-urole').textContent  = user.role;
+if (user.role === 'admin') { const p = $('pill-admin'); if(p) p.style.display = ''; }
 async function loadCache(){
   const d = await API.hub.dados();
   if(d.obras)atualizarObras({obras:d.obras,budget:d.budget||[],lancamentos:d.lancamentos||[]});

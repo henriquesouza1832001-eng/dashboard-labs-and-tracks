@@ -49,4 +49,10 @@ const API = {
     },
   },
   invalidar: (endpoint) => { delete _mem[endpoint]; delete _exp[endpoint]; },
+  admin: {
+  listar:      ()          => req('/admin/usuarios',              {},                          0),
+  criar:       (d)         => req('/admin/usuarios',              { method: 'POST',  body: JSON.stringify(d) }),
+  toggleAtivo: (id, ativo) => req('/admin/usuarios/' + id,        { method: 'PUT',   body: JSON.stringify({ ativo }) }),
+  resetSenha:  (id, senha) => req('/admin/usuarios/' + id + '/senha', { method: 'PUT', body: JSON.stringify({ senha }) }),
+},
 };

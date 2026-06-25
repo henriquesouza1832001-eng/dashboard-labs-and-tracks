@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Controler — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="admin.css" rel="stylesheet">
+</head>
+<body>
+<div class="adm-wrap">
+  <div class="adm-header">
+    <div class="adm-title">Gestão de Usuários</div>
+    <a href="../hub/hub.html" class="btn-back">← Hub</a>
+  </div>
+
+  <div class="adm-box">
+    <div class="adm-sec-ttl">Novo usuário</div>
+    <div class="adm-form">
+      <input id="inp-nome" type="text" placeholder="Nome completo">
+      <input id="inp-email" type="email" placeholder="E-mail">
+      <input id="inp-senha" type="password" placeholder="Senha">
+      <select id="inp-role">
+        <option value="visualizador">Visualizador</option>
+        <option value="operador">Operador</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button id="btn-criar">Criar usuário</button>
+    </div>
+    <div id="adm-msg" class="adm-msg"></div>
+  </div>
+
+  <div class="adm-box">
+    <div class="adm-sec-ttl">Usuários cadastrados</div>
+    <table class="adm-table">
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Role</th><th>Ativo</th><th></th></tr></thead>
+      <tbody id="adm-tbody"></tbody>
+    </table>
+  </div>
+</div>
+<script src="../hub/auth.js"></script>
+<script src="../hub/api.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

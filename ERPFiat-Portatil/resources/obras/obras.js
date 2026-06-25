@@ -562,14 +562,12 @@ window.excluirTipo=excluirTipo;
 window.editarCategoria=editarCategoria; window.excluirCategoria=excluirCategoria;
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const [rObras, rCentral] = await Promise.all([
-      API.obras.listar(),
-      API.hub.config.ler()
-    ]);
-    const dObras = await rObras.json();
-    const dCentral = await rCentral.json();
-    if (dObras) carregarDeJSON(JSON.stringify(dObras));
-    if (dCentral && Object.keys(dCentral).length) carregarCentral(JSON.stringify(dCentral));
+    const [dObras, dCentral] = await Promise.all([
+  API.obras.listar(),
+  API.hub.config.ler()
+]);
+if (dObras) carregarDeJSON(JSON.stringify(dObras));
+if (dCentral && Object.keys(dCentral).length) carregarCentral(JSON.stringify(dCentral));
     setSaveStatus('saved', 'carregado');
   } catch(e) {
     setSaveStatus('nosave', 'erro ao carregar');

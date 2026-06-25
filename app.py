@@ -6,7 +6,16 @@ import os, json
 import asyncio
 import hashlib, jwt, datetime
 JWT_SECRET = os.getenv("JWT_SECRET")
-
+def verificar_admin(request: Request):
+    try:
+        auth = request.headers.get("Authorization", "")
+        token = auth.replace("Bearer ", "")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("role") != "admin":
+            return None
+        return payload
+    except:
+        return None
 
 app = FastAPI()
 
@@ -237,6 +246,51 @@ async def login(request: Request):
     except Exception as e:
         print(f"login error: {e}")
         return JSONResponse({"erro": "erro interno"}, status_code=500)
+@app.get("/api/admin/usuarios")
+async def admin_listar(request: Request):
+    token_data = verificar_admin(request)
+    if not token_data: return JSONResponse({"erro": "sem permissão"}, status_code=403)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, nome, email, role, ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios ORDER BY id")
+            cols = [d[0] for d in cur.description]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    return JSONResponse(rows)
+
+@app.post("/api/admin/usuarios")
+async def admin_criar(request: Request):
+    token_data = verificar_admin(request)
+    if not token_data: return JSONResponse({"erro": "sem permissão"}, status_code=403)
+    body = await request.json()
+    senha_hash = hashlib.sha256(body["senha"].encode()).hexdigest()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO eng_lab.`dashboard-labs-and-tracks`.usuarios (nome, email, senha_hash, role, ativo) VALUES (?,?,?,?,true)",
+                [body["nome"], body["email"].lower(), senha_hash, body.get("role","visualizador")]
+            )
+    return JSONResponse({"ok": True})
+
+@app.put("/api/admin/usuarios/{uid}")
+async def admin_toggle(uid: int, request: Request):
+    token_data = verificar_admin(request)
+    if not token_data: return JSONResponse({"erro": "sem permissão"}, status_code=403)
+    body = await request.json()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET ativo=? WHERE id=?", [body["ativo"], uid])
+    return JSONResponse({"ok": True})
+
+@app.put("/api/admin/usuarios/{uid}/senha")
+async def admin_reset_senha(uid: int, request: Request):
+    token_data = verificar_admin(request)
+    if not token_data: return JSONResponse({"erro": "sem permissão"}, status_code=403)
+    body = await request.json()
+    nova_hash = hashlib.sha256(body["senha"].encode()).hexdigest()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET senha_hash=? WHERE id=?", [nova_hash, uid])
+    return JSONResponse({"ok": True})   
 @app.get("/")
 async def root():
     return FileResponse("ERPFiat-Portatil/resources/hub/hub.html")

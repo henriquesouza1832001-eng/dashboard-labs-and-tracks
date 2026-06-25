@@ -1,7 +1,8 @@
 'use strict';
 (function () {
   const token = sessionStorage.getItem('ctrl-token');
-  if (!token) { window.location.href = '../login/login.html'; return; }
+  const _loginPath = location.pathname.includes('/hub/') ? '../login/login.html' : '../login/login.html';
+if (!token) { window.location.href = _loginPath; return; }
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload.exp && Date.now() / 1000 > payload.exp) {

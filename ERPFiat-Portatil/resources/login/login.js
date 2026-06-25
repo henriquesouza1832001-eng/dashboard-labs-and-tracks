@@ -17,7 +17,7 @@ btn.addEventListener('click', async () => {
     const d = await res.json();
     if (!res.ok || !d.token) { err.textContent = d.erro || 'credenciais inválidas'; return; }
     sessionStorage.setItem('ctrl-token', d.token);
-    window.location.href = '../hub/hub.html';
+    window.location.href = '../kpi/kpi.html';
   } catch {
     err.textContent = 'erro de conexão';
   } finally {
