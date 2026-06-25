@@ -942,7 +942,7 @@ function abrirDetalheObra(cod){
     const btnObs=document.getElementById('btn-obs-edit');
     const taObs=document.getElementById('obs-det-obra');
     if(btnObs&&taObs){
-      btnObs.addEventListener('click',()=>{
+      btnObs.addEventListener('click', async ()=>{
         if(taObs.readOnly){
           taObs.readOnly=false;
           taObs.style.background='var(--surface)';
@@ -2363,8 +2363,16 @@ function dtIrParaLinha(linha){
 
 // ── MEDIR RENDER ──
 function dtMedirRender(nome,fn){
-  const t0=performance.now();
-  fn();
-  const ms=Math.round(performance.now()-t0);
-  try{if(typeof _dtRenderTimes!=='undefined')_dtRenderTimes[nome]=ms;}catch(e){}
+  const r=fn();
+  if(r&&typeof r.then==='function'){
+    const t0=performance.now();
+    r.then(()=>{
+      const ms=Math.round(performance.now()-t0);
+      try{if(typeof _dtRenderTimes!=='undefined')_dtRenderTimes[nome]=ms;}catch(e){}
+    });
+  } else {
+    const t0=performance.now();
+    const ms=Math.round(performance.now()-t0);
+    try{if(typeof _dtRenderTimes!=='undefined')_dtRenderTimes[nome]=ms;}catch(e){}
+  }
 }
