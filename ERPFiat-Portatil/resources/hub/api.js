@@ -11,6 +11,10 @@ async function req(endpoint, opts = {}, ttl = 0) {
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (sessionStorage.getItem('ctrl-token') || ''), ...(opts.headers || {}) },
     ...opts
   });
+  if (res.status === 302 || res.status === 303 || res.redirected) {
+    window.location.reload();
+    return;
+  }
   if (!res.ok) {
     let detalhe = res.status;
     try {
