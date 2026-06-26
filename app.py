@@ -222,8 +222,14 @@ def _background_refresh(intervalo=300):
 @app.on_event("startup")
 async def prefetch():
     loop = asyncio.get_event_loop()
-    print("[startup] aquecendo cache em paralelo...")
-    await asyncio.gather(*[loop.run_in_executor(None, fn) for fn in LOADERS.values()])
+    print("[startup] aquecendo cache...")
+    for nome, fn in LOADERS.items():
+        try:
+            print(f"[startup] carregando {nome}...")
+            await loop.run_in_executor(None, fn)
+            print(f"[startup] {nome} ok")
+        except Exception as e:
+            print(f"[startup] {nome} erro: {e}")
     print("[startup] cache aquecido.")
     threading.Thread(target=_background_refresh, args=(300,), daemon=True).start()
 
