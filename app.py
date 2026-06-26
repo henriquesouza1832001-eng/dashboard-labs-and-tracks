@@ -113,9 +113,10 @@ def verificar_admin(request: Request):
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             if payload.get("role") == "admin":
                 return payload
-        except:
-            pass
+        except Exception as e:
+            print(f"[admin] erro ao decodificar token: {e}")
     email = request.headers.get("X-Forwarded-User", "").strip().lower()
+    print(f"[admin] email do header: '{email}'")
     if not email:
         return None
     try:
