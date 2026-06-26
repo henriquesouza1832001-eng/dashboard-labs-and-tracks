@@ -1,23 +1,19 @@
 'use strict';
-const CACHE_NAME = 'controler-v10';
+const CACHE_NAME = 'controler-v11';
 const SHELL = [
   '/',
-  '/hub/hub.html',
-  '/hub/hub.css',
-  '/hub/hub.js',
-  '/hub/auth.js',
-  '/hub/api.js',
-  '/hub/cache.js',
-  '/chamados/chamados.html',
-  '/chamados/chamados.css',
-  '/obras/obras.html',
-  '/obras/obras.css',
-  '/conforto/conforto.html',
-  '/conforto/conforto.css',
+  '/hub/hub.html', '/hub/hub.css', '/hub/hub.js',
+  '/hub/auth.js', '/hub/api.js', '/hub/cache.js', '/hub/pwa.js',
+  '/chamados/chamados.html', '/chamados/chamados.css',
+  '/chamados/SLA.js', '/chamados/utils.js', '/chamados/fotos.js',
+  '/chamados/renders.js', '/chamados/tabs.js', '/chamados/dashboard.js',
+  '/chamados/abrirchamado.js', '/chamados/sidebar.js', '/chamados/eventos.js',
+  '/obras/obras.html', '/obras/obras.css', '/obras/obras.js',
+  '/conforto/conforto.html', '/conforto/conforto.css', '/conforto/conforto.js',
+  '/codins/codin.html', '/codins/codin.css', '/codins/codin.js',
+  '/kpi/kpi.html', '/kpi/kpi.css', '/kpi/kpi.js',
   '/atividades/atividades.html',
-  '/kpi/kpi.html',
-  '/kpi/kpi.css',
-  '/kpi/kpi.js',
+  '/app.webmanifest',
 ];
 self.addEventListener('install', e => {
   e.waitUntil(

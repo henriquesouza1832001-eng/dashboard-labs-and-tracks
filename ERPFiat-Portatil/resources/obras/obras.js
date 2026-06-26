@@ -41,22 +41,6 @@ function avancFisico(obraCod){
 function badgeStatus(s){ const map={'Em Andamento':'badge-orange','Planejado':'badge-blue','Concluído':'badge-green','Suspenso':'badge-red'}; return `<span class="badge ${map[s]||'badge-muted'}">${s}</span>`; }
 function badgeBudget(pct){ if(pct>=100)return'badge-red'; if(pct>=85)return'badge-yellow'; return'badge-green'; }
 function progressBar(pct,cor){ const cls=cor||(pct>=100?'red':pct>=85?'yellow':''); const p=Math.min(pct,100); return `<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${cls}" style="width:${p}%"></div></div><span class="progress-pct">${fmt(pct,1)}%</span></div>`; }
-function toJSON(){ return {versao:'1.0',modulo:'obras',obras:state.obras,budget:state.budget,lancamentos:state.lancamentos,revisoes:state.revisoes}; }
-function centralToJSON(){ return {pessoas:state.central.pessoas, cresp:state.central.cresp, tiposObra:state.central.tiposObra, categoriasCusto:state.central.categoriasCusto, leitores:state.central.leitores}; }function carregarDeJSON(txt){
-  try {
-    const d=JSON.parse(txt);
-    state.obras=Array.isArray(d.obras)?d.obras:[];
-    state.budget=Array.isArray(d.budget)?d.budget:[];
-    state.lancamentos=Array.isArray(d.lancamentos)?d.lancamentos:[];
-    state.revisoes=Array.isArray(d.revisoes)?d.revisoes:[];
-    state.obras.forEach(o=>{
-      if(!o.obs)o.obs='';
-      if(!o.etapas)o.etapas=[];
-    });
-    state.lancamentos.forEach(l=>{if(!l.id)l.id=gerarId('L',state.lancamentos,'id');});
-    return true;
-  } catch(e){ console.error(e); return false; }
-}
 function carregarCentral(txt){
   try {
     const d=JSON.parse(txt);
@@ -68,7 +52,6 @@ function carregarCentral(txt){
     return true;
   } catch(e){ console.error(e); return false; }
 }
-
 async function salvarDados(){
   setSaveStatus('saving','salvando…');
   await API.obras.salvar(toJSON());
@@ -566,7 +549,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.__DADOS__ ? Promise.resolve(window.__DADOS__) : API.obras.listar(),
   API.hub.config.ler()
 ]);
-if (dObras) carregarDeJSON(JSON.stringify(dObras));
+if (dObras) {
+  state.obras        = Array.isArray(dObras.obras)        ? dObras.obras        : [];
+  state.budget       = Array.isArray(dObras.budget)       ? dObras.budget       : [];
+  state.lancamentos  = Array.isArray(dObras.lancamentos)  ? dObras.lancamentos  : [];
+  state.revisoes     = Array.isArray(dObras.revisoes)     ? dObras.revisoes     : [];
+  state.obras.forEach(o => { if (!o.obs) o.obs = ''; if (!o.etapas) o.etapas = []; });
+  state.lancamentos.forEach(l => { if (!l.id) l.id = gerarId('L', state.lancamentos, 'id'); });
+}
 if (dCentral && Object.keys(dCentral).length) carregarCentral(JSON.stringify(dCentral));
     setSaveStatus('saved', 'carregado');
   } catch(e) {

@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Atividades — ERP Fiat</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="/app.webmanifest">
 <style>
 :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--blue-mid:#2E5FA3;--blue-light:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--purple:#a371f7;--orange:#e3702a;--text:#e6edf3;--text-muted:#8b949e;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -109,22 +110,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .com-input-row input:focus{outline:none;border-color:var(--blue-light);}
 </style>
 <script>
-const _m=document.createElement('link');
-_m.rel='manifest';
-_m.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify({
-  name:'Controler — ERP Facilities',
-  short_name:'Controler',
-  start_url:'/',
-  scope:'/',
-  display:'standalone',
-  background_color:'#0d1117',
-  theme_color:'#161b22',
-  icons:[
-    {src:'/icons/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
-    {src:'/icons/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
-  ]
-}));
-document.head.appendChild(_m);
 </script>
 <meta name="theme-color" content="#161b22">
 <meta name="mobile-web-app-capable" content="yes">

@@ -39,4 +39,9 @@ async function carregar(modulo, fetchFn, renderFn) {
   } catch (e) {
     if (!cached) throw e;
   }
+  function invalidar(modulo) {
+  try { sessionStorage.removeItem(CHAVES[modulo]); } catch {}
+}
+
+const Cache = { ler, salvar, carregar, invalidar };
 }

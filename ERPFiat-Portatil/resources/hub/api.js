@@ -48,7 +48,13 @@ const API = {
       salvar: (d) => req('/hub/config',  { method: 'POST', body: JSON.stringify(d) }),
     },
   },
-  invalidar: (endpoint) => { delete _mem[endpoint]; delete _exp[endpoint]; },
+  invalidar: (endpoint) => {
+  delete _mem[endpoint];
+  delete _exp[endpoint];
+  const _mapa = { '/chamados':'chamados', '/obras':'obras', '/codin':'codin', '/conforto':'conforto', '/kpi':'kpi', '/hub/config':'config' };
+  const mod = Object.entries(_mapa).find(([k]) => endpoint.startsWith(k))?.[1];
+  if (mod && typeof Cache !== 'undefined') Cache.invalidar(mod);
+},
   admin: {
   listar:      ()          => req('/admin/usuarios',              {},                          0),
   criar:       (d)         => req('/admin/usuarios',              { method: 'POST',  body: JSON.stringify(d) }),

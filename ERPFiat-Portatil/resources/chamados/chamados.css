@@ -502,3 +502,11 @@ select.form-control option { background: var(--surface2); }
 .sb-resumo-row strong { font-family: var(--mono); font-size: 13px; color: var(--text); }
 .sb-resumo-alerta strong { color: var(--red); }
 .sb-resumo-warn strong { color: var(--yellow); }
+@media (max-width: 768px) {
+  body { font-size: 12px; }
+  .topbar { padding: 0 12px; }
+  .table-wrap, .lista-wrap, table { overflow-x: auto; -webkit-overflow-scrolling: touch; display: block; }
+  .layout, .main-layout { flex-direction: column; height: auto; overflow: visible; }
+  .sidebar, .left-panel { width: 100% !important; border-right: none; border-bottom: 1px solid var(--border); }
+  .content, .right-panel { height: auto; overflow: visible; }
+}

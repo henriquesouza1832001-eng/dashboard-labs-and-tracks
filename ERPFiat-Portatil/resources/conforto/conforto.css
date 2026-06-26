@@ -226,3 +226,11 @@ tfoot td { padding: 10px 16px; font-size: 12px; font-family: var(--mono); backgr
 .badge-civil { background: #e8f5e9; color: #1a7f4b; }
 .badge-tec   { background: #fff3e0; color: #b07d00; }
 .badge-ac    { background: var(--blue-pale); color: var(--blue-light); }
+@media (max-width: 768px) {
+  body { font-size: 12px; }
+  .topbar { padding: 0 12px; }
+  .table-wrap, .lista-wrap, table { overflow-x: auto; -webkit-overflow-scrolling: touch; display: block; }
+  .layout, .main-layout { flex-direction: column; height: auto; overflow: visible; }
+  .sidebar, .left-panel { width: 100% !important; border-right: none; border-bottom: 1px solid var(--border); }
+  .content, .right-panel { height: auto; overflow: visible; }
+}

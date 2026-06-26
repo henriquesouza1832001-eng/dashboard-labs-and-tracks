@@ -28,16 +28,22 @@ _conn_lock = threading.Lock()
 def get_conn():
     global _conn
     with _conn_lock:
-        try:
-            if _conn and _conn.open:
-                return _conn
-        except:
-            pass
-        _conn = sql.connect(
-            server_hostname=HOST,
-            http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-            access_token=TOKEN,
-        )
+        for _ in range(2):
+            try:
+                if _conn:
+                    with _conn.cursor() as _c:
+                        _c.execute("SELECT 1")
+                    return _conn
+            except:
+                _conn = None
+            try:
+                _conn = sql.connect(
+                    server_hostname=HOST,
+                    http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+                    access_token=TOKEN,
+                )
+            except:
+                pass
         return _conn
 
 def run_query(sql_str, params=None):
@@ -563,6 +569,14 @@ async def admin_reset_senha(uid: int, request: Request):
     run_exec("UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET senha_hash=? WHERE id=?",
              [hashlib.sha256(body["senha"].encode()).hexdigest(),uid])
     return JSONResponse({"ok": True})
+
+async def arun_query(sql_str, params=None):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, run_query, sql_str, params)
+
+async def arun_exec(sql_str, params=None):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, run_exec, sql_str, params)
 
 # ─── Paginas HTML com dados injetados ─────────────────────────────────────────
 BASE = "ERPFiat-Portatil/resources"

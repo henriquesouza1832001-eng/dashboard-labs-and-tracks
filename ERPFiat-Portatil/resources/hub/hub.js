@@ -3,36 +3,18 @@ const user = window.__authUser || { nome: '—', role: '—', avatar: '?' };
 const $=id=>document.getElementById(id);
 const fmtRK=v=>{if(!v&&v!==0)return'—';const n=+v;if(Math.abs(n)>=1e6)return'R$'+(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return'R$'+(n/1e3).toFixed(1)+'k';return'R$'+Math.round(n);};
 
-const DEFAULT={
-  identidade:{brand:'Controler',brandEnv:'ERP Facilities',instNome:'Stellantis Brasil',instSub:'Infraestrutura Facilities',instBadge:'ISO 55001'},
-  painelEsq:{valores:'Excelência Operacional · Segurança · Sustentabilidade',objetivo:'Zero paradas não planejadas. Redução 30% no consumo energético.',objProg:68,objPrazo:'Dez/2026',missao:'Infraestrutura segura, eficiente e sustentável para operações de classe mundial.',metas:['Manutenção preventiva ≥ 95%','Redução chamados corretivos -15%','Conformidade NR-12: 100%']},
-  kpisMini:[
-    {lbl:'Obras em andamento',val:'—',cls:'yw',sub:'cadastradas',bar:0,barCor:'var(--yw)'},
-    {lbl:'Chamados abertos',val:'—',cls:'rd',sub:'total',bar:0,barCor:'var(--rd)'},
-    {lbl:'Atividades concluídas',val:'—',cls:'gn',sub:'do total',bar:0,barCor:'var(--gn)'},
-    {lbl:'Budget executado',val:'—',cls:'bl',sub:'do aprovado',bar:0,barCor:'var(--bl)'}
+const DEFAULT = {
+  identidade: { brand:'Controler', brandEnv:'ERP Facilities', instNome:'—', instSub:'—', instBadge:'—' },
+  painelEsq:  { valores:'—', objetivo:'—', objProg:0, objPrazo:'—', missao:'—', metas:[] },
+  kpisMini: [
+    { lbl:'Obras em andamento',    val:'—', cls:'yw', sub:'carregando...', bar:0, barCor:'var(--yw)' },
+    { lbl:'Chamados abertos',      val:'—', cls:'rd', sub:'carregando...', bar:0, barCor:'var(--rd)' },
+    { lbl:'Atividades concluídas', val:'—', cls:'gn', sub:'carregando...', bar:0, barCor:'var(--gn)' },
+    { lbl:'Budget executado',      val:'—', cls:'bl', sub:'carregando...', bar:0, barCor:'var(--bl)' },
   ],
-  acoes:[
-    {titulo:'Recertificação Sprinklers',status:'urg',prazo:'20 Jun 2026',resp:'RM',visivel:true},
-    {titulo:'Modernização Subestação #3',status:'plan',prazo:'Jul 2026',resp:'FS',visivel:true},
-    {titulo:'Fotovoltaicos — Fase 2',status:'prog',prazo:'Ago 2026',resp:'KL',visivel:true},
-    {titulo:'Retrofit HVAC Pintura',status:'plan',prazo:'Set 2026',resp:'JP',visivel:true},
-    {titulo:'Adequação NR-12 Linha 7',status:'rev',prazo:'25 Jun 2026',resp:'AL',visivel:true},
-    {titulo:'Reuso de Água Industrial',status:'plan',prazo:'Out 2026',resp:'MC',visivel:true},
-    {titulo:'CMMS Preditivo IoT',status:'prog',prazo:'Nov 2026',resp:'TS',visivel:true},
-    {titulo:'Reforma Vestiários',status:'plan',prazo:'Dez 2026',resp:'BH',visivel:true}
-  ],
-  atividades:[
-    {texto:'Inspeção HVAC — Bloco A',estado:'done',prio:'pl',ptxt:'OK'},
-    {texto:'Teste geradores emergência',estado:'done',prio:'pl',ptxt:'OK'},
-    {texto:'Calibração contra incêndio',estado:'pend',prio:'ph',ptxt:'HOJE'},
-    {texto:'Manut. preventiva compressores',estado:'pend',prio:'ph',ptxt:'14h'},
-    {texto:'Auditoria EPI — Linha 3',estado:'',prio:'pm',ptxt:'AMANHÃ'},
-    {texto:'Contrato fornecedor limpeza',estado:'',prio:'pm',ptxt:'SEX'},
-    {texto:'Planta elétrica Bloco C',estado:'',prio:'pl',ptxt:'SEM.'},
-    {texto:'Vistoria subestação principal',estado:'',prio:'pm',ptxt:'SEM.'}
-  ],
-  logos:['','','','']
+  acoes:      [],
+  atividades: [],
+  logos:      ['','','',''],
 };
 
 let CFG=JSON.parse(JSON.stringify(DEFAULT));
