@@ -32,30 +32,32 @@ S_ATIVIDADES = "eng_lab.dashboard_labs_and_tracks_atividades"
 S_HUB        = "eng_lab.dashboard_labs_and_tracks_hub"
 
 # ─── Conexão Databricks (thread-safe, reconecta automaticamente) ───────────────
-_conn      = None
 _conn_lock = threading.Lock()
+_local = threading.local()
 
 def get_conn():
-    global _conn
-    with _conn_lock:
-        for _ in range(2):
-            try:
-                if _conn:
-                    with _conn.cursor() as _c:
-                        _c.execute("SELECT 1")
-                    return _conn
-            except:
-                _conn = None
-            try:
-                _conn = sql.connect(
-                    server_hostname=HOST,
-                    http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-                    access_token=TOKEN,
-                    _socket_timeout=30,
-                )
-            except:
-                pass
-        return _conn
+    conn = getattr(_local, "conn", None)
+    for _ in range(2):
+        try:
+            if conn:
+                with conn.cursor() as _c:
+                    _c.execute("SELECT 1")
+                _local.conn = conn
+                return conn
+        except:
+            conn = None
+            _local.conn = None
+        try:
+            conn = sql.connect(
+                server_hostname=HOST,
+                http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+                access_token=TOKEN,
+                _socket_timeout=30,
+            )
+            _local.conn = conn
+        except:
+            pass
+    return conn
 
 # ─── Helpers SQL síncronos (uso interno e em threads) ─────────────────────────
 def run_query(sql_str, params=None):
