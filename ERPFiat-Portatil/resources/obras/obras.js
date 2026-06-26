@@ -539,11 +539,32 @@ function abrirModal(id){ $(id).classList.add('open'); }
 function fecharModal(id){ $(id).classList.remove('open'); }
 
 function editarObra(idx){ const o=state.obras[idx]; state.editIdx.obra=idx; $('modal-obra-title').textContent='Editar Obra'; $('ob-cod').value=o.cod; $('ob-status').value=o.status; $('ob-nome').value=o.nome; $('ob-tipo').value=o.tipo||''; $('ob-local').value=o.local||''; $('ob-resp').value=o.responsavel||''; $('ob-cresp').value=o.cresp||''; $('ob-dt-ini-prev').value=o.dtInicioPrev||''; $('ob-dt-fim-prev').value=o.dtFimPrev||''; $('ob-dt-ini-real').value=o.dtInicioReal||''; $('ob-dt-fim-real').value=o.dtFimReal||''; $('ob-obs').value=o.obs||''; $('ob-err').textContent=''; abrirModal('modal-obra'); }
-function excluirObra(idx){ if(!confirm('Excluir esta obra?'))return; state.obras.splice(idx,1); agendarSalvamento(); renderTudo(); }
+async function excluirObra(idx){
+  if(!confirm('Excluir esta obra?'))return;
+  const o=state.obras[idx];
+  state.obras.splice(idx,1);
+  renderTudo();
+  try{ await API.obras.excluirObra(o.cod); }
+  catch(e){ console.error('Erro ao excluir obra:', e); }
+}
 function editarLanc(idx){ const l=state.lancamentos[idx]; state.editIdx.lanc=idx; $('modal-lanc-title').textContent='Editar Lançamento'; $('lanc-obra').value=l.obraCod; $('lanc-cresp').value=l.cresp; $('lanc-cat').value=l.categoria; $('lanc-cat').dispatchEvent(new Event('change')); setTimeout(()=>{$('lanc-subcat').value=l.subcategoria||'';},50); $('lanc-desc').value=l.descricao; $('lanc-unid').value=l.unid||''; $('lanc-qtd').value=l.qtd; $('lanc-preco').value=l.precoUnit; $('lanc-nf').value=l.nfDoc||''; $('lanc-data').value=l.dtLanc||''; $('lanc-forn').value=l.fornecedor||''; $('lanc-obs').value=l.obs||''; $('lanc-err').textContent=''; abrirModal('modal-lanc'); }
-function excluirLanc(idx){ if(!confirm('Excluir este lançamento?'))return; state.lancamentos.splice(idx,1); agendarSalvamento(); renderTudo(); if(state.obraAtiva) renderDetalheLancamentos(state.obraAtiva); }
-function editarBudget(idx){ const b=state.budget[idx]; state.editIdx.budget=idx; $('modal-budget-title').textContent='Editar Budget'; $('bgt-obra').value=b.obraCod; $('bgt-cresp').value=b.cresp; $('bgt-tipo').value=b.tipoVerba; $('bgt-aprov').value=b.budgetAprov; $('bgt-capex').value=b.capex||''; $('bgt-opex').value=b.opex||''; $('bgt-cont').value=b.contingencia||''; $('bgt-obs').value=b.obs||''; $('bgt-err').textContent=''; abrirModal('modal-budget'); }
-function excluirBudget(idx){ if(!confirm('Excluir este budget?'))return; state.budget.splice(idx,1); agendarSalvamento(); renderTudo(); }
+async function excluirLanc(idx){
+  if(!confirm('Excluir este lançamento?'))return;
+  const l=state.lancamentos[idx];
+  state.lancamentos.splice(idx,1);
+  renderTudo();
+  if(state.obraAtiva) renderDetalheLancamentos(state.obraAtiva);
+  try{ await API.obras.excluirLanc(l.id); }
+  catch(e){ console.error('Erro ao excluir lançamento:', e); }
+}function editarBudget(idx){ const b=state.budget[idx]; state.editIdx.budget=idx; $('modal-budget-title').textContent='Editar Budget'; $('bgt-obra').value=b.obraCod; $('bgt-cresp').value=b.cresp; $('bgt-tipo').value=b.tipoVerba; $('bgt-aprov').value=b.budgetAprov; $('bgt-capex').value=b.capex||''; $('bgt-opex').value=b.opex||''; $('bgt-cont').value=b.contingencia||''; $('bgt-obs').value=b.obs||''; $('bgt-err').textContent=''; abrirModal('modal-budget'); }
+async function excluirBudget(idx){
+  if(!confirm('Excluir este budget?'))return;
+  const b=state.budget[idx];
+  state.budget.splice(idx,1);
+  renderTudo();
+  try{ await API.obras.excluirBudget(b.id); }
+  catch(e){ console.error('Erro ao excluir budget:', e); }
+}
 function excluirRevisao(idx){ if(!confirm('Excluir esta revisão?'))return; state.revisoes.splice(idx,1); agendarSalvamento(); renderRevisoes(); renderDashboard(); }
 function editarCresp(idx){ const c=state.central.cresp[idx]; state.editIdx.cresp=idx; $('modal-cresp-title').textContent='Editar CRESP'; $('cresp-id').value=c.id; $('cresp-desc').value=c.descricao; $('cresp-area').value=c.area||''; $('cresp-err').textContent=''; abrirModal('modal-cresp'); }
 function excluirCresp(idx){

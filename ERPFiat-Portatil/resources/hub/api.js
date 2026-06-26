@@ -38,9 +38,12 @@ const API = {
     salvarSla: (cfg)   => req('/chamados/sla',      { method: 'POST',  body: JSON.stringify(cfg) }),
   },
   obras: {
-    listar: ()    => req('/obras',    {},                          120000),
-    salvar: (d)   => req('/obras',    { method: 'POST', body: JSON.stringify(d) }),
-  },
+    listar:        ()      => req('/obras', {}, 120000),
+    salvar:        (d)     => req('/obras', { method: 'POST', body: JSON.stringify(d) }),
+    excluirObra:   (cod)   => req('/obras/' + cod, { method: 'DELETE' }),
+    excluirBudget: (id)    => req('/obras/budget/' + id, { method: 'DELETE' }),
+    excluirLanc:   (id)    => req('/obras/lancamento/' + id, { method: 'DELETE' }),
+},
   codin: {
     listar: ()    => req('/codin',    {},                          60000),
     salvar: (d)   => req('/codin',    { method: 'POST', body: JSON.stringify(d) }),
