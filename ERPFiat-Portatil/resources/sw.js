@@ -1,5 +1,5 @@
 'use strict';
-const CACHE_NAME = 'controler-v13';
+const CACHE_NAME = 'controler-v14';
 const SHELL = [
   '/',
   '/hub/hub.html', '/hub/hub.css', '/hub/hub.js',
@@ -27,6 +27,8 @@ self.addEventListener('activate', e => {
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(clients => clients.forEach(client => client.navigate(client.url)))
   );
 });
 self.addEventListener('fetch', e => {
