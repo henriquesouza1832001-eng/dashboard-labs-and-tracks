@@ -68,17 +68,6 @@ function setSaveStatus(s, txt) {
 
 function abrirModal(id) { const el = $(id); if (el) el.classList.add('open'); }
 function fecharModal(id) { const el = $(id); if (el) el.classList.remove('open'); }
-function toJSON() {
-  return {
-    versao: '1.0', modulo: 'conforto',
-    ordens: state.ordens, ucs: state.ucs,
-    preventivas: state.preventivas, manutencoes: state.manutencoes,
-    pecas: state.pecas, requisicoes: state.requisicoes,
-    areas: state.areas, fornecedores: state.fornecedores,
-    tecnicos: state.tecnicos, config: state.config,
-    rotinas: state.rotinas
-  };
-}
 
 function carregarDeJSON(txt) {
   try {
@@ -106,30 +95,20 @@ function carregarDeJSON(txt) {
     return true;
   } catch (e) { return false; }
 }
-
-async function salvarDados(){
-  await API.conforto.salvar(toJSON());
-  setSaveStatus('saved','salvo');
-}
-
 function agendarSalvamento() {
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(salvarDados, 400);
 }
-
-// ── IDs AUTOMÁTICOS ──
 function gerarId(prefix, arr, campo) {
   let n = arr.length + 1;
   while (arr.find(x => x[campo] === `${prefix}-${String(n).padStart(3, '0')}`)) n++;
   return `${prefix}-${String(n).padStart(3, '0')}`;
 }
 
-// ── BADGES ──
 function badgeStatusOS(s) {
   const map = { 'Programada': 'badge-blue', 'Em Execução': 'badge-orange', 'Concluída': 'badge-green', 'Cancelada': 'badge-red' };
   return `<span class="badge ${map[s] || 'badge-muted'}">${s}</span>`;
 }
-
 function badgeStatusUC(ucId) {
   const hoje_d = hoje();
   const prevs = state.preventivas.filter(p => p.ucId === ucId && p.status !== 'Realizada');
@@ -1414,16 +1393,6 @@ function excluirChecklistItem(idx) {
   agendarSalvamento();
   renderConfiguracoes();
 }
-
-function exportarJSON() {
-  const txt = JSON.stringify(toJSON(), null, 2);
-  const blob = new Blob([txt], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'conforto-dados.json'; a.click();
-  URL.revokeObjectURL(url);
-}
-
 async function tentarCarregar(){
   const d = window.__DADOS__ || await API.conforto.listar();
   if(d&&d.modulo==='conforto')carregarDeJSON(JSON.stringify(d));
@@ -1483,7 +1452,6 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-nova-area')?.addEventListener('click', () => abrirModalArea());
   $('btn-novo-forn')?.addEventListener('click', () => abrirModalFornecedor());
   $('btn-novo-tec')?.addEventListener('click', () => abrirModalTecnico());
-  $('btn-export-json')?.addEventListener('click', exportarJSON);
   $('btn-abrir-arquivo')?.addEventListener('click', () => {
     alert('Gerencie os arquivos pelo Hub principal.');
   });
@@ -1591,7 +1559,6 @@ window.toggleDiasSemana = toggleDiasSemana;
 window.abrirModalUC = abrirModalUC;
 window.abrirModalPreventiva = abrirModalPreventiva;
 window.abrirModalManutencao = abrirModalManutencao;
-window.exportarJSON = exportarJSON;
 window.abrirAgendaSlot = abrirAgendaSlot;
 window.state = state;
 window.agendarSalvamento = agendarSalvamento;

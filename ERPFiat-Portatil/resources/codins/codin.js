@@ -40,7 +40,10 @@ function carregarDeJSON(json){
 async function abrirArquivo(){ return false; }
 async function carregarDados(){
   const d = window.__DADOS__ || await API.codin.listar();
-  if(d)carregarDeJSON(JSON.stringify(d));
+ if (d) {
+  state.pessoas = Array.isArray(d.pessoas) ? d.pessoas : [];
+  state.pontos  = Array.isArray(d.pontos)  ? d.pontos  : [];
+}
 }
 function aplicarFiltroURL(){
   const p = new URLSearchParams(location.search);
@@ -325,13 +328,6 @@ document.getElementById('btn-exportar').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`backup-codin-${new Date().toISOString().slice(0,10)}.json`;a.click();
   toast('Backup exportado!','success');
-});
-document.getElementById('btn-importar').addEventListener('click',()=>document.getElementById('input-importar').click());
-document.getElementById('input-importar').addEventListener('change',async e=>{
-  const file=e.target.files[0];if(!file)return;
-  const ok=carregarDeJSON(await file.text());
-  if(ok){renderAll();agendarSalvamento();toast('Backup importado!','success');}else toast('Arquivo inválido.','error');
-  e.target.value='';
 });
 window.confirmarDeletar=function(tipo,idx,nome){
   const msgs={pessoa:`Remover "${nome}"?`,ponto:`Remover o ponto "${nome}"?`,acesso:`Remover o acesso de "${nome}"?`};

@@ -20,8 +20,14 @@ const fmtR = v => 'R$ '+fmt(v,2);
 const fmtD = s => s ? s.split('-').reverse().join('/') : '—';
 const hoje = () => new Date().toISOString().slice(0,10);
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
-async function salvarCentral(){
-  await API.hub.config.salvar(centralToJSON());
+async function salvarCentral() {
+  await API.hub.config.salvar({
+    pessoas:          state.central.pessoas,
+    cresp:            state.central.cresp,
+    tiposObra:        state.central.tiposObra,
+    categoriasCusto:  state.central.categoriasCusto,
+    leitores:         state.central.leitores,
+  });
 }
 function abrirDB(){ return Promise.resolve(); }
 
@@ -52,10 +58,14 @@ function carregarCentral(txt){
     return true;
   } catch(e){ console.error(e); return false; }
 }
-async function salvarDados(){
-  setSaveStatus('saving','salvando…');
-  await API.obras.salvar(toJSON());
-  setSaveStatus('saved','salvo');
+async function salvarDados() {
+  await API.obras.salvar({
+    versao:       '2.0',
+    obras:        state.obras,
+    budget:       state.budget,
+    lancamentos:  state.lancamentos,
+    revisoes:     state.revisoes,
+  });
 }
 function agendarSalvamento(){ setSaveStatus('saving','salvando…'); clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
 function agendarSalvamentoCentral(){ clearTimeout(centralSaveTimeout); centralSaveTimeout=setTimeout(()=>salvarCentral(),400); }
@@ -557,7 +567,13 @@ if (dObras) {
   state.obras.forEach(o => { if (!o.obs) o.obs = ''; if (!o.etapas) o.etapas = []; });
   state.lancamentos.forEach(l => { if (!l.id) l.id = gerarId('L', state.lancamentos, 'id'); });
 }
-if (dCentral && Object.keys(dCentral).length) carregarCentral(JSON.stringify(dCentral));
+if (dCentral && Object.keys(dCentral).length) {
+  state.central.pessoas         = Array.isArray(dCentral.pessoas)        ? dCentral.pessoas        : [];
+  state.central.cresp           = Array.isArray(dCentral.cresp)          ? dCentral.cresp          : [];
+  state.central.tiposObra       = Array.isArray(dCentral.tiposObra)      ? dCentral.tiposObra      : [];
+  state.central.categoriasCusto = Array.isArray(dCentral.categoriasCusto)? dCentral.categoriasCusto: [];
+  state.central.leitores        = Array.isArray(dCentral.leitores)       ? dCentral.leitores       : [];
+}
     setSaveStatus('saved', 'carregado');
   } catch(e) {
     setSaveStatus('nosave', 'erro ao carregar');
@@ -571,17 +587,6 @@ $('btn-vincular-arquivo')?.addEventListener('click', () => {
 $('_placeholder_vincular')?.addEventListener('click', () => {
   alert('Dados carregados automaticamente do banco.');
 });
-  $('btn-export-json').addEventListener('click', () => { const b=new Blob([JSON.stringify(toJSON(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`dados-obras-backup-${hoje()}.json`; a.click(); });
-  $('btn-export-pdf').addEventListener('click', exportarPDF);
-  document.querySelectorAll('.nav-item[data-pane]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      $('pane-'+btn.dataset.pane).classList.add('active');
-      state.obraAtiva = null;
-    });
-  });
   document.querySelectorAll('.detalhe-tab').forEach(tab => {
     tab.addEventListener('click', () => renderAbaDetalhe(tab.dataset.tab));
   });

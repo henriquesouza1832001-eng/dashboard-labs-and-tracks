@@ -264,17 +264,6 @@ function atualizarConforto(d){
   const prevAtrasadas=prev.filter(p=>p.status!=='Realizada'&&p.dataPrevista&&p.dataPrevista<hoje_).length;
   const manAbertas=man.filter(m=>m.status==='Aberta'||m.status==='Em Andamento').length;
 }
-window.exportarCentral = () => {
-  const c = {};
-  c.logos = CFG.logos || [];
-  c.gif = CFG.gif || '';
-  c.atividades_turno = CFG.atividades;
-  c.acoes = CFG.acoes;
-  c.identidade = CFG.identidade;
-  c.painelEsq = CFG.painelEsq;
-  const b = new Blob([JSON.stringify(c,null,2)],{type:'application/json'});
-  const a = document.createElement('a');a.href=URL.createObjectURL(b);a.download='central.json';a.click();
-};
 setTimeout(()=>{document.querySelectorAll('[data-w]').forEach(el=>{el.style.transition='width 1s ease';el.style.width=el.getAttribute('data-w')+'%';});},400);
 async function saveCFG(){ await API.hub.config.salvar(CFG); }
 applyIdent();
