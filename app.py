@@ -8,12 +8,27 @@ import os, json, asyncio, hashlib, jwt, datetime, threading, time
 JWT_SECRET = os.getenv("JWT_SECRET")
 
 def verificar_admin(request: Request):
-    try:
-        token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        return payload if payload.get("role") == "admin" else None
-    except:
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            if payload.get("role") == "admin":
+                return payload
+        except:
+            pass
+    email = request.headers.get("X-Forwarded-User", "").strip().lower()
+    if not email:
         return None
+    try:
+        rows = run_query(
+            "SELECT role FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email=? AND ativo=true LIMIT 1",
+            [email]
+        )
+        if rows and rows[0].get("role") == "admin":
+            return {"email": email, "role": "admin"}
+    except:
+        pass
+    return None
 
 app = FastAPI()
 
