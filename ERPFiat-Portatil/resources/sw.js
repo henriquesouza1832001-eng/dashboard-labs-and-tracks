@@ -1,5 +1,5 @@
 'use strict';
-const CACHE_NAME = 'controler-v11';
+const CACHE_NAME = 'controler-v12';
 const SHELL = [
   '/',
   '/hub/hub.html', '/hub/hub.css', '/hub/hub.js',
@@ -32,17 +32,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
  if (url.pathname.startsWith('/api/')) {
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request.url, clone));
-        }
-        return res;
-      })
-      .catch(() => caches.match(e.request.url))
-  );
+  e.respondWith(fetch(e.request));
   return;
 }
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
