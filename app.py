@@ -135,9 +135,19 @@ def inject(html_path, dados):
 # ─── Loaders (síncronos — rodam em thread pool no startup e no refresh) ────────
 def _load_chamados():
     rows = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados ORDER BY dataAbertura DESC")
+    ids = [r["id"] for r in rows]
+    fotos_map = {}
+    historico_map = {}
+    if ids:
+        fotos = run_query(f"SELECT chamado_id, url FROM {S_CHAMADOS}.fotos")
+        for f in fotos:
+            fotos_map.setdefault(f["chamado_id"], []).append(f["url"])
+        historico = run_query(f"SELECT chamado_id, usuario, acao, data FROM {S_CHAMADOS}.historico ORDER BY data")
+        for h in historico:
+            historico_map.setdefault(h["chamado_id"], []).append(h)
     for r in rows:
-        r["fotos"]     = run_query(f"SELECT url FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [r["id"]])
-        r["historico"] = run_query(f"SELECT usuario, acao, data FROM {S_CHAMADOS}.historico WHERE chamado_id=? ORDER BY data", [r["id"]])
+        r["fotos"]     = fotos_map.get(r["id"], [])
+        r["historico"] = historico_map.get(r["id"], [])
         for f in ("dataAbertura", "dataConclusao", "atualizado_em"):
             r[f] = _ts(r.get(f))
     payload = {"chamados": rows}
@@ -146,8 +156,12 @@ def _load_chamados():
 
 def _load_obras():
     obras = run_query(f"SELECT * FROM {S_OBRAS}.obras")
+    etapas_todas = run_query(f"SELECT * FROM {S_OBRAS}.etapas")
+    etapas_map = {}
+    for e in etapas_todas:
+        etapas_map.setdefault(e["obra_cod"], []).append(e)
     for o in obras:
-        o["etapas"]        = run_query(f"SELECT * FROM {S_OBRAS}.etapas WHERE obra_cod=?", [o["cod"]])
+        o["etapas"]        = etapas_map.get(o["cod"], [])
         o["atualizado_em"] = _ts(o.get("atualizado_em"))
     budget = run_query(f"SELECT * FROM {S_OBRAS}.budget")
     for b in budget:
@@ -162,8 +176,12 @@ def _load_obras():
 def _load_codin():
     pessoas = run_query(f"SELECT * FROM {S_CODIN}.pessoas")
     pontos  = run_query(f"SELECT * FROM {S_CODIN}.pontos")
+    leitores_todos = run_query(f"SELECT ponto_id, leitor_id FROM {S_CODIN}.ponto_leitores")
+    leitores_map = {}
+    for l in leitores_todos:
+        leitores_map.setdefault(l["ponto_id"], []).append(l["leitor_id"])
     for p in pontos:
-        p["leitores"] = [r["leitor_id"] for r in run_query(f"SELECT leitor_id FROM {S_CODIN}.ponto_leitores WHERE ponto_id=?", [p["id"]])]
+        p["leitores"] = leitores_map.get(p["id"], [])
     for x in pessoas + pontos:
         x["atualizado_em"] = _ts(x.get("atualizado_em"))
     payload = {"pessoas": pessoas, "pontos": pontos, "acessos": [], "leitores": []}
@@ -172,8 +190,12 @@ def _load_codin():
 
 def _load_atividades():
     rows = run_query(f"SELECT * FROM {S_ATIVIDADES}.atividades ORDER BY criadoEm DESC")
+    comentarios_todos = run_query(f"SELECT atividade_id, autor, texto, data FROM {S_ATIVIDADES}.comentarios ORDER BY data")
+    comentarios_map = {}
+    for c in comentarios_todos:
+        comentarios_map.setdefault(c["atividade_id"], []).append(c)
     for r in rows:
-        r["comentarios"]   = run_query(f"SELECT autor, texto, data FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=? ORDER BY data", [r["id"]])
+        r["comentarios"]   = comentarios_map.get(r["id"], [])
         r["atualizado_em"] = _ts(r.get("atualizado_em"))
     payload = {"versao": "2.0", "atividades": rows}
     cache_set("atividades", payload)
