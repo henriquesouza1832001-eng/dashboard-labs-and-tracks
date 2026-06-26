@@ -494,9 +494,29 @@ async def save_obras(request: Request):
                 l.get("nfDoc"), l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u
             ])
 
+        async def salvar_budget(b):
+            await arun_exec(f"""
+                MERGE INTO {S_OBRAS}.budget AS t
+                USING (SELECT ? AS id) AS s ON t.id = s.id
+                WHEN MATCHED THEN UPDATE SET
+                    obraCod=?,cresp=?,tipoVerba=?,budgetAprov=?,capex=?,opex=?,contingencia=?,obs=?,
+                    atualizado_em=current_timestamp(),atualizado_por=?
+                WHEN NOT MATCHED THEN INSERT
+                    (id,obraCod,cresp,tipoVerba,budgetAprov,capex,opex,contingencia,obs,atualizado_por)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)
+            """, [
+                b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
+                b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
+                b.get("contingencia",0), b.get("obs"), u,
+                b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
+                b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
+                b.get("contingencia",0), b.get("obs"), u
+            ])
+
         await asyncio.gather(
             *[salvar_obra(o) for o in body.get("obras", [])],
             *[salvar_lanc(l) for l in body.get("lancamentos", [])],
+            *[salvar_budget(b) for b in body.get("budget", [])],
         )
     except Exception as e:
         print(f"[obras] erro ao salvar: {e}")
