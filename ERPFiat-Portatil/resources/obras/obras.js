@@ -64,8 +64,11 @@ function carregarCentral(txt){
     return true;
   } catch(e){ console.error(e); return false; }
 }
+let _salvando = false;
 async function salvarDados() {
   if (typeof API === 'undefined') return;
+  if (_salvando) { agendarSalvamento(); return; }
+  _salvando = true;
   try {
     await API.obras.salvar({
       versao:       '2.0',
@@ -78,6 +81,8 @@ async function salvarDados() {
   } catch(err) {
     setSaveStatus('error', 'erro ao salvar');
     console.error('salvarDados falhou:', err);
+  } finally {
+    _salvando = false;
   }
 }
 function agendarSalvamento(){ setSaveStatus('saving','salvando…'); clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
