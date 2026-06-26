@@ -22,13 +22,18 @@ const hoje = () => new Date().toISOString().slice(0,10);
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
 async function salvarCentral() {
   if (typeof API === 'undefined') return;
-  await API.hub.config.salvar({
-    pessoas:          state.central.pessoas,
-    cresp:            state.central.cresp,
-    tiposObra:        state.central.tiposObra,
-    categoriasCusto:  state.central.categoriasCusto,
-    leitores:         state.central.leitores,
-  });
+  try {
+    await API.hub.config.salvar({
+      pessoas:         state.central.pessoas,
+      cresp:           state.central.cresp,
+      tiposObra:       state.central.tiposObra,
+      categoriasCusto: state.central.categoriasCusto,
+      leitores:        state.central.leitores,
+    });
+  } catch (err) {
+    setSaveStatus('error', 'Erro ao salvar configurações: ' + err.message);
+    console.error('salvarCentral falhou:', err);
+  }
 }
 function abrirDB(){ return Promise.resolve(); }
 

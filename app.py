@@ -482,13 +482,17 @@ async def get_hub_config(request: Request):
 async def save_hub_config(request: Request):
     dados   = await request.json()
     usuario = get_usuario(request)
-    run_exec(f"""
-        MERGE INTO {S_HUB}.config AS t
-        USING (SELECT ? AS chave) AS s ON t.chave = s.chave
-        WHEN MATCHED THEN UPDATE SET dados_json=?,atualizado_por=?,atualizado_em=current_timestamp()
-        WHEN NOT MATCHED THEN INSERT (chave,dados_json,atualizado_por,atualizado_em)
-            VALUES (?,?,?,current_timestamp())
-    """, [f"config_{usuario}",_jdumps(dados),usuario,f"config_{usuario}",_jdumps(dados),usuario])
+    try:
+        await arun_exec(f"""
+            MERGE INTO {S_HUB}.config AS t
+            USING (SELECT ? AS chave) AS s ON t.chave = s.chave
+            WHEN MATCHED THEN UPDATE SET dados_json=?,atualizado_por=?,atualizado_em=current_timestamp()
+            WHEN NOT MATCHED THEN INSERT (chave,dados_json,atualizado_por,atualizado_em)
+                VALUES (?,?,?,current_timestamp())
+        """, [f"config_{usuario}",_jdumps(dados),usuario,f"config_{usuario}",_jdumps(dados),usuario])
+    except Exception as e:
+        print(f"[hub/config] erro ao salvar: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
     cache_set(f"hub_config_{usuario}", dados)
     return JSONResponse({"ok": True})
 
@@ -592,11 +596,6 @@ async def admin_reset_senha(uid: int, request: Request):
 async def arun_query(sql_str, params=None):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, run_query, sql_str, params)
-
-async def arun_exec(sql_str, params=None):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, run_exec, sql_str, params)
-
 def run_exec(sql_str, params=None):
     conn = get_conn()
     with conn.cursor() as cur:
