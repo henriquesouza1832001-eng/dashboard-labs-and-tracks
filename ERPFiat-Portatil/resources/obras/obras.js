@@ -68,6 +68,7 @@ let _salvando = false;
 async function salvarDados() {
   if (typeof API === 'undefined') return;
   if (_salvando) { agendarSalvamento(); return; }
+  if (!state.obras.length && !state.lancamentos.length && !state.budget.length) return;
   _salvando = true;
   try {
     await API.obras.salvar({
