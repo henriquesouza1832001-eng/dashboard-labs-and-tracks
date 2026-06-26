@@ -4,7 +4,17 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from databricks import sql
 import os, json, asyncio, hashlib, jwt, datetime, threading, time
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 JWT_SECRET   = os.getenv("JWT_SECRET")
@@ -85,18 +95,6 @@ def cache_invalidate(*keys):
         for k in keys:
             _cache.pop(k, None)
 
-# ─── Utilitários ──────────────────────────────────────────────────────────────
-def _jloads(s):
-    if not s:
-        return []
-    try:
-        return json.loads(s)
-    except:
-        return []
-
-def _jdumps(obj):
-    return json.dumps(obj, ensure_ascii=False)
-
 def _ts(v):
     if v and hasattr(v, "isoformat"):
         return v.isoformat()
@@ -138,8 +136,8 @@ def inject(html_path, dados):
 def _load_chamados():
     rows = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados ORDER BY dataAbertura DESC")
     for r in rows:
-        r["fotos"]     = _jloads(r.get("fotos"))
-        r["historico"] = _jloads(r.get("historico"))
+        r["fotos"]     = run_query(f"SELECT url FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [r["id"]])
+        r["historico"] = run_query(f"SELECT usuario, acao, data FROM {S_CHAMADOS}.historico WHERE chamado_id=? ORDER BY data", [r["id"]])
         for f in ("dataAbertura", "dataConclusao", "atualizado_em"):
             r[f] = _ts(r.get(f))
     payload = {"chamados": rows}
@@ -149,7 +147,7 @@ def _load_chamados():
 def _load_obras():
     obras = run_query(f"SELECT * FROM {S_OBRAS}.obras")
     for o in obras:
-        o["etapas"]        = _jloads(o.get("etapas"))
+        o["etapas"]        = run_query(f"SELECT * FROM {S_OBRAS}.etapas WHERE obra_cod=?", [o["cod"]])
         o["atualizado_em"] = _ts(o.get("atualizado_em"))
     budget = run_query(f"SELECT * FROM {S_OBRAS}.budget")
     for b in budget:
@@ -165,7 +163,7 @@ def _load_codin():
     pessoas = run_query(f"SELECT * FROM {S_CODIN}.pessoas")
     pontos  = run_query(f"SELECT * FROM {S_CODIN}.pontos")
     for p in pontos:
-        p["leitores"] = _jloads(p.get("leitores"))
+        p["leitores"] = [r["leitor_id"] for r in run_query(f"SELECT leitor_id FROM {S_CODIN}.ponto_leitores WHERE ponto_id=?", [p["id"]])]
     for x in pessoas + pontos:
         x["atualizado_em"] = _ts(x.get("atualizado_em"))
     payload = {"pessoas": pessoas, "pontos": pontos, "acessos": [], "leitores": []}
@@ -175,7 +173,7 @@ def _load_codin():
 def _load_atividades():
     rows = run_query(f"SELECT * FROM {S_ATIVIDADES}.atividades ORDER BY criadoEm DESC")
     for r in rows:
-        r["comentarios"]   = _jloads(r.get("comentarios"))
+        r["comentarios"]   = run_query(f"SELECT autor, texto, data FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=? ORDER BY data", [r["id"]])
         r["atualizado_em"] = _ts(r.get("atualizado_em"))
     payload = {"versao": "2.0", "atividades": rows}
     cache_set("atividades", payload)
@@ -183,13 +181,8 @@ def _load_atividades():
 
 def _load_conforto():
     try:
-        rows   = run_query(f"SELECT chave, valor_json FROM {S_CONFORTO}.config")
-        config = {}
-        for r in rows:
-            try:
-                config[r["chave"]] = json.loads(r["valor_json"])
-            except:
-                config[r["chave"]] = r["valor_json"]
+        rows = run_query(f"SELECT * FROM {S_CONFORTO}.config LIMIT 1")
+        config = rows[0] if rows else {}
     except:
         config = {}
     payload = {
@@ -327,16 +320,19 @@ async def create_chamado(request: Request):
             INSERT INTO {S_CHAMADOS}.chamados
                 (id,titulo,categoria,tipo,prioridade,local,setor,solicitante,
                  dataDesejada,descricao,status,responsavel,idExterno,
-                 dataAbertura,dataConclusao,fotos,historico,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 dataAbertura,dataConclusao,atualizado_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, [
             body["id"], body.get("titulo"), body.get("categoria"), body.get("tipo"),
             body.get("prioridade"), body.get("local"), body.get("setor"),
             body.get("solicitante"), body.get("dataDesejada"), body.get("descricao"),
             body.get("status", "Aberto"), body.get("responsavel"), body.get("idExterno"),
-            body.get("dataAbertura"), body.get("dataConclusao"),
-            _jdumps(body.get("fotos", [])), _jdumps(body.get("historico", [])), u
+            body.get("dataAbertura"), body.get("dataConclusao"), u
         ])
+        for foto in body.get("fotos", []):
+            await arun_exec(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES (?,?)", [body["id"], foto])
+        for h in body.get("historico", []):
+            await arun_exec(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES (?,?,?)", [body["id"], h.get("usuario"), h.get("acao")])
     except Exception as e:
         print(f"[chamados] erro ao criar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -348,23 +344,12 @@ async def update_chamado(cid: str, request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
-        await arun_exec(f"""
-            MERGE INTO {S_CHAMADOS}.chamados AS t
-            USING (SELECT ? AS id) AS s ON t.id = s.id
-            WHEN MATCHED THEN UPDATE SET
-                titulo=?,categoria=?,tipo=?,prioridade=?,local=?,setor=?,
-                solicitante=?,dataDesejada=?,descricao=?,status=?,responsavel=?,
-                idExterno=?,dataAbertura=?,dataConclusao=?,
-                fotos=?,historico=?,atualizado_em=current_timestamp(),atualizado_por=?
-        """, [
-            cid,
-            body.get("titulo"), body.get("categoria"), body.get("tipo"),
-            body.get("prioridade"), body.get("local"), body.get("setor"),
-            body.get("solicitante"), body.get("dataDesejada"), body.get("descricao"),
-            body.get("status"), body.get("responsavel"), body.get("idExterno"),
-            body.get("dataAbertura"), body.get("dataConclusao"),
-            _jdumps(body.get("fotos", [])), _jdumps(body.get("historico", [])), u
-        ])
+        await arun_exec(f"DELETE FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [cid])
+        for foto in body.get("fotos", []):
+            await arun_exec(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES (?,?)", [cid, foto])
+        await arun_exec(f"DELETE FROM {S_CHAMADOS}.historico WHERE chamado_id=?", [cid])
+        for h in body.get("historico", []):
+            await arun_exec(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES (?,?,?)", [cid, h.get("usuario"), h.get("acao")])
     except Exception as e:
         print(f"[chamados] erro ao atualizar {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -387,9 +372,9 @@ async def get_sla():
     if v:
         return JSONResponse(v)
     try:
-        rows = await arun_query(f"SELECT dados_json FROM {S_HUB}.config WHERE chave='sla_global' LIMIT 1")
+        rows = await arun_query(f"SELECT prioridade, dias FROM {S_HUB}.sla")
         if rows:
-            cfg = json.loads(rows[0]["dados_json"])
+            cfg = {r["prioridade"]: r["dias"] for r in rows}
             cache_set("sla", cfg)
             return JSONResponse(cfg)
     except:
@@ -401,13 +386,13 @@ async def save_sla(request: Request):
     cfg = await request.json()
     u = get_usuario(request)
     try:
-        await arun_exec(f"""
-            MERGE INTO {S_HUB}.config AS t
-            USING (SELECT 'sla_global' AS chave) AS s ON t.chave = s.chave
-            WHEN MATCHED THEN UPDATE SET dados_json=?,atualizado_por=?,atualizado_em=current_timestamp()
-            WHEN NOT MATCHED THEN INSERT (chave,dados_json,atualizado_por,atualizado_em)
-                VALUES ('sla_global',?,?,current_timestamp())
-        """, [_jdumps(cfg), u, _jdumps(cfg), u])
+        for prioridade, dias in cfg.items():
+            await arun_exec(f"""
+                MERGE INTO {S_HUB}.sla AS t
+                USING (SELECT ? AS prioridade) AS s ON t.prioridade = s.prioridade
+                WHEN MATCHED THEN UPDATE SET dias=?
+                WHEN NOT MATCHED THEN INSERT (prioridade, dias) VALUES (?,?)
+            """, [prioridade, dias, prioridade, dias])
     except Exception as e:
         print(f"[sla] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -430,23 +415,31 @@ async def save_obras(request: Request):
                 USING (SELECT ? AS cod) AS s ON t.cod = s.cod
                 WHEN MATCHED THEN UPDATE SET
                     nome=?,tipo=?,local=?,responsavel=?,respNome=?,cresp=?,status=?,
-                    dtInicioPrev=?,dtFimPrev=?,dtInicioReal=?,dtFimReal=?,obs=?,etapas=?,
+                    dtInicioPrev=?,dtFimPrev=?,dtInicioReal=?,dtFimReal=?,obs=?,
                     atualizado_em=current_timestamp(),atualizado_por=?
                 WHEN NOT MATCHED THEN INSERT
                     (cod,nome,tipo,local,responsavel,respNome,cresp,status,
-                     dtInicioPrev,dtFimPrev,dtInicioReal,dtFimReal,obs,etapas,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                     dtInicioPrev,dtFimPrev,dtInicioReal,dtFimReal,obs,atualizado_por)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, [
                 o["cod"],
                 o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
                 o.get("respNome"), o.get("cresp"), o.get("status"),
                 o.get("dtInicioPrev"), o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"),
-                o.get("obs"), _jdumps(o.get("etapas", [])), u,
+                o.get("obs"), u,
                 o["cod"], o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
                 o.get("respNome"), o.get("cresp"), o.get("status"),
                 o.get("dtInicioPrev"), o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"),
-                o.get("obs"), _jdumps(o.get("etapas", [])), u
+                o.get("obs"), u
             ])
+            await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [o["cod"]])
+            for e in o.get("etapas", []):
+                await arun_exec(f"""
+                    INSERT INTO {S_OBRAS}.etapas
+                        (obra_cod, nome, dt_inicio, dt_fim, responsavel, peso, avanco_fisico, obs)
+                    VALUES (?,?,?,?,?,?,?,?)
+                """, [o["cod"], e.get("nome"), e.get("dtInicio"), e.get("dtFim"),
+                      e.get("responsavel"), e.get("peso", 1), e.get("avancoFisico", 0), e.get("obs")])
         for l in body.get("lancamentos", []):
             await arun_exec(f"""
                 MERGE INTO {S_OBRAS}.lancamentos AS t
@@ -515,14 +508,41 @@ async def save_conforto(request: Request):
     body = await request.json()
     u = get_usuario(request)
     if "config" in body:
+        c = body["config"]
         try:
-            await arun_exec(f"""
-                MERGE INTO {S_CONFORTO}.config AS t
-                USING (SELECT 'config_geral' AS chave) AS s ON t.chave = s.chave
-                WHEN MATCHED THEN UPDATE SET valor_json=?,atualizado_por=?,atualizado_em=current_timestamp()
-                WHEN NOT MATCHED THEN INSERT (chave,valor_json,atualizado_por)
-                    VALUES ('config_geral',?,?)
-            """, [_jdumps(body["config"]), u, _jdumps(body["config"]), u])
+            rows = await arun_query(f"SELECT COUNT(*) as n FROM {S_CONFORTO}.config")
+            if rows and rows[0]["n"] > 0:
+                await arun_exec(f"""
+                    UPDATE {S_CONFORTO}.config SET
+                        ciclo_filtro_dias=?, alerta_preventiva_dias=?, alerta_limpeza_dias=?,
+                        alerta_manutencao_dias=?, checklist_preventiva=?,
+                        frequencias_escritorio=?, frequencias_banheiro=?, frequencias_refeitorio=?,
+                        frequencias_area_tecnica=?, frequencias_corredor=?, frequencias_almoxarifado=?
+                """, [
+                    c.get("cicloFiltroDias"), c.get("alertaPreventivaDias"),
+                    c.get("alertaLimpezaDias"), c.get("alertaManutencaoDias"),
+                    str(c.get("checklistPreventiva", [])),
+                    c.get("frequencias", {}).get("escritorio"),
+                    c.get("frequencias", {}).get("banheiro"),
+                    c.get("frequencias", {}).get("refeitorio"),
+                    c.get("frequencias", {}).get("areaTecnica"),
+                    c.get("frequencias", {}).get("corredor"),
+                    c.get("frequencias", {}).get("almoxarifado"),
+                ])
+            else:
+                await arun_exec(f"""
+                    INSERT INTO {S_CONFORTO}.config VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                """, [
+                    c.get("cicloFiltroDias", 90), c.get("alertaPreventivaDias", 7),
+                    c.get("alertaLimpezaDias", 2), c.get("alertaManutencaoDias", 3),
+                    str(c.get("checklistPreventiva", [])),
+                    c.get("frequencias", {}).get("escritorio", "Diário"),
+                    c.get("frequencias", {}).get("banheiro", "Diário"),
+                    c.get("frequencias", {}).get("refeitorio", "Diário"),
+                    c.get("frequencias", {}).get("areaTecnica", "Semanal"),
+                    c.get("frequencias", {}).get("corredor", "Semanal"),
+                    c.get("frequencias", {}).get("almoxarifado", "Quinzenal"),
+                ])
         except Exception as e:
             print(f"[conforto] erro ao salvar: {e}")
             return JSONResponse({"erro": str(e)}, status_code=500)
@@ -545,24 +565,28 @@ async def save_atividades(request: Request):
                 USING (SELECT ? AS id) AS s ON t.id = s.id
                 WHEN MATCHED THEN UPDATE SET
                     titulo=?,desc=?,status=?,prioridade=?,responsavel=?,obra=?,
-                    prazo=?,progresso=?,tags=?,criadoPor=?,criadoEm=?,comentarios=?,
+                    prazo=?,progresso=?,tags=?,criadoPor=?,criadoEm=?,
                     atualizado_em=current_timestamp(),atualizado_por=?
                 WHEN NOT MATCHED THEN INSERT
                     (id,titulo,desc,status,prioridade,responsavel,obra,
-                     prazo,progresso,tags,criadoPor,criadoEm,comentarios,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                     prazo,progresso,tags,criadoPor,criadoEm,atualizado_por)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, [
                 a["id"],
                 a.get("titulo"), a.get("desc"), a.get("status"), a.get("prioridade"),
                 a.get("responsavel"), a.get("obra"), a.get("prazo"), a.get("progresso", 0),
-                a.get("tags"), a.get("criadoPor"), a.get("criadoEm"),
-                _jdumps(a.get("comentarios", [])), u,
+                a.get("tags"), a.get("criadoPor"), a.get("criadoEm"), u,
                 a["id"],
                 a.get("titulo"), a.get("desc"), a.get("status"), a.get("prioridade"),
                 a.get("responsavel"), a.get("obra"), a.get("prazo"), a.get("progresso", 0),
-                a.get("tags"), a.get("criadoPor"), a.get("criadoEm"),
-                _jdumps(a.get("comentarios", [])), u
+                a.get("tags"), a.get("criadoPor"), a.get("criadoEm"), u
             ])
+            await arun_exec(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [a["id"]])
+            for c in a.get("comentarios", []):
+                await arun_exec(f"""
+                    INSERT INTO {S_ATIVIDADES}.comentarios (atividade_id, autor, texto)
+                    VALUES (?,?,?)
+                """, [a["id"], c.get("autor"), c.get("texto")])
     except Exception as e:
         print(f"[atividades] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -578,11 +602,18 @@ async def get_hub_config(request: Request):
     if v is not None:
         return JSONResponse(v)
     try:
-        rows = await arun_query(
-            f"SELECT dados_json FROM {S_HUB}.config WHERE chave=? LIMIT 1",
-            [f"config_{usuario}"]
-        )
-        dados = json.loads(rows[0]["dados_json"]) if rows else {}
+        pessoas   = await arun_query(f"SELECT * FROM {S_HUB}.pessoas")
+        cresp     = await arun_query(f"SELECT * FROM {S_HUB}.cresp")
+        tipos     = await arun_query(f"SELECT nome FROM {S_HUB}.tipos_obra")
+        cats      = await arun_query(f"SELECT * FROM {S_HUB}.categorias_custo")
+        leitores  = await arun_query(f"SELECT * FROM {S_HUB}.leitores")
+        dados = {
+            "pessoas":         pessoas,
+            "cresp":           cresp,
+            "tiposObra":       [r["nome"] for r in tipos],
+            "categoriasCusto": cats,
+            "leitores":        leitores,
+        }
     except Exception as e:
         print(f"[hub/config] erro ao ler: {e}")
         dados = {}
@@ -594,13 +625,25 @@ async def save_hub_config(request: Request):
     dados   = await request.json()
     usuario = get_usuario(request)
     try:
-        await arun_exec(f"""
-            MERGE INTO {S_HUB}.config AS t
-            USING (SELECT ? AS chave) AS s ON t.chave = s.chave
-            WHEN MATCHED THEN UPDATE SET dados_json=?,atualizado_por=?,atualizado_em=current_timestamp()
-            WHEN NOT MATCHED THEN INSERT (chave,dados_json,atualizado_por,atualizado_em)
-                VALUES (?,?,?,current_timestamp())
-        """, [f"config_{usuario}", _jdumps(dados), usuario, f"config_{usuario}", _jdumps(dados), usuario])
+        await arun_exec(f"DELETE FROM {S_HUB}.pessoas")
+        for p in dados.get("pessoas", []):
+            await arun_exec(f"INSERT INTO {S_HUB}.pessoas (id, nome, cargo) VALUES (?,?,?)",
+                [p.get("id"), p.get("nome"), p.get("cargo")])
+        await arun_exec(f"DELETE FROM {S_HUB}.cresp")
+        for c in dados.get("cresp", []):
+            await arun_exec(f"INSERT INTO {S_HUB}.cresp (id, descricao, area) VALUES (?,?,?)",
+                [c.get("id"), c.get("descricao"), c.get("area")])
+        await arun_exec(f"DELETE FROM {S_HUB}.tipos_obra")
+        for nome in dados.get("tiposObra", []):
+            await arun_exec(f"INSERT INTO {S_HUB}.tipos_obra (nome) VALUES (?)", [nome])
+        await arun_exec(f"DELETE FROM {S_HUB}.categorias_custo")
+        for cat in dados.get("categoriasCusto", []):
+            await arun_exec(f"INSERT INTO {S_HUB}.categorias_custo (categoria, subcategoria) VALUES (?,?)",
+                [cat.get("categoria"), cat.get("subcategoria")])
+        await arun_exec(f"DELETE FROM {S_HUB}.leitores")
+        for l in dados.get("leitores", []):
+            await arun_exec(f"INSERT INTO {S_HUB}.leitores (id, nome) VALUES (?,?)",
+                [l.get("id"), l.get("nome")])
     except Exception as e:
         print(f"[hub/config] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -698,5 +741,9 @@ async def service_worker():
 @app.get("/manifest.json")
 async def manifest():
     return FileResponse(f"{BASE}/manifest.json", media_type="application/manifest+json")
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse(f"{BASE}/icons/icon-192.png", media_type="image/png")
 
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")
