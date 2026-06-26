@@ -440,77 +440,54 @@ async def save_obras(request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
+        # Apaga tudo e reinserir do zero
+        await arun_exec(f"DELETE FROM {S_OBRAS}.etapas")
+        await arun_exec(f"DELETE FROM {S_OBRAS}.obras")
+        await arun_exec(f"DELETE FROM {S_OBRAS}.lancamentos")
+        await arun_exec(f"DELETE FROM {S_OBRAS}.budget")
+
         async def salvar_obra(o):
             await arun_exec(f"""
-                MERGE INTO {S_OBRAS}.obras AS t
-                USING (SELECT ? AS cod) AS s ON t.cod = s.cod
-                WHEN MATCHED THEN UPDATE SET
-                    nome=?,tipo=?,local=?,responsavel=?,respNome=?,cresp=?,status=?,
-                    dtInicioPrev=?,dtFimPrev=?,dtInicioReal=?,dtFimReal=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
-                WHEN NOT MATCHED THEN INSERT
+                INSERT INTO {S_OBRAS}.obras
                     (cod,nome,tipo,local,responsavel,respNome,cresp,status,
                      dtInicioPrev,dtFimPrev,dtInicioReal,dtFimReal,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, [
-                o["cod"],
-                o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
-                o.get("respNome"), o.get("cresp"), o.get("status"),
-                o.get("dtInicioPrev"), o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"),
-                o.get("obs"), u,
-                o["cod"], o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
-                o.get("respNome"), o.get("cresp"), o.get("status"),
-                o.get("dtInicioPrev"), o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"),
-                o.get("obs"), u
+                o["cod"], o.get("nome"), o.get("tipo"), o.get("local"),
+                o.get("responsavel"), o.get("respNome"), o.get("cresp"), o.get("status"),
+                o.get("dtInicioPrev"), o.get("dtFimPrev"), o.get("dtInicioReal"),
+                o.get("dtFimReal"), o.get("obs"), u
             ])
-            await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [o["cod"]])
             for e in o.get("etapas", []):
                 await arun_exec(f"""
                     INSERT INTO {S_OBRAS}.etapas
-                        (obra_cod, nome, dt_inicio, dt_fim, responsavel, peso, avanco_fisico, obs)
+                        (obra_cod,nome,dt_inicio,dt_fim,responsavel,peso,avanco_fisico,obs)
                     VALUES (?,?,?,?,?,?,?,?)
                 """, [o["cod"], e.get("nome"), e.get("dtInicio"), e.get("dtFim"),
                       e.get("responsavel"), e.get("peso", 1), e.get("avancoFisico", 0), e.get("obs")])
 
         async def salvar_lanc(l):
             await arun_exec(f"""
-                MERGE INTO {S_OBRAS}.lancamentos AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
-                WHEN MATCHED THEN UPDATE SET
-                    obraCod=?,cresp=?,categoria=?,subcategoria=?,descricao=?,unid=?,
-                    qtd=?,precoUnit=?,nfDoc=?,dtLanc=?,fornecedor=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
-                WHEN NOT MATCHED THEN INSERT
+                INSERT INTO {S_OBRAS}.lancamentos
                     (id,obraCod,cresp,categoria,subcategoria,descricao,unid,
                      qtd,precoUnit,nfDoc,dtLanc,fornecedor,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, [
-                l["id"],
-                l.get("obraCod"), l.get("cresp"), l.get("categoria"), l.get("subcategoria"),
-                l.get("descricao"), l.get("unid"), l.get("qtd"), l.get("precoUnit"),
-                l.get("nfDoc"), l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u,
-                l["id"], l.get("obraCod"), l.get("cresp"), l.get("categoria"), l.get("subcategoria"),
-                l.get("descricao"), l.get("unid"), l.get("qtd"), l.get("precoUnit"),
-                l.get("nfDoc"), l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u
+                l["id"], l.get("obraCod"), l.get("cresp"), l.get("categoria"),
+                l.get("subcategoria"), l.get("descricao"), l.get("unid"),
+                l.get("qtd"), l.get("precoUnit"), l.get("nfDoc"),
+                l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u
             ])
 
         async def salvar_budget(b):
             await arun_exec(f"""
-                MERGE INTO {S_OBRAS}.budget AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
-                WHEN MATCHED THEN UPDATE SET
-                    obraCod=?,cresp=?,tipoVerba=?,budgetAprov=?,capex=?,opex=?,contingencia=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
-                WHEN NOT MATCHED THEN INSERT
+                INSERT INTO {S_OBRAS}.budget
                     (id,obraCod,cresp,tipoVerba,budgetAprov,capex,opex,contingencia,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
             """, [
                 b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
-                b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
-                b.get("contingencia",0), b.get("obs"), u,
-                b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
-                b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
-                b.get("contingencia",0), b.get("obs"), u
+                b.get("budgetAprov"), b.get("capex", 0), b.get("opex", 0),
+                b.get("contingencia", 0), b.get("obs"), u
             ])
 
         await asyncio.gather(
