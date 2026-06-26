@@ -21,6 +21,7 @@ const fmtD = s => s ? s.split('-').reverse().join('/') : '—';
 const hoje = () => new Date().toISOString().slice(0,10);
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
 async function salvarCentral() {
+  if (typeof API === 'undefined') return;
   await API.hub.config.salvar({
     pessoas:          state.central.pessoas,
     cresp:            state.central.cresp,
@@ -59,6 +60,7 @@ function carregarCentral(txt){
   } catch(e){ console.error(e); return false; }
 }
 async function salvarDados() {
+  if (typeof API === 'undefined') return;
   await API.obras.salvar({
     versao:       '2.0',
     obras:        state.obras,
