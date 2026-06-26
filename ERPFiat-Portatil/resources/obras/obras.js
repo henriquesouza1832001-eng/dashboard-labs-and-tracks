@@ -78,6 +78,7 @@ async function salvarDados() {
       lancamentos:  state.lancamentos,
       revisoes:     state.revisoes,
     });
+    API.invalidar('/obras');
     setSaveStatus('saved', 'salvo');
   } catch(err) {
     setSaveStatus('error', 'erro ao salvar');
