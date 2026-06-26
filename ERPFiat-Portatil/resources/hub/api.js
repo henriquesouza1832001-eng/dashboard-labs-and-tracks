@@ -11,7 +11,14 @@ async function req(endpoint, opts = {}, ttl = 0) {
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (sessionStorage.getItem('ctrl-token') || ''), ...(opts.headers || {}) },
     ...opts
   });
-  if (!res.ok) throw new Error('API ' + endpoint + ': ' + res.status);
+  if (!res.ok) {
+    let detalhe = res.status;
+    try {
+      const body = await res.json();
+      if (body && body.erro) detalhe = body.erro;
+    } catch (_) {}
+    throw new Error('API ' + endpoint + ': ' + detalhe);
+  }
   const data = await res.json();
   if (ttl > 0) { _mem[endpoint] = data; _exp[endpoint] = Date.now() + ttl; }
   return data;
