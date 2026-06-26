@@ -584,6 +584,7 @@ if (dObras) {
   state.revisoes     = Array.isArray(dObras.revisoes)     ? dObras.revisoes     : [];
   state.obras.forEach(o => { if (!o.obs) o.obs = ''; if (!o.etapas) o.etapas = []; });
   state.lancamentos.forEach(l => { if (!l.id) l.id = gerarId('L', state.lancamentos, 'id'); });
+  state.budget.forEach(b => { if (!b.id) b.id = gerarId('B', state.budget, 'id'); });
 }
 if (dCentral && Object.keys(dCentral).length) {
   state.central.pessoas         = Array.isArray(dCentral.pessoas)        ? dCentral.pessoas        : [];
