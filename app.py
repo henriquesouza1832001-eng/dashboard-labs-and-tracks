@@ -520,6 +520,8 @@ async def save_obras(request: Request):
         print(f"[obras] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_obras)
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/{cod}")
