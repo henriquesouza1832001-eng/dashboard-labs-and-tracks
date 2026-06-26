@@ -582,7 +582,20 @@ if (dCentral && Object.keys(dCentral).length) {
   }
   $('app').style.display = 'block';
   popularSelects(); renderTudo(); aplicarFiltroURL();
-
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pane = btn.dataset.pane;
+    if (!pane) return;
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const paneEl = document.getElementById('pane-' + pane);
+    if (paneEl) paneEl.classList.add('active');
+    const url = new URL(window.location);
+    url.searchParams.set('page', pane);
+    history.pushState({}, '', url);
+  });
+});
 $('btn-vincular-arquivo')?.addEventListener('click', () => {
   alert('Gerencie os arquivos pelo Hub principal.');
 });
