@@ -1,6 +1,4 @@
 'use strict';
-
-// ── Registro do Service Worker ────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
@@ -18,8 +16,6 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('[PWA] SW falhou:', err));
   });
 }
-
-// ── Banner de atualização disponível ─────────────────────────────────────────
 function _notificarAtualizacao() {
   const banner = document.createElement('div');
   banner.style.cssText = `
@@ -41,8 +37,6 @@ function _notificarAtualizacao() {
   `;
   document.body.appendChild(banner);
 }
-
-// ── Permissão de notificações push ───────────────────────────────────────────
 window.PWA = {
   async pedirPermissaoNotificacao() {
     if (!('Notification' in window)) return 'unsupported';
@@ -77,3 +71,6 @@ window.addEventListener('beforeinstallprompt', e => {
     });
   }
 });
+setInterval(() => {
+  fetch('/health').catch(() => {});
+}, 10 * 60 * 1000);
