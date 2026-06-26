@@ -596,7 +596,7 @@ window.editarCategoria=editarCategoria; window.excluirCategoria=excluirCategoria
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const [dObras, dCentral] = await Promise.all([
-  window.__DADOS__ ? Promise.resolve(window.__DADOS__) : API.obras.listar(),
+  API.obras.listar(),
   API.hub.config.ler()
 ]);
 if (dObras) {

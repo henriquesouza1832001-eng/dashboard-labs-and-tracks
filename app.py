@@ -532,6 +532,8 @@ async def delete_obra(cod: str):
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_obras)
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/budget/{bid}")
@@ -783,7 +785,7 @@ async def chamados_page():
 
 @app.get("/obras")
 async def obras_page():
-    return inject(f"{BASE}/obras/obras.html", get_cached("obras"))
+    return inject(f"{BASE}/obras/obras.html", {})
 
 @app.get("/codin")
 async def codin_page():
