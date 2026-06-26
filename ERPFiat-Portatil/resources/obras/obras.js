@@ -66,13 +66,19 @@ function carregarCentral(txt){
 }
 async function salvarDados() {
   if (typeof API === 'undefined') return;
-  await API.obras.salvar({
-    versao:       '2.0',
-    obras:        state.obras,
-    budget:       state.budget,
-    lancamentos:  state.lancamentos,
-    revisoes:     state.revisoes,
-  });
+  try {
+    await API.obras.salvar({
+      versao:       '2.0',
+      obras:        state.obras,
+      budget:       state.budget,
+      lancamentos:  state.lancamentos,
+      revisoes:     state.revisoes,
+    });
+    setSaveStatus('saved', 'salvo');
+  } catch(err) {
+    setSaveStatus('error', 'erro ao salvar');
+    console.error('salvarDados falhou:', err);
+  }
 }
 function agendarSalvamento(){ setSaveStatus('saving','salvando…'); clearTimeout(saveTimeout); saveTimeout=setTimeout(()=>salvarDados(),400); }
 function agendarSalvamentoCentral(){ clearTimeout(centralSaveTimeout); centralSaveTimeout=setTimeout(()=>salvarCentral(),400); }
