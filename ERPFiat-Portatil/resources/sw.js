@@ -53,9 +53,9 @@ self.addEventListener('fetch', e => {
   e.respondWith(
   caches.match(e.request)
     .then(cached => {
-      if (cached) return cached;
+      if (cached && !e.request.url.includes('.html') && e.request.destination !== 'document') return cached;
       return fetch(e.request).then(res => {
-        if (res.ok) {
+        if (res.ok && e.request.destination !== 'document') {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }

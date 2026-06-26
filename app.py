@@ -785,7 +785,7 @@ async def chamados_page():
 
 @app.get("/obras")
 async def obras_page():
-    return inject(f"{BASE}/obras/obras.html", {})
+    return FileResponse(f"{BASE}/obras/obras.html")
 
 @app.get("/codin")
 async def codin_page():
