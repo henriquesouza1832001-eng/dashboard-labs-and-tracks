@@ -51,6 +51,7 @@ def get_conn():
                     server_hostname=HOST,
                     http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
                     access_token=TOKEN,
+                    _socket_timeout=30,
                 )
             except:
                 pass
@@ -437,7 +438,7 @@ async def save_obras(request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
-        for o in body.get("obras", []):
+        async def salvar_obra(o):
             await arun_exec(f"""
                 MERGE INTO {S_OBRAS}.obras AS t
                 USING (SELECT ? AS cod) AS s ON t.cod = s.cod
@@ -468,7 +469,8 @@ async def save_obras(request: Request):
                     VALUES (?,?,?,?,?,?,?,?)
                 """, [o["cod"], e.get("nome"), e.get("dtInicio"), e.get("dtFim"),
                       e.get("responsavel"), e.get("peso", 1), e.get("avancoFisico", 0), e.get("obs")])
-        for l in body.get("lancamentos", []):
+
+        async def salvar_lanc(l):
             await arun_exec(f"""
                 MERGE INTO {S_OBRAS}.lancamentos AS t
                 USING (SELECT ? AS id) AS s ON t.id = s.id
@@ -489,6 +491,11 @@ async def save_obras(request: Request):
                 l.get("descricao"), l.get("unid"), l.get("qtd"), l.get("precoUnit"),
                 l.get("nfDoc"), l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u
             ])
+
+        await asyncio.gather(
+            *[salvar_obra(o) for o in body.get("obras", [])],
+            *[salvar_lanc(l) for l in body.get("lancamentos", [])],
+        )
     except Exception as e:
         print(f"[obras] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
