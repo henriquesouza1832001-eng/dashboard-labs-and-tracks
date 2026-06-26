@@ -397,13 +397,17 @@ async def save_conforto(request: Request):
     body = await request.json()
     u = get_usuario(request)
     if "config" in body:
-        run_exec(f"""
-            MERGE INTO {S_CONFORTO}.config AS t
-            USING (SELECT 'config_geral' AS chave) AS s ON t.chave = s.chave
-            WHEN MATCHED THEN UPDATE SET valor_json=?,atualizado_por=?,atualizado_em=current_timestamp()
-            WHEN NOT MATCHED THEN INSERT (chave,valor_json,atualizado_por)
-                VALUES ('config_geral',?,?)
-        """, [_jdumps(body["config"]),_jdumps(body["config"]),u])
+        try:
+            await arun_exec(f"""
+                MERGE INTO {S_CONFORTO}.config AS t
+                USING (SELECT 'config_geral' AS chave) AS s ON t.chave = s.chave
+                WHEN MATCHED THEN UPDATE SET valor_json=?,atualizado_por=?,atualizado_em=current_timestamp()
+                WHEN NOT MATCHED THEN INSERT (chave,valor_json,atualizado_por)
+                    VALUES ('config_geral',?,?)
+            """, [_jdumps(body["config"]),u,_jdumps(body["config"]),u])
+        except Exception as e:
+            print(f"[conforto] erro ao salvar: {e}")
+            return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("conforto")
     return JSONResponse({"ok": True})
 
@@ -577,6 +581,11 @@ async def arun_query(sql_str, params=None):
 async def arun_exec(sql_str, params=None):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, run_exec, sql_str, params)
+
+def run_exec(sql_str, params=None):
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute(sql_str, params or [])
 
 # ─── Paginas HTML com dados injetados ─────────────────────────────────────────
 BASE = "ERPFiat-Portatil/resources"
