@@ -633,7 +633,7 @@ function toggleObCard(tipo){
   overlay.id='ob-overlay';
   overlay.innerHTML=buildOverlayHTML(tipo,_obrasData);
   conteudo.innerHTML='';
-  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden';
+  conteudo.style.cssText='';
   conteudo.appendChild(overlay);
   setTimeout(()=>drawOverlayCharts(tipo,_obrasData),60);
 }
