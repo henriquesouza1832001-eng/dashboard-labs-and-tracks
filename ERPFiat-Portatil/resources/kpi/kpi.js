@@ -719,7 +719,7 @@ function buildOverlayTotal(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
       <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="110" style="width:190px;height:110px;display:block"></canvas>
+      <canvas id="cv-ov-pizza2" width="190" height="130" style="width:190px;height:130px;display:block"></canvas>
       <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -738,7 +738,7 @@ function buildOverlayAndamento(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
       <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="110" style="width:190px;height:110px;display:block"></canvas>
+      <canvas id="cv-ov-pizza2" width="190" height="130" style="width:190px;height:130px;display:block"></canvas>
       <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -757,7 +757,7 @@ function buildOverlayConcluidas(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
       <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="110" style="width:190px;height:110px;display:block"></canvas>
+      <canvas id="cv-ov-pizza2" width="190" height="130" style="width:190px;height:130px;display:block"></canvas>
       <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -789,12 +789,12 @@ function desenharBulletBudget(cv,budget,gasto){
   const ctx=cv.getContext('2d');
   const W=cv.width,H=cv.height;
   ctx.clearRect(0,0,W,H);
-  const m={t:36,r:14,b:34,l:14};
+  const m={t:38,r:18,b:54,l:18};
   const cw=W-m.l-m.r;
   const maxVal=Math.max(budget,gasto,1)*1.15;
   const xBudget=m.l+(budget/maxVal)*cw;
   const xGasto=m.l+(gasto/maxVal)*cw;
-  const barY=m.t+10,barH=22,rad=6;
+  const barY=m.t+8,barH=22,rad=6;
   const excedeu=gasto>budget;
 
   ctx.fillStyle='#e8edf5';
@@ -816,16 +816,17 @@ function desenharBulletBudget(cv,budget,gasto){
 
   ctx.font='600 10px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#4a5880';
-  ctx.fillText(`Budget: ${fmtRK(budget)}`,Math.min(Math.max(xBudget,50),W-50),barY-16);
+  ctx.fillText(`Budget: ${fmtRK(budget)}`,Math.min(Math.max(xBudget,46),W-46),barY-16);
 
-  ctx.font='700 11px JetBrains Mono,monospace';
+  ctx.font='700 12px JetBrains Mono,monospace';
   ctx.textAlign='left';ctx.fillStyle=excedeu?'#f85149':'#2E5FA3';
-  ctx.fillText(`Gasto: ${fmtRK(gasto)}`,m.l,barY+barH+26);
+  ctx.fillText(`Gasto: ${fmtRK(gasto)}`,m.l,barY+barH+24);
 
-  ctx.textAlign='right';
+  ctx.font='600 11px JetBrains Mono,monospace';
+  ctx.textAlign='left';
   const pct=budget>0?((gasto/budget)*100).toFixed(1):'0';
   ctx.fillStyle=excedeu?'#f85149':'#0f1c3f';
-  ctx.fillText(`Uso: ${pct}%`,m.l+cw,barY+barH+44);
+  ctx.fillText(`Uso: ${pct}%`,m.l,barY+barH+42);
 }
 function drawOverlayCharts(tipo,d){
   const obras=d.obras||[];const lanc=d.lancamentos||[];
@@ -851,7 +852,7 @@ function drawOverlayCharts(tipo,d){
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
   const cv2=document.getElementById('cv-ov-pizza2');
-  if(cv2){cv2.width=190;cv2.height=110;desenharBulletBudget(cv2,totalB,totalR);}
+  if(cv2){cv2.width=190;cv2.height=130;desenharBulletBudget(cv2,totalB,totalR);}
   const legP2=document.getElementById('leg-ov-pizza2');
   if(legP2){
     const estourou=totalR>totalB;
