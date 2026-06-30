@@ -65,7 +65,7 @@ mkMicro(ativos,'Ativas','c-verde',"abrirModuloComDrill('codin','cd-total')")+
 mkMicro(semPonto,'Sem ponto',semPonto>0?'c-amarelo':'c-verde',"abrirModuloComDrill('codin','cd-ponto')")+
 mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
     document.getElementById('mfoot-codin').textContent=Math.round(ativos/Math.max(pessoas.length,1)*100)+'% ativos · '+semPonto+' sem ponto';
-    setTimeout(()=>desenharMicroDonut('mcv-codin',['Ativos','Inativos'],[ativos||1,pessoas.length-ativos||1],['#3fb950','#f85149']),80);
+    setTimeout(()=>desenharMicroBarras('mcv-codin',[{label:'Ativos',val:ativos||0,cor:'#3fb950'},{label:'Inativos',val:(pessoas.length-ativos)||0,cor:'#f85149'}]),80);
   }
   if(dCnf){
     const regs=dCnf.registros||[];
@@ -79,7 +79,7 @@ mkMicro(conform,'Conformes','c-verde',"abrirModuloComDrill('conforto','cf-conf')
 mkMicro(nconf,'Não conformes',nconf>0?'c-vermelho':'c-verde',"abrirModuloComDrill('conforto','cf-temp')")+
 mkMicro(pct+'%','Conformidade',pct>80?'c-verde':'c-vermelho',"abrirModuloComDrill('conforto','cf-areas')")
     document.getElementById('mfoot-conforto').textContent=areas+' áreas · '+pct+'% conformidade';
-    setTimeout(()=>desenharMicroDonut('mcv-conforto',['Conforme','Não Conforme'],[conform||1,nconf||1],['#3fb950','#f85149']),80);
+    setTimeout(()=>desenharMicroBarras('mcv-conforto',[{label:'Conforme',val:conform||0,cor:'#3fb950'},{label:'Não Conforme',val:nconf||0,cor:'#f85149'}]),80);
   }
   if(dErg){
     const avs=dErg.avaliacoes||[];
@@ -110,7 +110,8 @@ mkMicro(resolvidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-r
       Math.round(resolvidos/Math.max(total,1)*100)+'% resolvidos · '+alta+' críticos';
     const sm={};cham.forEach(c=>{const s=c.status||'Aberto';sm[s]=(sm[s]||0)+1;});
     const sl=Object.entries(sm).filter(x=>x[1]);
-    setTimeout(()=>desenharMicroDonut('mcv-chamados',sl.map(x=>x[0]),sl.map(x=>x[1]),['#f85149','#e3711a','#3fb950','#58a6ff']),80);
+    const coresCh=['#f85149','#e3711a','#3fb950','#58a6ff'];
+    setTimeout(()=>desenharMicroBarras('mcv-chamados',sl.map((x,i)=>({label:x[0],val:x[1],cor:coresCh[i%4]}))),80);
   }
 }
 
@@ -865,27 +866,54 @@ function desenharBulletBudget(cv,budget,gasto){
   ctx.fillStyle=excedeu?'#f85149':'#0f1c3f';
   ctx.fillText(`Uso: ${pct}%`,m.l,barY+barH+42);
 }
+function barrasHTML(items, opts={}){
+  // items = [{label, val, cor?}]
+  const max=Math.max(...items.map(x=>x.val),1);
+  return items.map(x=>{
+    const pct=Math.round((x.val/max)*100);
+    const cor=x.cor||'#2E5FA3';
+    const txt=x.val>999?fmtRK(x.val):typeof x.val==='number'&&x.val%1===0?x.val+'%':fmtRK(x.val);
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="width:${opts.labelW||100}px;font-size:11px;color:var(--text-muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${x.label}</div>
+      <div style="flex:1;position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct}%;background:${cor};border-radius:7px;transition:width 0.3s"></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:${cor};font-weight:600;min-width:48px;text-align:right">${txt}</div>
+    </div>`;
+  }).join('');
+}
+function desenharMicroBarras(id, items){
+  // items = [{label, val, cor}]
+  const cv=document.getElementById(id);if(!cv)return;
+  const wrap=cv.parentElement;
+  const max=Math.max(...items.map(x=>x.val),1);
+  wrap.innerHTML=items.map(x=>{
+    const pct=Math.round((x.val/max)*100);
+    return`<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <div style="width:72px;font-size:10px;color:var(--text-muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${x.label}</div>
+      <div style="flex:1;position:relative;height:10px;background:#e8edf5;border-radius:5px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct}%;background:${x.cor||'#2E5FA3'};border-radius:5px"></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:${x.cor||'#2E5FA3'};font-weight:600;min-width:28px;text-align:right">${x.val}</div>
+    </div>`;
+  }).join('');
+}
 function drawOverlayCharts(tipo,d){
   const obras=d.obras||[];const lanc=d.lancamentos||[];
-  const filtros={total:obras,andamento:obras.filter(o=>o.status==='Em Andamento'),concluidas:obras.filter(o=>o.status==='Concluído'),planejadas:obras.filter(o=>o.status==='Planejado')};
+  const filtros={total:obras,andamento:obras.filter(o=>o.status==='Em Andamento'),concluidas:obras.filter(o=>o.status==='Concluído'),planejadas:obras.filter(o=>o.status==='Planejado'),estudo:obras.filter(o=>o.status==='Em Estudo')};
   const lista=filtros[tipo]||[];
-  const avTop=lista.slice(0,8).map(o=>({nome:tnome(o.nome),av:calcAvFis(o)})).filter(x=>x.av>0&&x.av<100);
-  const cv1=document.getElementById('cv-ov-pizza1');
-  if(cv1){
-    cv1.width=cv1.parentElement.clientWidth||400;
-    if(avTop.length){
-      desenharBarrasH(cv1.id,avTop.map(x=>x.nome),avTop.map(x=>x.av),['#2E5FA3','#3fb950','#e3711a','#d29922','#a371f7','#58a6ff','#f85149','#8b949e']);
-    } else {
-      const fins=lista.slice(0,8).map(o=>{
-        const b=budgObra(o.cod),r=realObra(o.cod);
-        return{nome:tnome(o.nome),pct:b>0?Math.round(r/b*100):0};
-      }).filter(x=>x.pct>0);
-      if(fins.length){
-        const cores=fins.map(x=>x.pct>100?'#f85149':x.pct>80?'#3fb950':'#2E5FA3');
-        desenharBarrasH(cv1.id,fins.map(x=>x.nome),fins.map(x=>x.pct),cores);
-      }
-    }
+
+  // Avanço físico / financeiro
+  const av1=document.getElementById('cv-ov-pizza1');
+  if(av1){
+    const wrap=av1.parentElement;
+    const avTop=lista.slice(0,8).map(o=>({nome:tnome(o.nome),av:calcAvFis(o)})).filter(x=>x.av>0&&x.av<100);
+    const fins=lista.slice(0,8).map(o=>{const b=budgObra(o.cod),r=realObra(o.cod);return{nome:tnome(o.nome),pct:b>0?Math.round(r/b*100):0};}).filter(x=>x.pct>0);
+    const src=avTop.length?avTop.map((x,i)=>({label:x.nome,val:x.av,cor:['#2E5FA3','#3fb950','#e3711a','#d29922','#a371f7','#58a6ff','#f85149','#8b949e'][i%8]})):fins.map(x=>({label:x.nome,val:x.pct,cor:x.pct>100?'#f85149':x.pct>80?'#3fb950':'#2E5FA3'}));
+    wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px" id="cv-ov-pizza1-titulo">Avanço por Obras em Andamento</div>`+(src.length?barrasHTML(src,{labelW:90}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem dados</div>');
   }
+
+  // Previsto × Realizado
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
   const bulletWrap=document.getElementById('bullet-ov-wrap');
@@ -899,7 +927,7 @@ function drawOverlayCharts(tipo,d){
       <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">Previsto × Realizado</div>
       <div style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--mono);margin-bottom:6px">Previsto: <b style="color:var(--text)">${fmtRK(totalB)}</b></div>
       <div style="position:relative;height:18px;background:#e8edf5;border-radius:9px;overflow:hidden;margin-bottom:10px">
-        <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:9px;transition:width 0.4s"></div>
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:9px"></div>
         <div style="position:absolute;right:0;top:-4px;bottom:-4px;width:2px;background:#8a9abf;border-radius:2px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;margin-bottom:14px">
@@ -907,29 +935,20 @@ function drawOverlayCharts(tipo,d){
         <span style="color:var(--text-muted)">${pctTxt}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
-          <span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span>
-          <span style="color:var(--text-muted)">Realizado</span>
-          <b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
-          <span style="width:10px;height:10px;border-radius:3px;background:${estourou?'#f8514955':'#1a7f4b'};flex-shrink:0"></span>
-          <span style="color:var(--text-muted)">${estourou?'Excedente':'Disponível'}</span>
-          <b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'#1a7f4b'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
-          <span style="width:10px;height:10px;border-radius:3px;background:#8a9abf;flex-shrink:0"></span>
-          <span style="color:var(--text-muted)">Uso do budget</span>
-          <b style="margin-left:auto;font-family:var(--mono);color:${cor}">${pctTxt}</b>
-        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span><span style="color:var(--text-muted)">Realizado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${estourou?'#f8514955':'#1a7f4b'};flex-shrink:0"></span><span style="color:var(--text-muted)">${estourou?'Excedente':'Disponível'}</span><b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'#1a7f4b'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">Uso do budget</span><b style="margin-left:auto;font-family:var(--mono);color:${cor}">${pctTxt}</b></div>
       </div>`;
   }
+
+  // Gastos por categoria
   const catM={};lista.forEach(o=>{lanc.filter(l=>l.obraCod===o.cod).forEach(l=>{const c=l.categoria||'Outros';catM[c]=(catM[c]||0)+l.qtd*l.precoUnit;});});
   const top=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const cvb=document.getElementById('cv-ov-barras');
-  if(cvb&&top.length){
-    const pw=cvb.parentElement.clientWidth||400;cvb.width=pw;
-    desenharBarrasH('cv-ov-barras',top.map(x=>x[0]),top.map(x=>x[1]),['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7','#58a6ff','#f85149','#8b949e']);
+  if(cvb){
+    const wrap=cvb.parentElement;
+    const cores=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7','#58a6ff','#f85149','#8b949e'];
+    wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Gastos por Categoria</div>`+(top.length?barrasHTML(top.map((x,i)=>({label:x[0],val:x[1],cor:cores[i%8]})),{labelW:100}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem lançamentos</div>');
   }
 }
 function abrirDetalheObra(cod){
