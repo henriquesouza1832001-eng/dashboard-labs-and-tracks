@@ -696,7 +696,7 @@ function buildOverlayTotal(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
       <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="190" style="width:190px;height:190px;display:block"></canvas>
+      <canvas id="cv-ov-pizza2" width="190" height="110" style="width:190px;height:110px;display:block"></canvas>
       <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -715,7 +715,7 @@ function buildOverlayAndamento(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
       <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="190" style="width:190px;height:190px;display:block"></canvas>
+      <canvas id="cv-ov-pizza2" width="190" height="110" style="width:190px;height:110px;display:block"></canvas>
       <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -734,7 +734,7 @@ function buildOverlayConcluidas(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
       <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="190" style="width:190px;height:190px;display:block"></canvas>
+      <canvas id="cv-ov-pizza2" width="190" height="110" style="width:190px;height:110px;display:block"></canvas>
       <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -746,6 +746,63 @@ function buildOverlayConcluidas(d){
 function buildOverlayPlanejadas(d){
   const {header}=_obOvBase(d,'planejadas');
   return header;
+}
+function _retArred(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+function _retArredCustom(ctx,x,y,w,h,o){
+  const tl=o.tl||0,tr=o.tr||0,br=o.br||0,bl=o.bl||0;
+  ctx.beginPath();ctx.moveTo(x+tl,y);ctx.lineTo(x+w-tr,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+tr);ctx.lineTo(x+w,y+h-br);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-br,y+h);ctx.lineTo(x+bl,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-bl);ctx.lineTo(x,y+tl);
+  ctx.quadraticCurveTo(x,y,x+tl,y);ctx.closePath();
+}
+function desenharBulletBudget(cv,budget,gasto){
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  const m={t:36,r:14,b:34,l:14};
+  const cw=W-m.l-m.r;
+  const maxVal=Math.max(budget,gasto,1)*1.15;
+  const xBudget=m.l+(budget/maxVal)*cw;
+  const xGasto=m.l+(gasto/maxVal)*cw;
+  const barY=m.t+10,barH=22,rad=6;
+  const excedeu=gasto>budget;
+
+  ctx.fillStyle='#e8edf5';
+  _retArred(ctx,m.l,barY,cw,barH,rad);ctx.fill();
+
+  if(!excedeu){
+    ctx.fillStyle='#2E5FA3';
+    _retArred(ctx,m.l,barY,Math.max(xGasto-m.l,2),barH,rad);ctx.fill();
+  } else {
+    ctx.fillStyle='#2E5FA3';
+    _retArredCustom(ctx,m.l,barY,xBudget-m.l,barH,{tl:rad,bl:rad});ctx.fill();
+    ctx.fillStyle='#f85149';
+    _retArredCustom(ctx,xBudget,barY,Math.max(xGasto-xBudget,2),barH,{tr:rad,br:rad});ctx.fill();
+  }
+
+  ctx.strokeStyle='#0f1c3f';ctx.lineWidth=2;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(xBudget,barY-8);ctx.lineTo(xBudget,barY+barH+8);ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.font='600 10px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='#4a5880';
+  ctx.fillText(`Budget: ${fmtRK(budget)}`,Math.min(Math.max(xBudget,50),W-50),barY-16);
+
+  ctx.font='700 11px JetBrains Mono,monospace';
+  ctx.textAlign='left';ctx.fillStyle=excedeu?'#f85149':'#2E5FA3';
+  ctx.fillText(`Gasto: ${fmtRK(gasto)}`,m.l,barY+barH+22);
+
+  ctx.textAlign='right';
+  const pct=budget>0?((gasto/budget)*100).toFixed(1):'0';
+  ctx.fillStyle=excedeu?'#f85149':'#0f1c3f';
+  ctx.fillText(`Uso: ${pct}%`,m.l+cw,barY+barH+22);
 }
 function drawOverlayCharts(tipo,d){
   const obras=d.obras||[];const lanc=d.lancamentos||[];
@@ -770,23 +827,16 @@ function drawOverlayCharts(tipo,d){
   }
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
-  const aGastar=Math.max(totalB-totalR,0);
-  const estourou=totalR>totalB;
-  const excedente=estourou?totalR-totalB:0;
   const cv2=document.getElementById('cv-ov-pizza2');
-  if(cv2&&(totalR||aGastar)){
-    if(estourou){
-      desenharDonutResponsivo(cv2,['Dentro do budget','Excedente'],[totalB||1,excedente||1],['#3fb950','#f85149']);
-    } else {
-      desenharDonutResponsivo(cv2,['Gasto','A gastar'],[totalR||1,aGastar||1],['#e3711a','#2E5FA3']);
-    }
-  }
+  if(cv2){cv2.width=190;cv2.height=110;desenharBulletBudget(cv2,totalB,totalR);}
   const legP2=document.getElementById('leg-ov-pizza2');
   if(legP2){
-    const pctUso=totalB>0?Math.round((totalR/totalB)*100):0;
+    const estourou=totalR>totalB;
+    const excedente=estourou?totalR-totalB:0;
+    const disponivel=Math.max(totalB-totalR,0);
     const itens=estourou
-      ? [{l:'Eficiência',v:pctUso+'%',c:'#f85149'},{l:'Excedente',v:fmtRK(excedente),c:'#f85149'},{l:'Gasto total',v:fmtRK(totalR),c:'#e3711a'}]
-      : [{l:'Eficiência',v:pctUso+'%',c:'#3fb950'},{l:'Gasto',v:fmtRK(totalR),c:'#e3711a'},{l:'A gastar',v:fmtRK(aGastar),c:'#2E5FA3'}];
+      ? [{l:'Uso do orçamento',v:(totalB>0?((totalR/totalB)*100).toFixed(1):0)+'%',c:'#f85149'},{l:'Valor excedido',v:fmtRK(excedente),c:'#f85149'}]
+      : [{l:'Uso do orçamento',v:(totalB>0?((totalR/totalB)*100).toFixed(1):0)+'%',c:'#2E5FA3'},{l:'Disponível',v:fmtRK(disponivel),c:'#3fb950'}];
     legP2.innerHTML=itens.map(x=>`<span style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:8px;height:8px;border-radius:2px;background:${x.c};flex-shrink:0"></span><span style="color:var(--text-muted)">${x.l}:</span><b style="font-family:var(--mono);color:var(--text)">${x.v}</b></span>`).join('');
   }
   const catM={};lista.forEach(o=>{lanc.filter(l=>l.obraCod===o.cod).forEach(l=>{const c=l.categoria||'Outros';catM[c]=(catM[c]||0)+l.qtd*l.precoUnit;});});
