@@ -157,7 +157,7 @@
         <div class="table-wrap">
           <div class="table-toolbar">
             <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="obras-search" placeholder="Buscar obra…"></div>
-            <select class="filter-sel" id="obras-filtro-status"><option value="">Todos os status</option><option>Planejado</option><option>Em Andamento</option><option>Concluído</option><option>Suspenso</option></select>
+            <select class="filter-sel" id="obras-filtro-status"><option value="">Todos os status</option><option>Em Estudo</option><option>Planejado</option><option>Em Andamento</option><option>Concluído</option><option>Suspenso</option></select>
           </div>
           <table>
             <thead><tr><th>CÓDIGO</th><th>NOME</th><th>TIPO</th><th>LOCAL</th><th>RESPONSÁVEL</th><th>CRESP</th><th>STATUS</th><th>PRAZO</th><th>AÇÕES</th></tr></thead>
@@ -384,7 +384,7 @@
   <div class="modal">
     <div class="modal-header"><span class="modal-title" id="modal-obra-title">Nova Obra</span><button class="modal-close" id="modal-obra-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
-      <div class="form-row"><div class="field"><label>Código *</label><input type="text" id="ob-cod" placeholder="OB-004"></div><div class="field"><label>Status *</label><select id="ob-status"><option>Planejado</option><option>Em Andamento</option><option>Concluído</option><option>Suspenso</option></select></div></div>
+      <div class="form-row"><div class="field"><label>Código *</label><input type="text" id="ob-cod" placeholder="OB-004"></div><div class="field"><label>Status *</label><select id="ob-status"><option>Em Estudo</option><option>Planejado</option><option>Em Andamento</option><option>Concluído</option><option>Suspenso</option></select></div></div>
       <div class="form-row full"><div class="field"><label>Nome da Obra *</label><input type="text" id="ob-nome"></div></div>
       <div class="form-row"><div class="field"><label>Tipo *</label><select id="ob-tipo"></select></div><div class="field"><label>Localização</label><input type="text" id="ob-local"></div></div>
       <div class="form-row"><div class="field"><label>Responsável</label><select id="ob-resp"><option value="">—</option></select></div><div class="field"><label>CRESP Principal</label><select id="ob-cresp"><option value="">—</option></select></div></div>

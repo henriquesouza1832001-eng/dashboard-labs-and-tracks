@@ -50,7 +50,7 @@ function avancFisico(obraCod){
   const exec = o.etapas.reduce((s,e)=>s+((e.peso||1)*(e.avancoFisico||0)/100),0);
   return total>0?(exec/total)*100:0;
 }
-function badgeStatus(s){ const map={'Em Andamento':'badge-orange','Planejado':'badge-blue','Concluído':'badge-green','Suspenso':'badge-red'}; return `<span class="badge ${map[s]||'badge-muted'}">${s}</span>`; }
+function badgeStatus(s){ const map={'Em Estudo':'badge-muted','Em Andamento':'badge-orange','Planejado':'badge-blue','Concluído':'badge-green','Suspenso':'badge-red'}; return `<span class="badge ${map[s]||'badge-muted'}">${s}</span>`; }
 function badgeBudget(pct){ if(pct>=100)return'badge-red'; if(pct>=85)return'badge-yellow'; return'badge-green'; }
 function progressBar(pct,cor){ const cls=cor||(pct>=100?'red':pct>=85?'yellow':''); const p=Math.min(pct,100); return `<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${cls}" style="width:${p}%"></div></div><span class="progress-pct">${fmt(pct,1)}%</span></div>`; }
 function carregarCentral(txt){

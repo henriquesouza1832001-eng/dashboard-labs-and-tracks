@@ -43,19 +43,16 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
     const emAnd=obras.filter(o=>o.status==='Em Andamento').length;
     const conc=obras.filter(o=>o.status==='Concluído').length;
-    const pct=budgTotal>0?Math.round(real/budgTotal*100):0;
-   const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
+    const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
+    const estudo=obras.filter(o=>o.status==='Em Estudo').length;
     document.getElementById('mkpis-obras').innerHTML=
       mkMicro(obras.length,'Total obras','c-azul',"abrirModuloComDrill('obras','total')")+
       mkMicro(emAnd,'Em andamento','c-laranja',"abrirModuloComDrill('obras','andamento')")+
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
-      mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')");
+      mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
+      mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')");
     document.getElementById('mfoot-obras').textContent='';
-    const Orçado=Math.max(budgTotal-real,0);
-    const labels=['Gasto','Orçado'];
-    const vals=[real||0,Orçado||0];
-    const cores=['#e3711a','#d0d8e8'];
-    setTimeout(()=>desenharMicroDonut('mcv-obras',labels,vals,cores),80);
+    setTimeout(()=>desenharMicroBullet('mcv-obras', budgTotal, real),80);
   }
   if(dCod){
     const pessoas=dCod.pessoas||[];
@@ -127,6 +124,31 @@ function desenharMicroDonut(id,labels,vals,cores){
   const pai=cv.parentElement;
   pai.id=pai.id||'donut-'+id;
   desenharDonutSVG(pai.id,labels,vals,cores);
+}
+
+function desenharMicroBullet(id, orcado, gasto){
+  const cv=document.getElementById(id);if(!cv)return;
+  const pai=cv.parentElement;
+  const pct=orcado>0?Math.min(gasto/orcado,1):0;
+  const pctTxt=orcado>0?Math.round(gasto/orcado*100)+'%':'0%';
+  const cor=pct>=1?'#c0392b':pct>=0.8?'#e3711a':'#2E5FA3';
+  const disponivel=Math.max(orcado-gasto,0);
+  pai.innerHTML=`
+    <div style="width:100%;display:flex;flex-direction:column;gap:6px;padding:4px 0">
+      <div style="font-size:10px;color:var(--text-dim);text-align:right;font-family:var(--mono)">Budget: ${fmtRK(orcado)}</div>
+      <div style="position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:7px;transition:width 0.4s"></div>
+        <div style="position:absolute;right:0;top:-3px;bottom:-3px;width:2px;background:#8a9abf;border-radius:2px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
+        <span style="color:${cor};font-weight:600">Gasto: ${fmtRK(gasto)}</span>
+        <span style="color:var(--text-dim)">Uso: ${pctTxt}</span>
+      </div>
+      <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Uso do orçamento: ${pctTxt}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>Disponível: ${fmtRK(disponivel)}</span>
+      </div>
+    </div>`;
 }
 (async function loadLogos(){
   const wrap=document.getElementById('kpi-logos');if(!wrap)return;
@@ -444,6 +466,7 @@ container.innerHTML='<div class="obras-section"><div class="secao-titulo">Obras<
     drawMiniCard('andamento',d);
     drawMiniCard('concluidas',d);
     drawMiniCard('planejadas',d);
+    drawMiniCard('estudo',d);
   },60);
 }
 
@@ -453,17 +476,21 @@ function buildObrasCards(d){
   const lanc=d.lancamentos||[];
   const budgTotal=budget.reduce((s,b)=>s+(b.budgetAprov||0),0);
   const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-  const Orçado=budgTotal-real;
+  const disponivel=Math.max(budgTotal-real,0);
   const emAnd=obras.filter(o=>o.status==='Em Andamento');
   const conc=obras.filter(o=>o.status==='Concluído');
   const plan=obras.filter(o=>o.status==='Planejado');
+  const estudo=obras.filter(o=>o.status==='Em Estudo');
   const avFis=obras.length?obras.reduce((s,o)=>s+calcAvFis(o),0)/obras.length:0;
   const planB=budget.filter(b=>plan.map(o=>o.cod).includes(b.obraCod)).reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const estudoB=budget.filter(b=>estudo.map(o=>o.cod).includes(b.obraCod)).reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const pct=budgTotal>0?Math.round(real/budgTotal*100):0;
+  const corPct=pct>=100?'c-vermelho':pct>=80?'c-laranja':'c-azul';
 
   return`<div class="obras-cards-grid" id="obras-grid">
     ${mkCard('total','TOTAL OBRAS',obras.length,'c-azul','#58a6ff',fmtRK(budgTotal)+' budget total',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Orçado</span><span class="ob-mini-val ${Orçado<0?'c-vermelho':'c-verde'}">${fmtRK(Orçado)}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">% Realizado</span><span class="ob-mini-val c-azul">${budgTotal>0?fmt(real/budgTotal*100,1):0}%</span></div>`)}
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Disponível</span><span class="ob-mini-val ${disponivel<=0?'c-vermelho':'c-verde'}">${fmtRK(disponivel)}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">% Realizado</span><span class="ob-mini-val ${corPct}">${pct}%</span></div>`)}
     ${mkCard('andamento','EM ANDAMENTO',emAnd.length,'c-laranja','#e3711a',fmt(avFis,1)+'% avanço médio',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">Budget</span><span class="ob-mini-val c-azul">${fmtRK(emAnd.reduce((s,o)=>s+budgObra(o.cod),0))}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Realizado</span><span class="ob-mini-val c-laranja">${fmtRK(emAnd.reduce((s,o)=>s+realObra(o.cod),0))}</span></div>`)}
@@ -473,6 +500,9 @@ function buildObrasCards(d){
     ${mkCard('planejadas','PLANEJADAS',plan.length,'c-azul','#a371f7',fmtRK(planB)+' previsto',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">Budget prev.</span><span class="ob-mini-val c-azul">${fmtRK(planB)}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Prazo médio</span><span class="ob-mini-val c-azul">${prazoMedio(plan)}</span></div>`)}
+    ${mkCard('estudo','EM ESTUDO',estudo.length,'c-cinza','#8a9abf',fmtRK(estudoB)+' estimado',
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Budget est.</span><span class="ob-mini-val c-cinza">${fmtRK(estudoB)}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Prazo médio</span><span class="ob-mini-val c-cinza">${prazoMedio(estudo)}</span></div>`)}
   </div>`;
 }
 
@@ -511,10 +541,12 @@ function drawMiniCard(tipo,d){
 
   let labels=[],vals=[],cores=[];
   if(tipo==='total'){
-    const sm={};obras.forEach(o=>{sm[o.status]=(sm[o.status]||0)+1;});
-    const sl=Object.entries(sm).filter(x=>x[1]);
-    labels=sl.map(x=>x[0]);vals=sl.map(x=>x[1]);
-    cores=['#e3711a','#3fb950','#58a6ff','#f85149'];
+    const budgTotal=budget.filter(b=>true).reduce((s,b)=>s+(b.budgetAprov||0),0);
+    const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
+    const disponivel=Math.max(budgTotal-real,0);
+    labels=['Realizado','Disponível'];
+    vals=[Math.round(real)||0,Math.round(disponivel)||0];
+    cores=['#2E5FA3','#e8edf5'];
   } else if(tipo==='andamento'){
     const lista=obras.filter(o=>o.status==='Em Andamento');
     if(!lista.length)return;
@@ -535,6 +567,12 @@ function drawMiniCard(tipo,d){
     labels=lista.map(o=>tnome(o.nome));
     vals=lista.map(o=>Math.max(budgObra(o.cod),1));
     cores=['#a371f7','#58a6ff','#2E5FA3','#e3711a','#d29922'];
+  } else if(tipo==='estudo'){
+    const lista=obras.filter(o=>o.status==='Em Estudo');
+    if(!lista.length)return;
+    labels=lista.map(o=>tnome(o.nome));
+    vals=lista.map(o=>Math.max(budgObra(o.cod),1));
+    cores=['#8a9abf','#b0bde0','#d0d8e8','#4a5880','#0f1c3f'];
   }
 
   desenharDonutResponsivo(cv,labels,vals,cores);
