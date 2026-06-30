@@ -770,13 +770,24 @@ function drawOverlayCharts(tipo,d){
   }
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
-  const Orçado=Math.max(totalB-totalR,0);
+  const aGastar=Math.max(totalB-totalR,0);
+  const estourou=totalR>totalB;
+  const excedente=estourou?totalR-totalB:0;
   const cv2=document.getElementById('cv-ov-pizza2');
-  if(cv2&&(totalR||Orçado))desenharDonutResponsivo(cv2,['Realizado','Orçado'],[totalR||1,Orçado||1],['#e3711a','#2E5FA3']);
+  if(cv2&&(totalR||aGastar)){
+    if(estourou){
+      desenharDonutResponsivo(cv2,['Dentro do budget','Excedente'],[totalB||1,excedente||1],['#3fb950','#f85149']);
+    } else {
+      desenharDonutResponsivo(cv2,['Gasto','A gastar'],[totalR||1,aGastar||1],['#e3711a','#2E5FA3']);
+    }
+  }
   const legP2=document.getElementById('leg-ov-pizza2');
   if(legP2){
-    const itens=[{l:'Realizado',v:totalR,c:'#e3711a'},{l:'Orçado',v:Math.max(Orçado,0),c:'#2E5FA3'}];
-    legP2.innerHTML=itens.map(x=>`<span style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:8px;height:8px;border-radius:2px;background:${x.c};flex-shrink:0"></span><span style="color:var(--text-muted)">${x.l}:</span><b style="font-family:var(--mono);color:var(--text)">${fmtRK(x.v)}</b></span>`).join('');
+    const pctUso=totalB>0?Math.round((totalR/totalB)*100):0;
+    const itens=estourou
+      ? [{l:'Eficiência',v:pctUso+'%',c:'#f85149'},{l:'Excedente',v:fmtRK(excedente),c:'#f85149'},{l:'Gasto total',v:fmtRK(totalR),c:'#e3711a'}]
+      : [{l:'Eficiência',v:pctUso+'%',c:'#3fb950'},{l:'Gasto',v:fmtRK(totalR),c:'#e3711a'},{l:'A gastar',v:fmtRK(aGastar),c:'#2E5FA3'}];
+    legP2.innerHTML=itens.map(x=>`<span style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:8px;height:8px;border-radius:2px;background:${x.c};flex-shrink:0"></span><span style="color:var(--text-muted)">${x.l}:</span><b style="font-family:var(--mono);color:var(--text)">${x.v}</b></span>`).join('');
   }
   const catM={};lista.forEach(o=>{lanc.filter(l=>l.obraCod===o.cod).forEach(l=>{const c=l.categoria||'Outros';catM[c]=(catM[c]||0)+l.qtd*l.precoUnit;});});
   const top=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,8);
