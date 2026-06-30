@@ -220,38 +220,54 @@ def _load_conforto():
                 config["checklistPreventiva"] = json.loads(config["checklist_preventiva"])
             except:
                 config["checklistPreventiva"] = []
-    except:
+        config = json.loads(json.dumps(config, default=str))
+    except Exception as e:
+        print(f"[conforto] erro ao carregar config: {e}")
         config = {}
     try:
-        ucs = run_query(f"SELECT * FROM {S_CONFORTO}.ucs")
-        for u in ucs:
-            u["id"]             = u.get("id")
-            u["codigo"]         = u.get("codigo")
-            u["nome"]           = u.get("nome")
-            u["local"]          = u.get("local")
-            u["modelo"]         = u.get("modelo")
-            u["categoria"]      = u.get("categoria", "Ar-Condicionado")
-            u["tipo"]           = u.get("tipo")
-            u["capacidadeBtu"]  = u.get("capacidade_btu")
-            u["dataInstalacao"] = u.get("data_instalacao")
-            u["cicloFiltroDias"]= u.get("ciclo_filtro_dias")
-            u["responsavelId"]  = u.get("responsavel_id")
-            u["obs"]            = u.get("obs")
-    except:
+        ucs_raw = run_query(f"SELECT * FROM {S_CONFORTO}.ucs")
+        ucs = []
+        for u in ucs_raw:
+            ucs.append({
+                "id":             u.get("id"),
+                "codigo":         u.get("codigo"),
+                "nome":           u.get("nome"),
+                "local":          u.get("local"),
+                "modelo":         u.get("modelo"),
+                "categoria":      u.get("categoria") or "Ar-Condicionado",
+                "tipo":           u.get("tipo"),
+                "capacidadeBtu":  u.get("capacidade_btu"),
+                "dataInstalacao": str(u.get("data_instalacao") or ""),
+                "cicloFiltroDias":u.get("ciclo_filtro_dias"),
+                "responsavelId":  u.get("responsavel_id"),
+                "obs":            u.get("obs") or "",
+            })
+    except Exception as e:
+        print(f"[conforto] erro ao carregar ucs: {e}")
         ucs = []
     try:
-        preventivas = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas")
-        for p in preventivas:
-            p["ucId"]          = p.get("uc_id")
-            p["tecnicoId"]     = p.get("tecnico_id")
-            p["dataPrevista"]  = p.get("data_prevista")
-            p["dataRealizada"] = p.get("data_realizada")
-            if isinstance(p.get("checklist"), str):
+        prevs_raw = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas")
+        preventivas = []
+        for p in prevs_raw:
+            checklist = p.get("checklist") or "[]"
+            if isinstance(checklist, str):
                 try:
-                    p["checklist"] = json.loads(p["checklist"])
+                    checklist = json.loads(checklist)
                 except:
-                    p["checklist"] = []
-    except:
+                    checklist = []
+            preventivas.append({
+                "id":            p.get("id"),
+                "ucId":          p.get("uc_id"),
+                "tecnicoId":     p.get("tecnico_id"),
+                "dataPrevista":  str(p.get("data_prevista") or ""),
+                "dataRealizada": str(p.get("data_realizada") or ""),
+                "status":        p.get("status"),
+                "checklist":     checklist,
+                "obs":           p.get("obs") or "",
+                "origem":        p.get("origem") or "manual",
+            })
+    except Exception as e:
+        print(f"[conforto] erro ao carregar preventivas: {e}")
         preventivas = []
     payload = {
         "versao": "2.0", "ordens": [], "ucs": ucs,
