@@ -766,11 +766,7 @@ function buildOverlayTotal(d){
   const {header}=_obOvBase(d,'total');
   return header+`
   <div style="display:flex;gap:10px;margin-bottom:14px">
-    <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
-      <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="130" style="width:190px;height:130px;display:block"></canvas>
-      <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
-    </div>
+    <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
       <div class="ob-ov-ctit">Gastos por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
@@ -785,11 +781,7 @@ function buildOverlayAndamento(d){
   const {header}=_obOvBase(d,'andamento');
   return header+`
   <div style="display:flex;gap:10px;margin-bottom:14px">
-    <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
-      <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="130" style="width:190px;height:130px;display:block"></canvas>
-      <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
-    </div>
+    <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
       <div class="ob-ov-ctit">Gastos por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
@@ -804,11 +796,7 @@ function buildOverlayConcluidas(d){
   const {header}=_obOvBase(d,'concluidas');
   return header+`
   <div style="display:flex;gap:10px;margin-bottom:14px">
-    <div class="ob-ov-cbox" style="width:220px;flex-shrink:0">
-      <div class="ob-ov-ctit">Gasto × Orçado</div>
-      <canvas id="cv-ov-pizza2" width="190" height="130" style="width:190px;height:130px;display:block"></canvas>
-      <div id="leg-ov-pizza2" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
-    </div>
+    <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
       <div class="ob-ov-ctit">Gastos por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
@@ -900,17 +888,41 @@ function drawOverlayCharts(tipo,d){
   }
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
-  const cv2=document.getElementById('cv-ov-pizza2');
-  if(cv2){cv2.width=190;cv2.height=130;desenharBulletBudget(cv2,totalB,totalR);}
-  const legP2=document.getElementById('leg-ov-pizza2');
-  if(legP2){
+  const bulletWrap=document.getElementById('bullet-ov-wrap');
+  if(bulletWrap){
     const estourou=totalR>totalB;
-    const excedente=estourou?totalR-totalB:0;
+    const pct=totalB>0?Math.min(totalR/totalB,1):0;
+    const pctTxt=totalB>0?((totalR/totalB)*100).toFixed(1)+'%':'0%';
+    const cor=estourou?'#f85149':pct>=0.8?'#e3711a':'#2E5FA3';
     const disponivel=Math.max(totalB-totalR,0);
-    const itens=estourou
-      ? [{l:'Uso do orçamento',v:(totalB>0?((totalR/totalB)*100).toFixed(1):0)+'%',c:'#f85149'},{l:'Valor excedido',v:fmtRK(excedente),c:'#f85149'}]
-      : [{l:'Uso do orçamento',v:(totalB>0?((totalR/totalB)*100).toFixed(1):0)+'%',c:'#2E5FA3'},{l:'Disponível',v:fmtRK(disponivel),c:'#3fb950'}];
-    legP2.innerHTML=itens.map(x=>`<span style="display:flex;align-items:center;gap:6px;font-size:10px"><span style="width:8px;height:8px;border-radius:2px;background:${x.c};flex-shrink:0"></span><span style="color:var(--text-muted)">${x.l}:</span><b style="font-family:var(--mono);color:var(--text)">${x.v}</b></span>`).join('');
+    bulletWrap.innerHTML=`
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">Previsto × Realizado</div>
+      <div style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--mono);margin-bottom:6px">Previsto: <b style="color:var(--text)">${fmtRK(totalB)}</b></div>
+      <div style="position:relative;height:18px;background:#e8edf5;border-radius:9px;overflow:hidden;margin-bottom:10px">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:9px;transition:width 0.4s"></div>
+        <div style="position:absolute;right:0;top:-4px;bottom:-4px;width:2px;background:#8a9abf;border-radius:2px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;margin-bottom:14px">
+        <span style="color:${cor};font-weight:700">Realizado: ${fmtRK(totalR)}</span>
+        <span style="color:var(--text-muted)">${pctTxt}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+          <span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span>
+          <span style="color:var(--text-muted)">Realizado</span>
+          <b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+          <span style="width:10px;height:10px;border-radius:3px;background:${estourou?'#f8514955':'#1a7f4b'};flex-shrink:0"></span>
+          <span style="color:var(--text-muted)">${estourou?'Excedente':'Disponível'}</span>
+          <b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'#1a7f4b'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+          <span style="width:10px;height:10px;border-radius:3px;background:#8a9abf;flex-shrink:0"></span>
+          <span style="color:var(--text-muted)">Uso do budget</span>
+          <b style="margin-left:auto;font-family:var(--mono);color:${cor}">${pctTxt}</b>
+        </div>
+      </div>`;
   }
   const catM={};lista.forEach(o=>{lanc.filter(l=>l.obraCod===o.cod).forEach(l=>{const c=l.categoria||'Outros';catM[c]=(catM[c]||0)+l.qtd*l.precoUnit;});});
   const top=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,8);
