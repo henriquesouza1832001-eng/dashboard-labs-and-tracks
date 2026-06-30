@@ -879,20 +879,10 @@ function abrirDetalheObra(cod){
     <div class="ob-ov-ctit" style="margin-bottom:8px">Lançamentos (${lancsObra.length})</div>
     <table class="ob-ov-table">
       <thead><tr><th>ID</th><th>CRESP</th><th>Categoria</th><th>Subcategoria</th><th>Descrição</th><th style="text-align:center">Unid</th><th style="text-align:right">Qtd</th><th style="text-align:right">Unit</th><th style="text-align:right">Total</th><th>Data</th></tr></thead>
-      <tbody>${lancsObra.slice().sort((a,b2)=>(b2.dtLanc||'').localeCompare(a.dtLanc||'')).map(l=>{const tot=l.qtd*l.precoUnit;return`<tr>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">${l.id||'—'}</td>
-        <td style="font-family:var(--mono);font-size:10px"><span style="background:var(--blue-pale);color:var(--blue-mid);border-radius:4px;padding:1px 5px">${l.cresp||'—'}</span></td>
-        <td>${l.categoria||'—'}</td>
-        <td style="color:var(--text-muted);font-size:11px">${l.subcategoria||'—'}</td>
-        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.descricao||'—'}</td>
-        <td style="font-family:var(--mono);font-size:10px;text-align:center">${l.unid||'—'}</td>
-        <td style="font-family:var(--mono);font-size:10px;text-align:right">${fmt(l.qtd,2)}</td>
-        <td style="font-family:var(--mono);font-size:10px;text-align:right">${fmtRK(l.precoUnit)}</td>
-        <td style="font-family:var(--mono);font-size:11px;font-weight:600;text-align:right;color:var(--blue-light)">${fmtRK(tot)}</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">${l.dtLanc?l.dtLanc.split('-').reverse().join('/'):'—'}</td>
-      </tr>`}).join('')}</tbody>
+      <tbody id="lanc-tbody-det"></tbody>
       <tfoot><tr><td colspan="8" style="font-weight:600;font-size:11px">TOTAL</td><td style="font-family:var(--mono);font-weight:700;text-align:right;color:var(--blue-light)">${fmtRK(lancsObra.reduce((s,l)=>s+l.qtd*l.precoUnit,0))}</td><td></td></tr></tfoot>
     </table>
+    <div id="lanc-pag" style="display:flex;align-items:center;gap:4px;margin-top:10px;flex-wrap:wrap"></div>
   </div>`:''}`;
 
   requestAnimationFrame(()=>{
