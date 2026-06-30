@@ -102,6 +102,11 @@
           <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
           Permissões
         </button>
+        <button class="nav-item" data-page="solicitacoes">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Solicitações
+          <span class="nav-badge" id="nav-badge-solicitacoes" style="display:none">0</span>
+        </button>
         <button class="nav-item" data-page="busca">
           <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Busca Rápida
@@ -205,6 +210,32 @@
           </div>
         </div>
       </section>
+      <!-- SOLICITAÇÕES -->
+<section class="page" id="page-solicitacoes">
+  <div class="page-header">
+    <div><h1>Solicitações de Acesso</h1><p class="page-desc">Pedidos recebidos via QR Code de pontos CODIN</p></div>
+    <button class="btn" id="btn-recarregar-solicitacoes">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Atualizar
+    </button>
+  </div>
+  <div class="toolbar">
+    <select class="filter-select" id="filtro-status-solicitacao">
+      <option value="">Todas</option>
+      <option value="Pendente">Pendentes</option>
+      <option value="Aprovada">Aprovadas</option>
+      <option value="Rejeitada">Rejeitadas</option>
+    </select>
+  </div>
+  <div class="card p-0">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Data</th><th>Nome</th><th>E-mail</th><th>CODIN</th><th>Motivo</th><th>Status</th><th></th></tr></thead>
+        <tbody id="tbody-solicitacoes"><tr><td colspan="7" class="empty-state">Nenhuma solicitação recebida.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
       <!-- BUSCA RÁPIDA -->
       <section class="page" id="page-busca">
         <div class="page-header"><div><h1>Busca Rápida</h1><p class="page-desc">Encontre permissões por pessoa ou por ponto CODIN</p></div></div>

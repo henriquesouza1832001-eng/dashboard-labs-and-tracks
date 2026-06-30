@@ -70,6 +70,7 @@ function iniciarApp(){
   popularBuscaSelects();
   renderAll();
   aplicarFiltroURL();
+  carregarSolicitacoes();
 }
 function renderAll(){ renderPessoas(); renderPontos(); renderAcessos(); renderMatriz(); renderLeitoresCfg(); updateDashboard(); }
 async function inicializarCodin(){
@@ -91,8 +92,100 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     document.getElementById('page-'+page).classList.add('active');
     if(page==='matriz')renderMatriz();
     if(page==='busca')popularBuscaSelects();
+    if(page==='solicitacoes')carregarSolicitacoes();
   });
 });
+
+let solicitacoesCache = [];
+
+async function carregarSolicitacoes(){
+  try{
+    const res = await fetch('/api/codin/solicitacoes');
+    const dados = await res.json();
+    solicitacoesCache = dados.solicitacoes || [];
+    renderSolicitacoes();
+    atualizarBadgeSolicitacoes();
+  }catch{
+    document.getElementById('tbody-solicitacoes').innerHTML='<tr><td colspan="7" class="empty-state">Erro ao carregar solicitações.</td></tr>';
+  }
+}
+
+function atualizarBadgeSolicitacoes(){
+  const pendentes = solicitacoesCache.filter(s=>s.status==='Pendente').length;
+  const badge = document.getElementById('nav-badge-solicitacoes');
+  if(!badge)return;
+  badge.textContent = pendentes;
+  badge.style.display = pendentes>0 ? 'inline-flex' : 'none';
+}
+
+function badgeSolicitacao(s){
+  const map={'Pendente':'badge-temp','Aprovada':'badge-ativo','Rejeitada':'badge-bloqueado'};
+  return `<span class="badge ${map[s]||'badge-temp'}">${s}</span>`;
+}
+
+function renderSolicitacoes(){
+  const filtro = document.getElementById('filtro-status-solicitacao')?.value || '';
+  const tb = document.getElementById('tbody-solicitacoes');
+  let lista = [...solicitacoesCache].sort((a,b)=>new Date(b.data)-new Date(a.data));
+  if(filtro) lista = lista.filter(s=>s.status===filtro);
+  if(!lista.length){tb.innerHTML='<tr><td colspan="7" class="empty-state">Nenhuma solicitação encontrada.</td></tr>';return;}
+  tb.innerHTML = lista.map(s=>{
+    const ponto = state.pontos.find(p=>p.codin===s.codin);
+    const dt = s.data ? new Date(s.data).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    return `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text2)">${dt}</td>
+      <td>${s.nome}</td>
+      <td style="font-family:var(--mono);font-size:11px">${s.email}</td>
+      <td><span class="mono">${s.codin}</span>${ponto?`<div style="font-size:10px;color:var(--text2)">${ponto.nome}</div>`:''}</td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${s.motivo}">${s.motivo}</td>
+      <td>${badgeSolicitacao(s.status)}</td>
+      <td><div class="row-actions">
+        ${s.status==='Pendente'?`
+          <button class="btn btn-sm" style="color:var(--green);border-color:var(--green)" onclick="aprovarSolicitacao('${s.id}')">Aprovar</button>
+          <button class="btn btn-sm btn-danger" onclick="rejeitarSolicitacao('${s.id}')">Rejeitar</button>
+        `:''}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('filtro-status-solicitacao')?.addEventListener('change', renderSolicitacoes);
+document.getElementById('btn-recarregar-solicitacoes')?.addEventListener('click', carregarSolicitacoes);
+
+window.aprovarSolicitacao = async function(id){
+  await atualizarStatusSolicitacao(id, 'Aprovada');
+  const sol = solicitacoesCache.find(s=>s.id===id);
+  if(sol){
+    document.querySelector('.nav-item[data-page="acessos"]').click();
+    document.getElementById('btn-novo-acesso').click();
+    setTimeout(()=>{
+      const sel = document.getElementById('ac-pessoa');
+      const opt = [...sel.options].find(o=>o.textContent.toLowerCase().includes(sol.nome.toLowerCase()));
+      if(opt) sel.value = opt.value;
+    }, 100);
+  }
+};
+
+window.rejeitarSolicitacao = async function(id){
+  await atualizarStatusSolicitacao(id, 'Rejeitada');
+};
+
+async function atualizarStatusSolicitacao(id, status){
+  try{
+    await fetch(`/api/codin/solicitacoes/${id}`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({status})
+    });
+    const sol = solicitacoesCache.find(s=>s.id===id);
+    if(sol) sol.status = status;
+    renderSolicitacoes();
+    atualizarBadgeSolicitacoes();
+    toast(status==='Aprovada'?'Solicitação aprovada!':'Solicitação rejeitada.', status==='Aprovada'?'success':'');
+  }catch{
+    toast('Erro ao atualizar solicitação.','');
+  }
+}
 document.querySelectorAll('.aba-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.aba-btn').forEach(b=>b.classList.remove('active'));

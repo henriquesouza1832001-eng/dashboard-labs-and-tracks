@@ -2,35 +2,35 @@
    CONTROLE DE ACESSO — TEMA INDUSTRIAL
    ============================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --bg:         #0f1117;
-  --bg2:        #161b26;
-  --bg3:        #1e2433;
-  --border:     #2a3040;
-  --border2:    #333d50;
-  --text:       #e2e6ef;
-  --text2:      #8a95a8;
-  --text3:      #4e5a6a;
-  --blue:       #3b82f6;
-  --blue-dark:  #1d4ed8;
-  --blue-bg:    #1e3a5f22;
-  --green:      #22c55e;
-  --green-bg:   #14532d22;
-  --red:        #ef4444;
-  --red-dark:   #991b1b;
-  --red-bg:     #450a0a22;
-  --orange:     #f97316;
-  --orange-bg:  #431407aa;
-  --purple:     #a855f7;
-  --purple-bg:  #2e1065aa;
-  --yellow:     #eab308;
-  --radius:     6px;
-  --radius-lg:  10px;
-  --shadow:     0 4px 24px rgba(0,0,0,0.4);
-  --font:       'IBM Plex Sans', system-ui, sans-serif;
-  --mono:       'IBM Plex Mono', monospace;
+  --bg:         #f0f4f8;
+  --bg2:        #ffffff;
+  --bg3:        #e8edf5;
+  --border:     #d0d8e8;
+  --border2:    #b0bde0;
+  --text:       #0f1c3f;
+  --text2:      #4a5880;
+  --text3:      #8a9abf;
+  --blue:       #2E5FA3;
+  --blue-dark:  #243782;
+  --blue-bg:    #eef2fb;
+  --green:      #1a7f4b;
+  --green-bg:   #edfaf3;
+  --red:        #c0392b;
+  --red-dark:   #a8281c;
+  --red-bg:     #fdf0ef;
+  --orange:     #c05a1a;
+  --orange-bg:  #fef3ea;
+  --purple:     #6b46c1;
+  --purple-bg:  #f1ecfc;
+  --yellow:     #b07d00;
+  --radius:     8px;
+  --radius-lg:  12px;
+  --shadow:     0 1px 4px rgba(36,55,130,.08),0 4px 16px rgba(36,55,130,.06);
+  --font:       'Plus Jakarta Sans', system-ui, sans-serif;
+  --mono:       'JetBrains Mono', monospace;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -448,13 +448,13 @@ body {
   margin: 2px;
   background: var(--blue-bg);
   color: var(--blue);
-  border: 1px solid #3b82f622;
+  border: 1px solid #c5d4f0;
 }
 
 .chip-restrito {
   background: var(--purple-bg);
   color: var(--purple);
-  border-color: #a855f722;
+  border-color: #ddd0f5;
 }
 
 .chip-list {
@@ -820,4 +820,14 @@ input:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
+}
+.nav-badge{
+  margin-left:auto;
+  background:var(--orange);
+  color:#fff;
+  font-size:10px;
+  font-weight:700;
+  padding:1px 7px;
+  border-radius:10px;
+  font-family:var(--mono);
 }
