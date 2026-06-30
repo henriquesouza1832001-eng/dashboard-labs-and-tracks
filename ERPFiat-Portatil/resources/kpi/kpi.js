@@ -1426,7 +1426,50 @@ function abrirDetalheObra(cod){
     }
     const legCat=document.getElementById('leg-det-cat');
     if(legCat)legCat.innerHTML=topCat.map((x,i)=>`<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:${coresCat[i%coresCat.length]};flex-shrink:0"></span>${x[0]}: <b style="color:var(--text);font-family:var(--mono)">${fmtRK(x[1])}</b></span>`).join('');
-  
+
+    const lancSorted=lancsObra.slice().sort((a,b2)=>(b2.dtLanc||'').localeCompare(a.dtLanc||''));
+    const perPag=10;
+    let pagAtual=1;
+    function renderPagLanc(){
+      const inicio=(pagAtual-1)*perPag;
+      const pagina=lancSorted.slice(inicio,inicio+perPag);
+      const tbody=document.getElementById('lanc-tbody-det');
+      if(!tbody)return;
+      tbody.innerHTML=pagina.map(l=>{const tot=l.qtd*l.precoUnit;return`<tr>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">${l.id||'—'}</td>
+        <td><span style="background:var(--blue-pale);color:var(--blue-mid);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:10px">${l.cresp||'—'}</span></td>
+        <td style="font-size:10px">${l.categoria||'—'}</td>
+        <td style="font-size:10px;color:var(--text-muted)">${l.subcategoria||'—'}</td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.descricao||'—'}</td>
+        <td style="font-family:var(--mono);font-size:10px;text-align:center">${l.unid||'—'}</td>
+        <td style="font-family:var(--mono);font-size:10px;text-align:right">${fmt(l.qtd,2)}</td>
+        <td style="font-family:var(--mono);font-size:10px;text-align:right">${fmtRK(l.precoUnit)}</td>
+        <td style="font-family:var(--mono);font-size:11px;font-weight:600;text-align:right;color:var(--blue-light)">${fmtRK(tot)}</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">${l.dtLanc?l.dtLanc.split('-').reverse().join('/'):'—'}</td>
+      </tr>`;}).join('');
+      const totalPags=Math.ceil(lancSorted.length/perPag);
+      const pag=document.getElementById('lanc-pag');
+      if(!pag)return;
+      const btnStyle=(ativo)=>`cursor:pointer;padding:4px 10px;border-radius:5px;font-family:var(--mono);font-size:11px;border:1px solid ${ativo?'var(--blue-mid)':'var(--border)'};background:${ativo?'var(--blue-pale)':'var(--surface)'};color:${ativo?'var(--blue-mid)':'var(--text-muted)'}`;
+      let html=`<button style="${btnStyle(false)}" onclick="window._lancPag(${pagAtual-1})" ${pagAtual===1?'disabled':''}>← ant</button>`;
+      for(let i=1;i<=totalPags;i++){
+        if(totalPags<=7||i===1||i===totalPags||Math.abs(i-pagAtual)<=1){
+          html+=`<button style="${btnStyle(i===pagAtual)}" onclick="window._lancPag(${i})">${i}</button>`;
+        } else if(Math.abs(i-pagAtual)===2){
+          html+=`<span style="color:var(--text-muted);padding:0 2px">…</span>`;
+        }
+      }
+      html+=`<button style="${btnStyle(false)}" onclick="window._lancPag(${pagAtual+1})" ${pagAtual===totalPags?'disabled':''}>próx →</button>`;
+      html+=`<span style="font-size:10px;color:var(--text-muted);margin-left:6px">${inicio+1}–${Math.min(inicio+perPag,lancSorted.length)} de ${lancSorted.length}</span>`;
+      pag.innerHTML=html;
+    }
+    window._lancPag=function(p){
+      const total=Math.ceil(lancSorted.length/perPag);
+      if(p<1||p>total)return;
+      pagAtual=p;
+      renderPagLanc();
+    };
+    renderPagLanc();
   });
 }
 function voltarParaSubCards(){
