@@ -1,4 +1,3 @@
-
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:#0f1c3f}
 
@@ -37,31 +36,56 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:#0f1c3f
   border:1px solid #d0d8e8;
   border-radius:10px;
   padding:16px 18px;
-  display:flex;
-  align-items:center;
-  gap:16px;
-  flex-wrap:wrap;
 }
-.sd-card.com-id{opacity:.55}
+.sd-card.concluido{opacity:.55}
 
+.sd-head{display:flex;align-items:flex-start;gap:14px;cursor:pointer}
 .sd-info{flex:1;min-width:200px}
 .sd-id{font-family:'JetBrains Mono',monospace;font-size:11px;color:#2E5FA3;font-weight:700}
 .sd-titulo{font-size:14px;font-weight:600;margin-top:2px}
 .sd-meta{font-size:12px;color:#4a5880;margin-top:3px}
 
-.sd-form{display:flex;align-items:center;gap:8px}
-.sd-form input{
-  width:160px;
+.sd-status{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;margin-top:6px;
+}
+.st-aberto{background:#fdf0ef;color:#c0392b}
+.st-andamento{background:#fdf8e1;color:#b07d00}
+.st-concluido{background:#edfaf3;color:#1a7f4b}
+
+.sd-toggle{font-size:12px;color:#2E5FA3;font-weight:600;flex-shrink:0;margin-top:4px}
+
+.sd-painel{display:none;margin-top:16px;padding-top:16px;border-top:1px solid #e8edf5}
+.sd-painel.open{display:block}
+
+.sd-desc{font-size:13px;color:#4a5880;line-height:1.6;margin-bottom:14px;background:#f0f4f8;border-radius:8px;padding:10px 12px}
+
+.sd-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.sd-row select,.sd-row input{
   padding:9px 12px;
   border:1px solid #d0d8e8;
   border-radius:7px;
   font-size:13px;
-  font-family:'JetBrains Mono',monospace;
   outline:none;
 }
-.sd-form input:focus{border-color:#2E5FA3}
-.sd-form button{
-  padding:9px 16px;
+.sd-row select:focus,.sd-row input:focus{border-color:#2E5FA3}
+.sd-row select{flex:1;min-width:160px}
+.sd-row input[type="text"]{width:160px;font-family:'JetBrains Mono',monospace}
+
+.sd-comentario{width:100%;padding:10px 12px;border:1px solid #d0d8e8;border-radius:7px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;resize:vertical;min-height:60px;outline:none;margin-bottom:10px}
+.sd-comentario:focus{border-color:#2E5FA3}
+
+.sd-fotos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.sd-thumb{position:relative;width:56px;height:56px;border-radius:7px;overflow:hidden;border:1px solid #d0d8e8}
+.sd-thumb img{width:100%;height:100%;object-fit:cover}
+.sd-thumb button{position:absolute;top:1px;right:1px;width:16px;height:16px;border-radius:50%;background:rgba(15,28,63,.7);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.sd-thumb button svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:3}
+
+.sd-btn-foto{padding:8px 14px;border:1.5px dashed #b0bde0;border-radius:7px;background:#eef2fb;color:#2E5FA3;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px}
+
+.sd-acoes{display:flex;justify-content:flex-end;gap:8px}
+.sd-acoes button{
+  padding:9px 18px;
   border:none;
   border-radius:7px;
   background:#2E5FA3;
@@ -70,9 +94,15 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:#0f1c3f
   font-weight:600;
   cursor:pointer;
 }
-.sd-form button:hover{background:#243782}
+.sd-acoes button:hover{background:#243782}
 
-.sd-vazio{text-align:center;padding:60px 0;color:#8a9abf;font-size:14px}
+.sd-historico{margin-top:14px;border-top:1px solid #e8edf5;padding-top:12px}
+.sd-historico-titulo{font-size:11px;font-weight:700;color:#4a5880;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.sd-hist-item{display:flex;gap:8px;font-size:12px;color:#4a5880;padding:5px 0;border-bottom:1px solid #f0f4f8}
+.sd-hist-item:last-child{border-bottom:none}
+.sd-hist-data{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a9abf;flex-shrink:0;white-space:nowrap}
+
+.sd-vazio,.sd-erro{text-align:center;padding:60px 0;color:#8a9abf;font-size:14px}
 
 .toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);

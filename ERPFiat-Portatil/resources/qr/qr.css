@@ -89,3 +89,5 @@ textarea{resize:vertical;min-height:90px}
 #sucesso-area p{font-size:14px;color:#4a5880}
 #sucesso-id{font-family:'JetBrains Mono',monospace;font-weight:700;color:#2E5FA3}
 .sucesso-sub{font-size:12px;color:#8a9abf;margin-top:4px;margin-bottom:0}
+.link-status{display:inline-block;margin-top:16px;font-size:13px;color:#2E5FA3;font-weight:600;text-decoration:none}
+.link-status:hover{text-decoration:underline}

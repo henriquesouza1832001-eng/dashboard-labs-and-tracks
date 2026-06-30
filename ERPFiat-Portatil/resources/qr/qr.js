@@ -62,8 +62,8 @@ async function enviarChamado() {
   const erro = $('qr-erro');
   erro.textContent = '';
 
-  if (!cat || !desc) {
-    erro.textContent = 'Preencha a categoria e a descrição do problema.';
+  if (!cat || !desc || !nome) {
+    erro.textContent = 'Preencha a categoria, a descrição e o seu e-mail.';
     return;
   }
 
@@ -110,6 +110,7 @@ async function enviarChamado() {
     $('form-area').style.display = 'none';
     $('sucesso-area').style.display = 'block';
     $('sucesso-id').textContent = id;
+    $('link-meus-chamados').href = `/meus-chamados?email=${encodeURIComponent(nome)}`;
   } catch (e) {
     erro.textContent = 'Não foi possível enviar o chamado. Tente novamente.';
     btn.disabled = false;

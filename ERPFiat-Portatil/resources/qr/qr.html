@@ -38,8 +38,8 @@
       <label>Descreva o problema *</label>
       <textarea id="qr-desc" rows="4" placeholder="O que está acontecendo, desde quando, impacto..."></textarea>
 
-      <label>Seu nome ou matrícula (opcional)</label>
-      <input type="text" id="qr-nome" placeholder="Para contato, se precisarmos">
+      <label>Seu e-mail *</label>
+      <input type="text" id="qr-nome" placeholder="seu.email@stellantis.com">
 
       <label>Fotos (opcional)</label>
       <input type="file" id="qr-foto-input" accept="image/*" multiple style="display:none">
@@ -58,6 +58,7 @@
       <h2>Chamado registrado</h2>
       <p>Número: <span id="sucesso-id"></span></p>
       <p class="sucesso-sub">A equipe responsável foi notificada.</p>
+      <a id="link-meus-chamados" class="link-status" href="#">Ver status dos meus chamados</a>
       <button id="btn-novo-chamado" class="btn-enviar">Abrir outro chamado</button>
     </div>
   </div>

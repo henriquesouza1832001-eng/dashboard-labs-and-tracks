@@ -398,6 +398,17 @@ async def delete_chamado(cid: str):
     cache_invalidate("chamados")
     return JSONResponse({"ok": True})
 
+@app.get("/api/chamados/por-email/{email}")
+async def chamados_por_email(email: str):
+    todos = get_cached("chamados").get("chamados", [])
+    email = email.strip().lower()
+    filtrados = [c for c in todos if (c.get("solicitante") or "").strip().lower() == email]
+    return JSONResponse({"chamados": filtrados})
+
+@app.get("/meus-chamados")
+async def meus_chamados_page():
+    return FileResponse(f"{BASE}/meuschamados/meuschamados.html")
+
 @app.get("/api/chamados/areas-qr")
 async def get_areas_qr():
     rows = await arun_query(f"SELECT * FROM {S_CHAMADOS}.areas_qr")
