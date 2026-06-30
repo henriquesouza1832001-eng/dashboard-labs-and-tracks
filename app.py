@@ -107,7 +107,7 @@ def get_usuario(request: Request):
     return request.headers.get("X-Forwarded-User", "dev@local")
 
 def verificar_admin(request: Request):
-    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    token = request.headers.get("X-Ctrl-Token", "")
     print(f"[admin] token recebido: {'sim' if token else 'NAO'} (len={len(token)})")
     if token:
         try:
