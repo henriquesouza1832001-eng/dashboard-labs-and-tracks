@@ -816,6 +816,14 @@ async def conforto_page():
 async def atividades_page():
     return inject(f"{BASE}/atividades/atividades.html", get_cached("atividades"))
 
+@app.get("/qr/qr.css")
+async def qr_css():
+    return FileResponse(f"{BASE}/qr/qr.css", media_type="text/css")
+
+@app.get("/qr/qr.js")
+async def qr_js():
+    return FileResponse(f"{BASE}/qr/qr.js", media_type="application/javascript")
+
 @app.get("/qr/{area}")
 async def qr_abrir_chamado(area: str):
     return FileResponse(f"{BASE}/qr/qr.html")
