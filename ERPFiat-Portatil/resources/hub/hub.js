@@ -51,7 +51,6 @@ function tick(){
   $('el-clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
   const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   $('el-date').textContent=n.getDate()+' '+months[n.getMonth()]+' '+n.getFullYear();
-  $('el-now-lbl').textContent=n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
 tick();setInterval(tick,1000);
 
@@ -135,7 +134,7 @@ function buildAcoes(){
 function buildVMO(){
   const pe=CFG.painelEsq||{};
   const prog=pe.objProg||0;
-  const cores=['var(--gn)','var(--yw)','var(--bl)'];
+  const cores=['var(--gn)','var(--yw)','var(--blue-mid)'];
   const metasHTML=(pe.metas||[]).map((m,i)=>`<div class="meta-item"><div class="meta-dot" style="background:${cores[i%3]}"></div>${m}</div>`).join('');
   $('el-vmo').innerHTML=`
     <div class="vmo-item">
@@ -159,9 +158,7 @@ function buildVMO(){
   setTimeout(()=>{const f=$('obj-fill');if(f){f.style.transition='width 1.2s ease';f.style.width=prog+'%';}},400);
 }
 
-
 let gifLoaded=false;
-function dbg(){}
 const savedGif = CFG.gif || null;
 if(savedGif){
   const img=$('video-gif');
@@ -183,16 +180,15 @@ if(savedGif){
 $('btn-gif-upload').addEventListener('click',e=>{e.stopPropagation();const inp=document.createElement('input');inp.type='file';inp.accept='image/gif,image/*';inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{
   const src=ev.target.result;
   const img=$('video-gif');
-  img.dataset.src=src;  
-  img.src='';            
+  img.dataset.src=src;
+  img.src='';
   img.classList.add('loaded');
   $('video-placeholder').style.display='none';
   gifLoaded=true;
   CFG.gif = src;
   saveCFG();
-};;r.readAsDataURL(f);};inp.click();});
-function openMetrics(){$('metrics-panel').classList.add('open');}
-$('btn-mp-close').addEventListener('click',()=>$('metrics-panel').classList.remove('open'));
+};r.readAsDataURL(f);};inp.click();});
+
 const vi=$('video-inner');
 let hoverTimer=null;
 vi.addEventListener('mouseover',()=>{
@@ -217,6 +213,7 @@ $('btn-kpi-toggle').addEventListener('click',e=>{
   e.stopPropagation();
   $('video-overlay').classList.toggle('open');
 });
+
 function setKpi(i,val,sub,bar){
   const update=prefix=>{
     const v=$(prefix+'kpi-val-'+i);const s=$(prefix+'kpi-sub-'+i);const b=$(prefix+'kpi-bar-'+i);
@@ -224,48 +221,20 @@ function setKpi(i,val,sub,bar){
   };
   update('');update('mp-');
   if(CFG.kpisMini[i]){CFG.kpisMini[i].val=val;CFG.kpisMini[i].sub=sub;CFG.kpisMini[i].bar=bar;}
-buildVidKpis();
-  
+  buildVidKpis();
 }
-function atualizarObras(d){
-  const obras=d.obras||[];
-  const and=obras.filter(o=>o.status==='Em Andamento').length;
-  const conc=obras.filter(o=>o.status==='Concluído').length;
-  const totalB=(d.budget||[]).reduce((s,b)=>s+(b.budgetAprov||0),0);
-  const totalR=(d.lancamentos||[]).reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-  const pct=totalB?Math.round(totalR/totalB*100):0;
-  setKpi(0,and,obras.length+' cadastradas',obras.length?Math.round(and/obras.length*100):0);
-  setKpi(3,pct+'%',fmtRK(totalB)+' aprovado',pct);
+
+function preencherModCards(d){
+  const obraInfo = d.obras || {};
+  const chamInfo = d.chamados || {};
+  const cardObras = document.querySelector('a[href="/obras"] .mod-card-sub');
+  if (cardObras && obraInfo.total != null) cardObras.textContent = obraInfo.total + ' cadastradas';
+  const cardCham = document.querySelector('a[href="/chamados"] .mod-card-sub');
+  if (cardCham && chamInfo.total != null) cardCham.textContent = chamInfo.abertos + ' em aberto · ' + chamInfo.total + ' total';
 }
-function atualizarCham(d){
-  const c=d.chamados||(Array.isArray(d)?d:[]);
-  const ab=c.filter(x=>x.status==='Aberto').length;
-  const total=c.length;
-  setKpi(1,ab,total+' total',total?Math.round(ab/total*100):0);
-}
-function atualizarAtiv(d){
-  const a=Array.isArray(d)?d:(d.atividades||[]);
-  const total=a.length,done=a.filter(x=>x.status==='done').length;
-  const pct=total?Math.round(done/total*100):0;
-  setKpi(2,pct+'%',done+'/'+total+' concluídas',pct);
-}
-function atualizarCodin(d){
-  const pessoas=d.pessoas||[];
-  const total=pessoas.length;
-  const ativos=pessoas.filter(p=>p.status==='Ativo'||!p.status).length;
-  const pct=total?Math.round(ativos/total*100):0;
-}
-function atualizarConforto(d){
-  const ordens=d.ordens||[];
-  const ucs=d.ucs||[];
-  const prev=d.preventivas||[];
-  const man=d.manutencoes||[];
-  const hoje_=new Date().toISOString().slice(0,10);
-  const prevAtrasadas=prev.filter(p=>p.status!=='Realizada'&&p.dataPrevista&&p.dataPrevista<hoje_).length;
-  const manAbertas=man.filter(m=>m.status==='Aberta'||m.status==='Em Andamento').length;
-}
-setTimeout(()=>{document.querySelectorAll('[data-w]').forEach(el=>{el.style.transition='width 1s ease';el.style.width=el.getAttribute('data-w')+'%';});},400);
+
 async function saveCFG(){ await API.hub.config.salvar(CFG); }
+
 applyIdent();
 buildLogos();
 buildActs();
@@ -273,11 +242,11 @@ buildKpiMini();
 buildVidKpis();
 buildAcoes();
 buildVMO();
-loadCache();
 if ($('el-avatar')) $('el-avatar').textContent = user.avatar;
 if ($('el-uname'))  $('el-uname').textContent  = user.nome;
 if ($('el-urole'))  $('el-urole').textContent  = user.role;
 if (user.role === 'admin') { const p = $('pill-admin'); if(p) p.style.display = ''; }
+
 async function loadCache(){
   const d = await API.hub.dados();
   if(d.obras) {
@@ -287,4 +256,6 @@ async function loadCache(){
   if(d.chamados) {
     setKpi(1, d.chamados.abertos, d.chamados.total + ' total', d.chamados.total ? Math.round(d.chamados.abertos/d.chamados.total*100) : 0);
   }
+  preencherModCards(d);
 }
+loadCache();

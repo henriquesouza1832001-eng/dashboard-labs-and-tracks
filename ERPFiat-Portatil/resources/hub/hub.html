@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Controler</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="/hub/hub.css" rel="stylesheet">
 <link rel="manifest" href="/app.webmanifest">
-<meta name="theme-color" content="#161b22">
+<meta name="theme-color" content="#243782">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -29,12 +29,12 @@
       <div class="tb-clock" id="el-clock">--:--:--</div>
     </div>
     <div class="user-pill">
-  <div class="avatar" id="el-avatar"></div>
-  <div class="user-info">
-    <div class="user-name" id="el-uname"></div>
-    <div class="user-role" id="el-urole"></div>
-  </div>
-</div>
+      <div class="avatar" id="el-avatar"></div>
+      <div class="user-info">
+        <div class="user-name" id="el-uname"></div>
+        <div class="user-role" id="el-urole"><span class="pill-admin" id="pill-admin">admin</span></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -51,84 +51,105 @@
     <div class="sb-inst">
       <div class="sb-inst-name" id="el-inst-nome">Stellantis SA</div>
       <div class="sb-inst-sub" id="el-inst-sub">Infraestrutura Facilities</div>
-<span class="sb-badge" id="el-inst-badge">ISO 55001</span>
+      <span class="sb-badge" id="el-inst-badge">ISO 55001</span>
     </div>
 
     <div class="sb-sec">Atividades do Turno</div>
     <div class="acts" id="el-acts"></div>
 
     <div class="sb-meters">
-      <div class="sb-m-row"><span class="sb-m-lbl">Uptime</span><span class="sb-m-val" style="color:var(--gn)">97.4%</span></div>
+      <div class="sb-m-row"><span>Uptime</span><span class="sb-m-val" style="color:var(--gn)">97.4%</span></div>
       <div class="mbar"><div class="mfill" style="background:var(--gn);width:0" data-w="97"></div></div>
-      <div class="sb-m-row"><span class="sb-m-lbl">Tarefas</span><span class="sb-m-val" style="color:var(--bl)" id="el-act-pct">0/0</span></div>
-      <div class="mbar"><div class="mfill" style="background:var(--bl);width:0" id="el-act-bar"></div></div>
+      <div class="sb-m-row"><span>Tarefas</span><span class="sb-m-val" style="color:var(--blue-mid)" id="el-act-pct">0/0</span></div>
+      <div class="mbar"><div class="mfill" style="background:var(--blue-mid);width:0" id="el-act-bar"></div></div>
     </div>
   </aside>
 
-  <!-- CONTENT GRID 2x2 -->
+  <!-- CONTEÚDO -->
   <div class="content">
 
-    <!-- TOP-LEFT: vazio — card institucional simples -->
-    <div class="card">
-      <div class="card-hdr">
-        <div class="card-ttl">Indicadores do Sistema</div>
-        <span style="font-size:9px;color:var(--td);font-family:var(--mono)" id="el-now-lbl">—</span>
-      </div>
-      <div class="card-body" style="padding:10px 12px">
-        <div class="kpi-grid" id="el-kpi-mini"></div>
-        <div class="kpi-section-ttl" style="margin-top:10px">Acesso rápido</div>
-        <div class="mod-pills">
-          <a class="mod-pill" href="/obras">Obras</a>
-<a class="mod-pill" href="/chamados">Chamados</a>
-<a class="mod-pill" href="/atividades">Atividades</a>
-<a class="mod-pill" href="/codin">Acesso</a>
-<a class="mod-pill" href="/kpi">KPI Dashboard</a>
-<a class="mod-pill" href="/admin">Admin</a>
-<a class="mod-pill" href="/conforto">Conforto</a>
-        </div>
-        <div class="kpi-section-ttl" style="margin-top:10px">Arquivos</div>
-        <div style="display:flex;flex-direction:column;gap:4px" id="el-file-rows"></div>
-      </div>
-    </div>
-    <!-- TOP-RIGHT: Ações Futuras -->
-    <div class="card">
-      <div class="card-hdr">
-        <div class="card-ttl">Ações Futuras</div>
-        <span style="background:rgba(210,153,34,.1);color:var(--yw);font-size:8.5px;padding:1px 7px;border-radius:3px;font-family:var(--mono)" id="el-acoes-count">0</span>
-      </div>
-      <div class="card-body" style="padding:10px 12px">
-        <div class="acoes-grid" id="el-acoes"></div>
+    <!-- KPIs em destaque -->
+    <div class="kpi-grid" id="el-kpi-mini"></div>
+
+    <!-- Módulos como cards grandes -->
+    <div>
+      <div class="kpi-section-ttl">Módulos</div>
+      <div class="modulos-grid">
+        <a class="mod-card" href="/obras">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <div class="mod-card-nome">Obras</div>
+          <div class="mod-card-sub">Avanço físico e financeiro</div>
+        </a>
+        <a class="mod-card" href="/chamados">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="mod-card-nome">Chamados</div>
+          <div class="mod-card-sub">Suporte e incidentes</div>
+        </a>
+        <a class="mod-card" href="/atividades">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          <div class="mod-card-nome">Atividades</div>
+          <div class="mod-card-sub">Tarefas e acompanhamento</div>
+        </a>
+        <a class="mod-card" href="/codin">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div class="mod-card-nome">Acesso</div>
+          <div class="mod-card-sub">Controle de pessoas</div>
+        </a>
+        <a class="mod-card" href="/conforto">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div class="mod-card-nome">Conforto</div>
+          <div class="mod-card-sub">Climatização e manutenção</div>
+        </a>
+        <a class="mod-card" href="/kpi">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <div class="mod-card-nome">KPI Dashboard</div>
+          <div class="mod-card-sub">Visão analítica geral</div>
+        </a>
+        <a class="mod-card" href="/servicedesk" target="_blank">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+          <div class="mod-card-nome">Service Desk</div>
+          <div class="mod-card-sub">Atendimento de chamados</div>
+        </a>
+        <a class="mod-card" href="/admin">
+          <div class="mod-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/></svg></div>
+          <div class="mod-card-nome">Admin</div>
+          <div class="mod-card-sub">Usuários e configurações</div>
+        </a>
       </div>
     </div>
 
-    <!-- BOTTOM-LEFT: Vídeo / GIF -->
-    <div class="card video-card" id="video-card">
-      <div class="card-hdr">
-        <div class="card-ttl" id="el-video-ttl">Vídeo / GIF</div>
+    <!-- Ações futuras + Vídeo/GIF -->
+    <div class="section-row">
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-ttl">Ações Futuras</div>
+          <span style="background:#fdf8e1;color:var(--yw);font-size:8.5px;padding:1px 7px;border-radius:5px;font-family:var(--mono)" id="el-acoes-count">0</span>
+        </div>
+        <div class="card-body">
+          <div class="acoes-grid" id="el-acoes"></div>
+        </div>
+      </div>
+
+      <div class="card video-card" id="video-card">
+        <div class="card-hdr">
+          <div class="card-ttl" id="el-video-ttl">Vídeo / GIF</div>
+        </div>
         <button class="video-upload-btn" id="btn-gif-upload">+ Carregar GIF</button>
-<button class="video-upload-btn" id="btn-kpi-toggle" style="right:110px">⊞ KPIs</button>
-      </div>
-      <div class="video-inner" id="video-inner">
-        <div class="video-placeholder" id="video-placeholder">
-          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span>Clique para carregar</span>
+        <button class="video-upload-btn" id="btn-kpi-toggle" style="right:130px">⊞ KPIs</button>
+        <div class="video-inner" id="video-inner">
+          <div class="video-placeholder" id="video-placeholder">
+            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Clique para carregar</span>
+          </div>
+          <img id="video-gif" class="video-gif" src="" alt="">
+          <div class="video-overlay" id="video-overlay">
+            <div class="vid-kpi-grid" id="vid-kpis-1"></div>
+          </div>
         </div>
-        <img id="video-gif" class="video-gif" src="" alt="">
-        <div class="video-overlay" id="video-overlay">
-  <div class="vid-kpi-grid" id="vid-kpis-1"></div>
-</div>
-      </div>
-      <!-- Metrics panel -->
-      <div class="metrics-panel" id="metrics-panel">
-        <button class="mp-close" id="btn-mp-close">×</button>
-        <div class="mp-ttl">Indicadores de Facilities</div>
-        <div class="kpi-grid" id="el-mp-kpis"></div>
-        <div class="kpi-section-ttl">Carregar dados</div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap" id="el-mp-files"></div>
       </div>
     </div>
 
-    <!-- BOTTOM-RIGHT: Val / OBJ / Missão / Metas -->
+    <!-- Estratégia & Metas -->
     <div class="card">
       <div class="card-hdr">
         <div class="card-ttl">Estratégia &amp; Metas</div>
@@ -138,6 +159,14 @@
 
   </div>
 </div>
+
+<!-- Metrics panel -->
+<div class="metrics-panel" id="metrics-panel">
+  <button class="mp-close" id="btn-mp-close">×</button>
+  <div class="mp-ttl">Indicadores de Facilities</div>
+  <div class="kpi-grid" id="el-mp-kpis"></div>
+</div>
+
 <script src="pwa.js"></script>
 <script src="auth.js"></script>
 <script src="api.js"></script>
