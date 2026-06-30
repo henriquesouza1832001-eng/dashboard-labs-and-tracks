@@ -511,7 +511,6 @@ async def save_obras(request: Request):
                 b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
                 b.get("contingencia",0), b.get("obs"), u
             ])
-
         await asyncio.gather(
             *[salvar_obra(o) for o in body.get("obras", [])],
             *[salvar_lanc(l) for l in body.get("lancamentos", [])],
