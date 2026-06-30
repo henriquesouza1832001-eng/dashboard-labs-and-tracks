@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Solicitar Acesso</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="/codin-qr/codinqr.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card">
+    <div class="card-head">
+      <h1>Solicitar Acesso</h1>
+      <p id="ponto-nome">Carregando ponto...</p>
+    </div>
+
+    <div id="form-area">
+      <label>Nome completo *</label>
+      <input type="text" id="rq-nome" placeholder="Seu nome completo">
+
+      <label>E-mail *</label>
+      <input type="text" id="rq-email" placeholder="seu.email@stellantis.com">
+
+      <label>Cargo</label>
+      <input type="text" id="rq-cargo" placeholder="Seu cargo">
+
+      <label>Setor</label>
+      <input type="text" id="rq-setor" placeholder="Seu setor / área">
+
+      <label>Motivo da solicitação *</label>
+      <textarea id="rq-motivo" rows="4" placeholder="Explique por que você precisa de acesso a este ponto..."></textarea>
+
+      <div id="rq-erro"></div>
+
+      <button id="rq-enviar" class="btn-enviar">Enviar Solicitação</button>
+    </div>
+
+    <div id="sucesso-area" style="display:none">
+      <div class="check-icon">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2>Solicitação enviada</h2>
+      <p class="sucesso-sub">A equipe de segurança vai analisar seu pedido.</p>
+      <button id="btn-nova" class="btn-enviar">Nova solicitação</button>
+    </div>
+  </div>
+</div>
+
+<script src="/codin-qr/codinqr.js"></script>
+</body>
+</html>

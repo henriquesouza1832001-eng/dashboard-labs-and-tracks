@@ -190,6 +190,7 @@ def _load_codin():
     for l in leitores_todos:
         leitores_map.setdefault(l["ponto_id"], []).append(l["leitor_id"])
     for p in pontos:
+        p["nome_ponto"] = p.get("nome")
         p["leitores"] = leitores_map.get(p["id"], [])
     for x in pessoas + pontos:
         x["atualizado_em"] = _ts(x.get("atualizado_em"))
@@ -612,13 +613,76 @@ async def save_codin(request: Request):
                 p["id"], p.get("nome"), p.get("cargo"), p.get("setor"),
                 p.get("status"), p.get("lib"), p.get("obs"), u
             ])
+        for p in body.get("pontos", []):
+            ponto_id = p.get("id") or p.get("codin") or p.get("nome")
+            await arun_exec(f"""
+                MERGE INTO {S_CODIN}.pontos AS t
+                USING (SELECT ? AS id) AS s ON t.id = s.id
+                WHEN MATCHED THEN UPDATE SET
+                    nome=?,codin=?,tipo=?,senhaHash=?,
+                    atualizado_em=current_timestamp(),atualizado_por=?
+                WHEN NOT MATCHED THEN INSERT (id,nome,codin,tipo,senhaHash,atualizado_por)
+                    VALUES (?,?,?,?,?,?)
+            """, [
+                ponto_id, p.get("nome"), p.get("codin"), p.get("tipo"), p.get("senhaHash"), u,
+                ponto_id, p.get("nome"), p.get("codin"), p.get("tipo"), p.get("senhaHash"), u
+            ])
+            await arun_exec(f"DELETE FROM {S_CODIN}.ponto_leitores WHERE ponto_id=?", [ponto_id])
+            for leitor in p.get("leitores", []):
+                await arun_exec(f"INSERT INTO {S_CODIN}.ponto_leitores (ponto_id, leitor_id) VALUES (?,?)",
+                    [ponto_id, leitor])
     except Exception as e:
         print(f"[codin] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("codin")
     return JSONResponse({"ok": True})
 
+@app.get("/codin-qr/codinqr.css")
+async def codinqr_css():
+    return FileResponse(f"{BASE}/codinqr/codinqr.css", media_type="text/css")
+
+@app.get("/codin-qr/codinqr.js")
+async def codinqr_js():
+    return FileResponse(f"{BASE}/codinqr/codinqr.js", media_type="application/javascript")
+
+@app.get("/codin-qr/{codin_id}")
+async def codin_qr_page(codin_id: str):
+    return FileResponse(f"{BASE}/codinqr/codinqr.html")
+
+@app.get("/api/codin/solicitacoes")
+async def listar_solicitacoes_codin():
+    rows = await arun_query(f"SELECT * FROM {S_CODIN}.solicitacoes ORDER BY data DESC")
+    return JSONResponse({"solicitacoes": rows})
+
+@app.post("/api/codin/solicitacoes")
+async def criar_solicitacao_codin(request: Request):
+    body = await request.json()
+    try:
+        await arun_exec(f"""
+            INSERT INTO {S_CODIN}.solicitacoes (id, codin, nome, email, cargo, setor, motivo, status, data)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, [
+            body["id"], body.get("codin"), body.get("nome"), body.get("email"),
+            body.get("cargo"), body.get("setor"), body.get("motivo"),
+            body.get("status", "Pendente"), body.get("data")
+        ])
+    except Exception as e:
+        print(f"[codin] erro ao criar solicitacao: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    return JSONResponse({"ok": True})
+
+@app.put("/api/codin/solicitacoes/{sid}")
+async def atualizar_solicitacao_codin(sid: str, request: Request):
+    body = await request.json()
+    try:
+        await arun_exec(f"UPDATE {S_CODIN}.solicitacoes SET status=? WHERE id=?", [body["status"], sid])
+    except Exception as e:
+        print(f"[codin] erro ao atualizar solicitacao: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    return JSONResponse({"ok": True})
+
 # ─── Conforto ─────────────────────────────────────────────────────────────────
+
 @app.get("/api/conforto")
 async def get_conforto():
     return JSONResponse(get_cached("conforto"))

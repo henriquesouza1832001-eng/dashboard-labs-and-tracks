@@ -204,7 +204,8 @@ document.getElementById('btn-salvar-ponto').addEventListener('click',()=>{
     else if(!senhaHash){err.textContent='Defina uma senha para ponto restrito.';return;}
   }else{senhaHash='';}
   const leitoresSel=[...document.querySelectorAll('#pt-leitores-check input:checked')].map(x=>x.value);
-  const obj={nome,codin:document.getElementById('pt-codin').value.trim(),tipo,leitores:leitoresSel,senhaHash};
+  const idExistente = editCtx.idx>=0 ? state.pontos[editCtx.idx].id : null;
+  const obj={id:idExistente||('pt-'+Date.now().toString(36)),nome,codin:document.getElementById('pt-codin').value.trim(),tipo,leitores:leitoresSel,senhaHash};
   if(editCtx.idx>=0)state.pontos[editCtx.idx]=obj; else state.pontos.push(obj);
   fecharModal('modal-ponto');renderPontos();agendarSalvamento();
   toast(editCtx.idx>=0?'Ponto atualizado!':'Ponto cadastrado!','success');
