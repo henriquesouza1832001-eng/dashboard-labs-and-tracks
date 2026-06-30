@@ -1036,8 +1036,6 @@ async def manifest():
 async def favicon():
     return FileResponse(f"{BASE}/icons/icon-192.png", media_type="image/png")
 
-app.mount("/", StaticFiles(directory=BASE, html=True), name="static")
-
 @app.get("/conforto-prev/prev.css")
 async def prev_css():
     return FileResponse(f"{BASE}/confortoprev/prev.css", media_type="text/css")
@@ -1055,6 +1053,27 @@ async def prev_page(uc_id: str):
     return inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
 
 @app.post("/api/conforto/preventivas")
+async def criar_preventiva_qr(request: Request):
+    body = await request.json()
+    try:
+        await arun_exec(f"""
+            INSERT INTO {S_CONFORTO}.preventivas
+                (id, uc_id, tecnico_id, data_prevista, data_realizada, status, checklist, obs, origem, atualizado_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, [
+            body["id"], body.get("ucId"), body.get("tecnico"),
+            body.get("dataPrevista"), body.get("dataRealizada", body.get("dataPrevista")),
+            body.get("status", "Realizada"),
+            json.dumps(body.get("checklist", [])),
+            body.get("obs", ""), "qr", body.get("tecnico", "qr")
+        ])
+    except Exception as e:
+        print(f"[conforto] erro ao criar preventiva qr: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    cache_invalidate("conforto")
+    return JSONResponse({"ok": True})
+
+app.mount("/", StaticFiles(directory=BASE, html=True), name="static")
 async def criar_preventiva_qr(request: Request):
     body = await request.json()
     try:
