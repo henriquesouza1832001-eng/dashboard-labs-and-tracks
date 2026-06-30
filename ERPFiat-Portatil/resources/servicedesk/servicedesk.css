@@ -1,0 +1,82 @@
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:#0f1c3f}
+
+.topbar{
+  background:#243782;
+  padding:18px 24px;
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+}
+.topbar h1{font-size:18px;color:#fff;font-weight:700}
+.topbar .sub{font-size:12px;color:rgba(255,255,255,.6)}
+
+.wrap{max-width:900px;margin:0 auto;padding:24px 20px}
+
+.filtros{display:flex;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+#sd-busca{
+  flex:1;
+  min-width:240px;
+  padding:11px 16px;
+  border:1px solid #d0d8e8;
+  border-radius:8px;
+  font-size:14px;
+  background:#fff;
+  outline:none;
+}
+#sd-busca:focus{border-color:#2E5FA3}
+
+.check-todos{display:flex;align-items:center;gap:6px;font-size:13px;color:#4a5880;cursor:pointer;white-space:nowrap}
+.check-todos input{width:16px;height:16px;cursor:pointer}
+
+#sd-lista{display:flex;flex-direction:column;gap:10px}
+
+.sd-card{
+  background:#fff;
+  border:1px solid #d0d8e8;
+  border-radius:10px;
+  padding:16px 18px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.sd-card.com-id{opacity:.55}
+
+.sd-info{flex:1;min-width:200px}
+.sd-id{font-family:'JetBrains Mono',monospace;font-size:11px;color:#2E5FA3;font-weight:700}
+.sd-titulo{font-size:14px;font-weight:600;margin-top:2px}
+.sd-meta{font-size:12px;color:#4a5880;margin-top:3px}
+
+.sd-form{display:flex;align-items:center;gap:8px}
+.sd-form input{
+  width:160px;
+  padding:9px 12px;
+  border:1px solid #d0d8e8;
+  border-radius:7px;
+  font-size:13px;
+  font-family:'JetBrains Mono',monospace;
+  outline:none;
+}
+.sd-form input:focus{border-color:#2E5FA3}
+.sd-form button{
+  padding:9px 16px;
+  border:none;
+  border-radius:7px;
+  background:#2E5FA3;
+  color:#fff;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+}
+.sd-form button:hover{background:#243782}
+
+.sd-vazio{text-align:center;padding:60px 0;color:#8a9abf;font-size:14px}
+
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#0f1c3f;color:#fff;padding:12px 22px;border-radius:8px;font-size:13px;
+  opacity:0;transition:all .25s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}

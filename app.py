@@ -398,6 +398,23 @@ async def delete_chamado(cid: str):
     cache_invalidate("chamados")
     return JSONResponse({"ok": True})
 
+@app.get("/api/chamados/areas-qr")
+async def get_areas_qr():
+    rows = await arun_query(f"SELECT * FROM {S_CHAMADOS}.areas_qr")
+    return JSONResponse(rows)
+
+@app.post("/api/chamados/areas-qr")
+async def add_area_qr(request: Request):
+    body = await request.json()
+    await arun_exec(f"INSERT INTO {S_CHAMADOS}.areas_qr (id, nome, slug) VALUES (?,?,?)",
+        [body["id"], body["nome"], body["slug"]])
+    return JSONResponse({"ok": True})
+
+@app.delete("/api/chamados/areas-qr/{aid}")
+async def delete_area_qr(aid: str):
+    await arun_exec(f"DELETE FROM {S_CHAMADOS}.areas_qr WHERE id=?", [aid])
+    return JSONResponse({"ok": True})
+
 @app.get("/api/chamados/sla")
 async def get_sla():
     v = cache_get("sla")
@@ -798,6 +815,14 @@ async def conforto_page():
 @app.get("/atividades")
 async def atividades_page():
     return inject(f"{BASE}/atividades/atividades.html", get_cached("atividades"))
+
+@app.get("/qr/{area}")
+async def qr_abrir_chamado(area: str):
+    return FileResponse(f"{BASE}/qr/qr.html")
+
+@app.get("/servicedesk")
+async def servicedesk_page():
+    return inject(f"{BASE}/servicedesk/servicedesk.html", get_cached("chamados"))
 
 @app.get("/kpi")
 async def kpi_page():

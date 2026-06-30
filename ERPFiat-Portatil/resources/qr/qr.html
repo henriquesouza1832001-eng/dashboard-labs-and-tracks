@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Abrir Chamado</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="/qr/qr.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card">
+    <div class="card-head">
+      <h1>Abrir Chamado</h1>
+      <p id="area-nome">Carregando área...</p>
+    </div>
+
+    <div id="form-area">
+      <label>Categoria *</label>
+      <select id="qr-cat">
+        <option value="">Selecionar...</option>
+        <option value="INF">Infraestrutura</option>
+        <option value="ELE">Elétrica</option>
+        <option value="HID">Hidráulica</option>
+        <option value="LMP">Limpeza</option>
+        <option value="AR">Ar Condicionado</option>
+      </select>
+
+      <label>Prioridade *</label>
+      <select id="qr-prio">
+        <option value="Baixa">Baixa</option>
+        <option value="Média" selected>Média</option>
+        <option value="Alta">Alta</option>
+        <option value="Crítica">Crítica</option>
+      </select>
+
+      <label>Descreva o problema *</label>
+      <textarea id="qr-desc" rows="4" placeholder="O que está acontecendo, desde quando, impacto..."></textarea>
+
+      <label>Seu nome ou matrícula (opcional)</label>
+      <input type="text" id="qr-nome" placeholder="Para contato, se precisarmos">
+
+      <label>Fotos (opcional)</label>
+      <input type="file" id="qr-foto-input" accept="image/*" multiple style="display:none">
+      <div id="qr-fotos-grid"></div>
+      <button id="qr-add-foto" type="button" class="btn-foto">+ Adicionar foto</button>
+
+      <div id="qr-erro"></div>
+
+      <button id="qr-enviar" class="btn-enviar">Enviar Chamado</button>
+    </div>
+
+    <div id="sucesso-area" style="display:none">
+      <div class="check-icon">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2>Chamado registrado</h2>
+      <p>Número: <span id="sucesso-id"></span></p>
+      <p class="sucesso-sub">A equipe responsável foi notificada.</p>
+      <button id="btn-novo-chamado" class="btn-enviar">Abrir outro chamado</button>
+    </div>
+  </div>
+</div>
+
+<script src="/qr/qr.js"></script>
+</body>
+</html>

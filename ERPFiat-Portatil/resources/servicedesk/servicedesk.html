@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Service Desk — Cadastro de ID</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="/servicedesk/servicedesk.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Service Desk</h1>
+  <span class="sub">Cadastro de ID externo</span>
+</div>
+
+<div class="wrap">
+  <div class="filtros">
+    <input type="text" id="sd-busca" placeholder="Buscar por título, local ou ID...">
+    <label class="check-todos">
+      <input type="checkbox" id="sd-ver-todos">
+      Ver todos (inclusive já cadastrados)
+    </label>
+  </div>
+
+  <div id="sd-lista"></div>
+</div>
+
+<div id="sd-toast" class="toast"></div>
+
+<script src="/servicedesk/servicedesk.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 let chartInstances = {};
 function setTab(tab) {
-  ['lista','dash','config'].forEach(t => {
+  ['lista','dash','qr','config'].forEach(t => {
     const btn = document.getElementById('tab-'+t);
     const view = document.getElementById('view-'+t);
     if(btn) btn.classList.toggle('active', tab === t);
@@ -14,4 +14,5 @@ function setTab(tab) {
   [ft,fti,fo].forEach(el => { if(el) el.style.display = tab === 'lista' ? '' : 'none'; });
   if (tab === 'dash')   renderDashboard();
   if (tab === 'config') carregarCamposSLA();
+  if (tab === 'qr') carregarAreasQR();
 }
