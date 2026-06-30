@@ -108,11 +108,15 @@ def get_usuario(request: Request):
 
 def verificar_admin(request: Request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    print(f"[admin] token recebido: {'sim' if token else 'NAO'} (len={len(token)})")
     if token:
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            print(f"[admin] payload decodificado: {payload}")
             if payload.get("role") == "admin":
                 return payload
+            else:
+                print(f"[admin] role no token nao e admin: '{payload.get('role')}'")
         except Exception as e:
             print(f"[admin] erro ao decodificar token: {e}")
     email = request.headers.get("X-Forwarded-User", "").strip().lower()
@@ -124,10 +128,11 @@ def verificar_admin(request: Request):
             "SELECT role FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email=? AND ativo=true LIMIT 1",
             [email]
         )
+        print(f"[admin] resultado da query por header: {rows}")
         if rows and rows[0].get("role") == "admin":
             return {"email": email, "role": "admin"}
-    except:
-        pass
+    except Exception as e:
+        print(f"[admin] erro na query: {e}")
     return None
 
 def inject(html_path, dados):
