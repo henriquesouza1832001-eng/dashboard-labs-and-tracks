@@ -92,7 +92,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     document.getElementById('page-'+page).classList.add('active');
     if(page==='matriz')renderMatriz();
     if(page==='busca')popularBuscaSelects();
-    if(page==='solicitacoes')carregarSolicitacoes();
+    if(page==='solicitacoes'){ carregarSolicitacoes(); renderQrCodesTab(); }
   });
 });
 
@@ -105,6 +105,7 @@ async function carregarSolicitacoes(){
     solicitacoesCache = dados.solicitacoes || [];
     renderSolicitacoes();
     atualizarBadgeSolicitacoes();
+    updateDashboard();
   }catch{
     document.getElementById('tbody-solicitacoes').innerHTML='<tr><td colspan="7" class="empty-state">Erro ao carregar solicitações.</td></tr>';
   }
@@ -178,9 +179,10 @@ async function atualizarStatusSolicitacao(id, status){
       body: JSON.stringify({status})
     });
     const sol = solicitacoesCache.find(s=>s.id===id);
-    if(sol) sol.status = status;
+    if(sol){ sol.status = status; sol.data_resposta = new Date().toISOString(); }
     renderSolicitacoes();
     atualizarBadgeSolicitacoes();
+    updateDashboard();
     toast(status==='Aprovada'?'Solicitação aprovada!':'Solicitação rejeitada.', status==='Aprovada'?'success':'');
   }catch{
     toast('Erro ao atualizar solicitação.','');
@@ -188,10 +190,12 @@ async function atualizarStatusSolicitacao(id, status){
 }
 document.querySelectorAll('.aba-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    document.querySelectorAll('.aba-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.aba-content').forEach(c=>c.classList.remove('active'));
+    const grupo = btn.closest('.abas');
+    grupo.querySelectorAll('.aba-btn').forEach(b=>b.classList.remove('active'));
+    grupo.parentElement.querySelectorAll(':scope > .aba-content').forEach(c=>c.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('aba-'+btn.dataset.aba).classList.add('active');
+    if(btn.dataset.aba==='solic-qr') renderQrCodesTab(document.getElementById('busca-qr-pontos')?.value||'');
   });
 });
 function abrirModal(id){document.getElementById(id).classList.add('open');}
@@ -205,6 +209,52 @@ function updateDashboard(){
   document.getElementById('m-temp').textContent=state.pessoas.filter(p=>p.status==='Temporário').length;
   document.getElementById('m-pontos').textContent=state.pontos.length;
   document.getElementById('m-restritos').textContent=state.pontos.filter(p=>p.tipo==='Restrito').length;
+  atualizarDashboardSolicitacoes();
+}
+
+function atualizarDashboardSolicitacoes(){
+  const elTempo=document.getElementById('m-tempo-medio');
+  const elAntigas=document.getElementById('m-pendentes-antigas');
+  const elMes=document.getElementById('m-solic-mes');
+  const elTaxa=document.getElementById('m-taxa-aprovacao');
+  const elLista=document.getElementById('dashboard-pendentes-lista');
+  if(!elTempo) return;
+
+  const agora = new Date();
+  const respondidas = solicitacoesCache.filter(s=>s.data_resposta);
+  if(respondidas.length){
+    const totalMs = respondidas.reduce((acc,s)=>acc+(new Date(s.data_resposta)-new Date(s.data)),0);
+    const mediaHoras = totalMs/respondidas.length/3600000;
+    elTempo.textContent = mediaHoras<1 ? Math.round(mediaHoras*60)+'min' : mediaHoras.toFixed(1)+'h';
+  } else {
+    elTempo.textContent = '—';
+  }
+
+  const pendentes = solicitacoesCache.filter(s=>s.status==='Pendente');
+  const pendentesAntigas = pendentes.filter(s=>(agora-new Date(s.data))>86400000);
+  elAntigas.textContent = pendentesAntigas.length;
+
+  const ultimos30 = solicitacoesCache.filter(s=>(agora-new Date(s.data))<=30*86400000);
+  elMes.textContent = ultimos30.length;
+
+  const finalizadas = solicitacoesCache.filter(s=>s.status==='Aprovada'||s.status==='Rejeitada');
+  const aprovadas = solicitacoesCache.filter(s=>s.status==='Aprovada');
+  elTaxa.textContent = finalizadas.length ? Math.round(aprovadas.length/finalizadas.length*100)+'%' : '0%';
+
+  if(!elLista) return;
+  const antigasOrdenadas = [...pendentes].sort((a,b)=>new Date(a.data)-new Date(b.data)).slice(0,5);
+  if(!antigasOrdenadas.length){
+    elLista.innerHTML = '<div class="empty-state">Nenhuma solicitação pendente.</div>';
+    return;
+  }
+  elLista.innerHTML = antigasOrdenadas.map(s=>{
+    const horas = Math.floor((agora-new Date(s.data))/3600000);
+    const tempoTxt = horas<1 ? 'há poucos minutos' : horas<24 ? `há ${horas}h` : `há ${Math.floor(horas/24)}d`;
+    return `<div class="dashboard-pendente-item">
+      <div class="dp-info"><strong>${s.nome}</strong><span style="color:var(--text2)">CODIN ${s.codin} — ${s.motivo}</span></div>
+      <span class="dp-tempo">${tempoTxt}</span>
+    </div>`;
+  }).join('');
 }
 function renderPessoas(filtroTxt='',filtroStatus=''){
   const tb=document.getElementById('tbody-pessoas');
@@ -284,6 +334,21 @@ window.baixarQrPonto = function(){
   link.href = img ? img.src : canvas.toDataURL('image/png');
   link.click();
 };
+
+function renderQrCodesTab(filtro=''){
+  const wrap = document.getElementById('qr-pontos-lista');
+  if(!wrap) return;
+  let lista = state.pontos.filter(p=>p.codin);
+  if(filtro) lista = lista.filter(p=>p.nome.toLowerCase().includes(filtro.toLowerCase())||p.codin.toLowerCase().includes(filtro.toLowerCase()));
+  if(!lista.length){ wrap.innerHTML = '<div class="empty-state">Nenhum ponto com CODIN cadastrado.</div>'; return; }
+  wrap.innerHTML = lista.map(p=>`
+    <div class="qr-ponto-card">
+      <div class="qpc-nome">${p.nome}</div>
+      <div class="qpc-codin">CODIN ${p.codin}</div>
+      <button class="btn btn-sm btn-primary" onclick="abrirQrPonto('${p.codin}','${p.nome.replace(/'/g,"\\'")}')">Gerar QR Code</button>
+    </div>
+  `).join('');
+}
 function renderLeitoresCheckModal(selecionados=[]){
   const c=document.getElementById('pt-leitores-check');
   c.innerHTML=state.leitores.length?state.leitores.map(l=>`<label class="check-item"><input type="checkbox" value="${l}" ${selecionados.includes(l)?'checked':''}>${l}</label>`).join(''):'<span style="color:var(--text2);font-size:12px">Adicione leitores em Configurações.</span>';

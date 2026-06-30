@@ -674,8 +674,15 @@ async def criar_solicitacao_codin(request: Request):
 @app.put("/api/codin/solicitacoes/{sid}")
 async def atualizar_solicitacao_codin(sid: str, request: Request):
     body = await request.json()
+    novo_status = body["status"]
     try:
-        await arun_exec(f"UPDATE {S_CODIN}.solicitacoes SET status=? WHERE id=?", [body["status"], sid])
+        if novo_status in ("Aprovada", "Rejeitada"):
+            await arun_exec(
+                f"UPDATE {S_CODIN}.solicitacoes SET status=?, data_resposta=current_timestamp() WHERE id=?",
+                [novo_status, sid]
+            )
+        else:
+            await arun_exec(f"UPDATE {S_CODIN}.solicitacoes SET status=? WHERE id=?", [novo_status, sid])
     except Exception as e:
         print(f"[codin] erro ao atualizar solicitacao: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)

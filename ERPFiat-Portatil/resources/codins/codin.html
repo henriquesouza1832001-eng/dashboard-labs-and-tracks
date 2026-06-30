@@ -65,18 +65,17 @@
     <span id="sidebar-arquivo" style="font-size:11px;color:#8b949e;font-family:monospace">sem arquivo</span>
   </div>
 </div>
-<!-- TELA INÍCIO (oculta por padrão — app.js carrega automaticamente) -->
-<div id="tela-inicio" style="display:none;align-items:center;justify-content:center;min-height:calc(100vh - 48px)">
-  <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px 48px;text-align:center;max-width:440px;width:100%;display:flex;flex-direction:column;gap:16px">
+<!-- TELA INÍCIO (carregamento — some automaticamente quando os dados terminam de carregar) -->
+<div id="tela-inicio" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 48px)">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:40px 48px;text-align:center;max-width:480px;width:100%;display:flex;flex-direction:column;gap:16px">
     <div style="width:56px;height:56px;background:var(--blue);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto;font-family:monospace;font-size:20px;font-weight:600;color:#fff">CA</div>
-    <div style="font-size:20px;font-weight:600">Controle de Acesso</div>
-    <div style="font-size:13px;color:#8b949e" id="inicio-status">Selecione o arquivo dados-codin.json para começar.</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn btn-primary btn-lg" id="btn-abrir-dados">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        Selecionar dados-codin.json
-      </button>
-      <button class="btn btn-outline btn-sm" id="btn-comecar-vazio">Usar sem arquivo (temporário)</button>
+    <div style="font-size:20px;font-weight:600">Controle de Acesso CODIN</div>
+    <div style="font-size:13px;color:var(--text2)" id="inicio-status">Carregando pessoas, pontos e solicitações…</div>
+    <div class="inicio-features">
+      <div class="inicio-feature"><span class="inicio-feature-dot"></span>Cadastro de IDs e crachás</div>
+      <div class="inicio-feature"><span class="inicio-feature-dot"></span>Pontos CODIN públicos e restritos</div>
+      <div class="inicio-feature"><span class="inicio-feature-dot"></span>Permissões por pessoa e por leitor</div>
+      <div class="inicio-feature"><span class="inicio-feature-dot"></span>Solicitações via QR Code</div>
     </div>
   </div>
 </div>
@@ -104,7 +103,7 @@
         </button>
         <button class="nav-item" data-page="solicitacoes">
           <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Solicitações
+          Solicitações & QR
           <span class="nav-badge" id="nav-badge-solicitacoes" style="display:none">0</span>
         </button>
         <button class="nav-item" data-page="busca">
@@ -138,6 +137,19 @@
           <div class="metric-card"><div class="metric-label">Temporários</div><div class="metric-value text-orange" id="m-temp">0</div></div>
           <div class="metric-card"><div class="metric-label">Pontos CODIN</div><div class="metric-value" id="m-pontos">0</div></div>
           <div class="metric-card"><div class="metric-label">Restritos</div><div class="metric-value text-purple" id="m-restritos">0</div></div>
+        </div>
+        <div class="dashboard-section-title">Atendimento de Solicitações</div>
+        <div class="metrics-grid">
+          <div class="metric-card"><div class="metric-label">Tempo médio de resposta</div><div class="metric-value text-blue" id="m-tempo-medio">—</div></div>
+          <div class="metric-card"><div class="metric-label">Pendentes há +24h</div><div class="metric-value text-red" id="m-pendentes-antigas">0</div></div>
+          <div class="metric-card"><div class="metric-label">Solicitações (30 dias)</div><div class="metric-value" id="m-solic-mes">0</div></div>
+          <div class="metric-card"><div class="metric-label">Taxa de aprovação</div><div class="metric-value text-green" id="m-taxa-aprovacao">0%</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Solicitações pendentes mais antigas</div>
+          <div id="dashboard-pendentes-lista" class="dashboard-pendentes-lista">
+            <div class="empty-state">Nenhuma solicitação pendente.</div>
+          </div>
         </div>
       </section>
       <!-- IDs / PESSOAS -->
@@ -210,30 +222,42 @@
           </div>
         </div>
       </section>
-      <!-- SOLICITAÇÕES -->
+      <!-- SOLICITAÇÕES & QR -->
 <section class="page" id="page-solicitacoes">
   <div class="page-header">
-    <div><h1>Solicitações de Acesso</h1><p class="page-desc">Pedidos recebidos via QR Code de pontos CODIN</p></div>
+    <div><h1>Solicitações & QR Codes</h1><p class="page-desc">Pedidos recebidos via QR Code e geração de QR por ponto</p></div>
     <button class="btn" id="btn-recarregar-solicitacoes">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       Atualizar
     </button>
   </div>
-  <div class="toolbar">
-    <select class="filter-select" id="filtro-status-solicitacao">
-      <option value="">Todas</option>
-      <option value="Pendente">Pendentes</option>
-      <option value="Aprovada">Aprovadas</option>
-      <option value="Rejeitada">Rejeitadas</option>
-    </select>
+  <div class="abas">
+    <button class="aba-btn active" data-aba="solic-lista">Solicitações</button>
+    <button class="aba-btn" data-aba="solic-qr">QR Codes dos Pontos</button>
   </div>
-  <div class="card p-0">
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Data</th><th>Nome</th><th>E-mail</th><th>CODIN</th><th>Motivo</th><th>Status</th><th></th></tr></thead>
-        <tbody id="tbody-solicitacoes"><tr><td colspan="7" class="empty-state">Nenhuma solicitação recebida.</td></tr></tbody>
-      </table>
+  <div class="aba-content active" id="aba-solic-lista">
+    <div class="toolbar">
+      <select class="filter-select" id="filtro-status-solicitacao">
+        <option value="">Todas</option>
+        <option value="Pendente">Pendentes</option>
+        <option value="Aprovada">Aprovadas</option>
+        <option value="Rejeitada">Rejeitadas</option>
+      </select>
     </div>
+    <div class="card p-0">
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Data</th><th>Nome</th><th>E-mail</th><th>CODIN</th><th>Motivo</th><th>Status</th><th></th></tr></thead>
+          <tbody id="tbody-solicitacoes"><tr><td colspan="7" class="empty-state">Nenhuma solicitação recebida.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="aba-content" id="aba-solic-qr">
+    <div class="toolbar">
+      <input class="search-input" id="busca-qr-pontos" placeholder="Buscar ponto por nome ou CODIN…" oninput="renderQrCodesTab(this.value)">
+    </div>
+    <div id="qr-pontos-lista" class="qr-pontos-lista"></div>
   </div>
 </section>
       <!-- BUSCA RÁPIDA -->
