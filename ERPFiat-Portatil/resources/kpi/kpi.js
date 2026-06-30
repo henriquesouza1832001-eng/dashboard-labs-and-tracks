@@ -46,7 +46,7 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
     const estudo=obras.filter(o=>o.status==='Em Estudo').length;
     document.getElementById('mkpis-obras').innerHTML=
-      mkMicro(obras.length,'Total obras','c-azul',"abrirModuloComDrill('obras','total')")+
+      `<div class="mod-obras-total-fixo">${obras.length} <span>obras</span></div>`+
       mkMicro(emAnd,'Em andamento','c-laranja',"abrirModuloComDrill('obras','andamento')")+
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
@@ -681,19 +681,21 @@ function buildOverlayHTML(tipo,d){
   if(tipo==='andamento') return buildOverlayAndamento(d);
   if(tipo==='concluidas') return buildOverlayConcluidas(d);
   if(tipo==='planejadas') return buildOverlayPlanejadas(d);
+  if(tipo==='estudo') return buildOverlayEstudo(d);
   return buildOverlayTotal(d);
 }
+function buildOverlayEstudo(d){ return _obOvBase(d,'estudo'); }
 function _obOvBase(d,tipo){
   const obras=d.obras||[];const hoje=new Date();
-  const filtros={total:obras,andamento:obras.filter(o=>o.status==='Em Andamento'),concluidas:obras.filter(o=>o.status==='Concluído'),planejadas:obras.filter(o=>o.status==='Planejado')};
-  const titulos={total:'Todas as Obras',andamento:'Em Andamento',concluidas:'Concluídas',planejadas:'Planejadas'};
+  const filtros={total:obras,andamento:obras.filter(o=>o.status==='Em Andamento'),concluidas:obras.filter(o=>o.status==='Concluído'),planejadas:obras.filter(o=>o.status==='Planejado'),estudo:obras.filter(o=>o.status==='Em Estudo')};
+  const titulos={total:'Todas as Obras',andamento:'Em Andamento',concluidas:'Concluídas',planejadas:'Planejadas',estudo:'Em Estudo'};
   const lista=filtros[tipo]||[];
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
   const Orçado=totalB-totalR;
   const avgFis=lista.length?lista.reduce((s,o)=>s+calcAvFis(o),0)/lista.length:0;
   const pb=(v,c)=>`<div class="ob-mini-prog"><div class="ob-mbar"><div class="ob-mfill" style="width:${Math.min(v,100)}%;background:${c}"></div></div><span style="font-size:9px;font-family:var(--mono);color:var(--text-muted);min-width:30px">${fmt(v,1)}%</span></div>`;
-  const badgeSt=s=>{const m={'Em Andamento':'badge-and','Concluído':'badge-conc','Planejado':'badge-plan','Suspenso':'badge-susp'};return`<span class="badge-sm ${m[s]||'badge-plan'}">${s}</span>`;};
+  const badgeSt=s=>{const m={'Em Andamento':'badge-and','Concluído':'badge-conc','Planejado':'badge-plan','Suspenso':'badge-susp','Em Estudo':'badge-muted'};return`<span class="badge-sm ${m[s]||'badge-plan'}">${s}</span>`;};
   if(!window._obOvTipo||window._obOvTipo!==tipo)window._obOvPag=1;
   window._obOvTipo=tipo;
   window._obOvLista=lista;

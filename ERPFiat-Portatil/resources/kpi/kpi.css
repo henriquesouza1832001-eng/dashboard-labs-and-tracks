@@ -477,3 +477,17 @@
 #mod-capex .mod-footer-hint,#mod-chamados .mod-footer-hint,
 #mod-codin .mod-footer-hint,#mod-conforto .mod-footer-hint,
 #mod-ergonomia .mod-footer-hint{display:none}
+.mod-obras-total-fixo {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--blue-mid);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.mod-obras-total-fixo span {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
