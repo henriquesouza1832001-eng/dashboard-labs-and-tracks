@@ -656,7 +656,12 @@ function _obOvBase(d,tipo){
   const avgFis=lista.length?lista.reduce((s,o)=>s+calcAvFis(o),0)/lista.length:0;
   const pb=(v,c)=>`<div class="ob-mini-prog"><div class="ob-mbar"><div class="ob-mfill" style="width:${Math.min(v,100)}%;background:${c}"></div></div><span style="font-size:9px;font-family:var(--mono);color:var(--text-muted);min-width:30px">${fmt(v,1)}%</span></div>`;
   const badgeSt=s=>{const m={'Em Andamento':'badge-and','Concluído':'badge-conc','Planejado':'badge-plan','Suspenso':'badge-susp'};return`<span class="badge-sm ${m[s]||'badge-plan'}">${s}</span>`;};
-  const linhas=lista.map(o=>{
+  if(!window._obOvTipo||window._obOvTipo!==tipo)window._obOvPag=1;
+  window._obOvTipo=tipo;
+  window._obOvLista=lista;
+  const _perPag=10,_pagAtual=window._obOvPag||1,_inicio=(_pagAtual-1)*_perPag;
+  const _pagina=lista.slice(_inicio,_inicio+_perPag);
+  const linhas=_pagina.map(o=>{
     const b=budgObra(o.cod),r=realObra(o.cod),af=calcAvFis(o),pf=b>0?(r/b)*100:0;
     const prazo=o.dtFimPrev?Math.floor((new Date(o.dtFimPrev+'T00:00:00')-hoje)/86400000):null;
     const corP=prazo===null?'var(--text-dim)':prazo<0?'var(--red)':prazo<=30?'var(--yellow)':'var(--green)';
@@ -670,6 +675,18 @@ function _obOvBase(d,tipo){
       <td style="color:var(--blue-light);font-size:11px">›</td>
     </tr>`;
   }).join('');
+  const _totalPags=Math.ceil(lista.length/_perPag);
+  const _btnSt=(ativo)=>`cursor:pointer;padding:4px 10px;border-radius:5px;font-family:var(--mono);font-size:11px;border:1px solid ${ativo?'var(--blue-mid)':'var(--border)'};background:${ativo?'var(--blue-pale)':'var(--surface)'};color:${ativo?'var(--blue-mid)':'var(--text-muted)'}`;
+  let _pagHtml=`<button style="${_btnSt(false)}" onclick="window._obOvIrPag(${_pagAtual-1})" ${_pagAtual===1?'disabled':''}>← ant</button>`;
+  for(let i=1;i<=_totalPags;i++){
+    if(_totalPags<=7||i===1||i===_totalPags||Math.abs(i-_pagAtual)<=1){
+      _pagHtml+=`<button style="${_btnSt(i===_pagAtual)}" onclick="window._obOvIrPag(${i})">${i}</button>`;
+    } else if(Math.abs(i-_pagAtual)===2){
+      _pagHtml+=`<span style="color:var(--text-muted);padding:0 2px">…</span>`;
+    }
+  }
+  _pagHtml+=`<button style="${_btnSt(false)}" onclick="window._obOvIrPag(${_pagAtual+1})" ${_pagAtual===_totalPags?'disabled':''}>próx →</button>`;
+  _pagHtml+=`<span style="font-size:10px;color:var(--text-muted);margin-left:6px">${_inicio+1}–${Math.min(_inicio+_perPag,lista.length)} de ${lista.length}</span>`;
   const header=`
   <div class="ob-ov-header">
     <div class="ob-ov-title">${titulos[tipo]} &mdash; Análise Gerencial (${lista.length} obras)</div>
@@ -687,7 +704,13 @@ function _obOvBase(d,tipo){
       <thead><tr><th>Obra</th><th>Status</th><th>% Físico</th><th>% Financeiro</th><th>Orçado</th><th>Prazo</th><th></th></tr></thead>
       <tbody>${linhas||'<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:16px">Nenhuma obra</td></tr>'}</tbody>
     </table>
+    <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;flex-wrap:wrap">${_pagHtml}</div>
   </div>`;
+  window._obOvIrPag=function(p){
+    if(p<1||p>_totalPags)return;
+    window._obOvPag=p;
+    voltarParaLista();
+  };
   return{header,lista,totalB,totalR,Orçado};
 }
 function buildOverlayTotal(d){
@@ -797,12 +820,12 @@ function desenharBulletBudget(cv,budget,gasto){
 
   ctx.font='700 11px JetBrains Mono,monospace';
   ctx.textAlign='left';ctx.fillStyle=excedeu?'#f85149':'#2E5FA3';
-  ctx.fillText(`Gasto: ${fmtRK(gasto)}`,m.l,barY+barH+22);
+  ctx.fillText(`Gasto: ${fmtRK(gasto)}`,m.l,barY+barH+26);
 
   ctx.textAlign='right';
   const pct=budget>0?((gasto/budget)*100).toFixed(1):'0';
   ctx.fillStyle=excedeu?'#f85149':'#0f1c3f';
-  ctx.fillText(`Uso: ${pct}%`,m.l+cw,barY+barH+22);
+  ctx.fillText(`Uso: ${pct}%`,m.l+cw,barY+barH+44);
 }
 function drawOverlayCharts(tipo,d){
   const obras=d.obras||[];const lanc=d.lancamentos||[];
