@@ -145,8 +145,8 @@ function desenharMicroBullet(id, orcado, gasto){
         <span style="color:var(--text-dim)">Uso: ${pctTxt}</span>
       </div>
       <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Uso do orçamento: ${pctTxt}</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>Disponível: ${fmtRK(disponivel)}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Realizado: ${fmtRK(gasto)}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>Previsto: ${fmtRK(orcado)}</span>
       </div>
     </div>`;
 }
@@ -684,7 +684,16 @@ function buildOverlayHTML(tipo,d){
   if(tipo==='estudo') return buildOverlayEstudo(d);
   return buildOverlayTotal(d);
 }
-function buildOverlayEstudo(d){ return _obOvBase(d,'estudo'); }
+function buildOverlayEstudo(d){
+  const {header}=_obOvBase(d,'estudo');
+  return header+`
+  <div style="display:flex;gap:10px;margin-bottom:14px">
+    <div class="ob-ov-cbox" style="flex:1;min-width:0">
+      <div class="ob-ov-ctit">Budget estimado por obra</div>
+      <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
+    </div>
+  </div>`;
+}
 function _obOvBase(d,tipo){
   const obras=d.obras||[];const hoje=new Date();
   const filtros={total:obras,andamento:obras.filter(o=>o.status==='Em Andamento'),concluidas:obras.filter(o=>o.status==='Concluído'),planejadas:obras.filter(o=>o.status==='Planejado'),estudo:obras.filter(o=>o.status==='Em Estudo')};
