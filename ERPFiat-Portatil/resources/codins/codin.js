@@ -163,10 +163,34 @@ function renderPontos(filtro=''){
   if(!lista.length){tb.innerHTML='<tr><td colspan="6" class="empty-state">Nenhum ponto encontrado.</td></tr>';return;}
   tb.innerHTML=lista.map((p,idx)=>{
     const i=state.pontos.indexOf(p);
-    return`<tr><td style="color:var(--text2);font-family:var(--mono);font-size:11px">${idx+1}</td><td>${p.nome}</td><td><span class="mono">${p.codin||'—'}</span></td><td>${badgePonto(p.tipo)}${p.tipo==='Restrito'?`<span style="color:${p.senhaHash?'var(--green)':'var(--red)'};font-size:10px;margin-left:6px">${p.senhaHash?'● senha ok':'● sem senha'}</span>`:''}</td><td style="max-width:240px">${p.leitores.length?p.leitores.map(l=>`<span class="chip">${l}</span>`).join(''):'<span style="color:var(--text2)">—</span>'}</td><td><div class="row-actions"><button class="btn btn-sm" onclick="editarPonto(${i})"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-sm btn-danger" onclick="confirmarDeletar('ponto',${i},'${p.nome.replace(/'/g,"\\'")}')"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></td></tr>`;
+    return`<tr><td style="color:var(--text2);font-family:var(--mono);font-size:11px">${idx+1}</td><td>${p.nome}</td><td><span class="mono">${p.codin||'—'}</span></td><td>${badgePonto(p.tipo)}${p.tipo==='Restrito'?`<span style="color:${p.senhaHash?'var(--green)':'var(--red)'};font-size:10px;margin-left:6px">${p.senhaHash?'● senha ok':'● sem senha'}</span>`:''}</td><td style="max-width:240px">${p.leitores.length?p.leitores.map(l=>`<span class="chip">${l}</span>`).join(''):'<span style="color:var(--text2)">—</span>'}</td><td><div class="row-actions">${p.codin?`<button class="btn btn-sm" title="Gerar QR Code" onclick="abrirQrPonto('${p.codin}','${p.nome.replace(/'/g,"\\'")}')"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></button>`:''}<button class="btn btn-sm" onclick="editarPonto(${i})"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-sm btn-danger" onclick="confirmarDeletar('ponto',${i},'${p.nome.replace(/'/g,"\\'")}')"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></td></tr>`;
   }).join('');
   updateDashboard();
 }
+
+window.abrirQrPonto = function(codin, nome){
+  const url = `${window.location.origin}/codin-qr/${codin}`;
+  document.getElementById('qr-ponto-titulo').textContent = nome;
+  document.getElementById('qr-ponto-link').textContent = url;
+  document.getElementById('qr-ponto-canvas').innerHTML = '';
+  new QRCode(document.getElementById('qr-ponto-canvas'), {
+    text: url, width: 180, height: 180,
+    colorDark: '#0f1c3f', colorLight: '#ffffff'
+  });
+  window._qrPontoUrl = url;
+  window._qrPontoSlug = codin;
+  abrirModal('modal-qr-ponto');
+};
+
+window.baixarQrPonto = function(){
+  const wrap = document.getElementById('qr-ponto-canvas');
+  const img = wrap.querySelector('img');
+  const canvas = wrap.querySelector('canvas');
+  const link = document.createElement('a');
+  link.download = `qrcode-codin-${window._qrPontoSlug}.png`;
+  link.href = img ? img.src : canvas.toDataURL('image/png');
+  link.click();
+};
 function renderLeitoresCheckModal(selecionados=[]){
   const c=document.getElementById('pt-leitores-check');
   c.innerHTML=state.leitores.length?state.leitores.map(l=>`<label class="check-item"><input type="checkbox" value="${l}" ${selecionados.includes(l)?'checked':''}>${l}</label>`).join(''):'<span style="color:var(--text2);font-size:12px">Adicione leitores em Configurações.</span>';
