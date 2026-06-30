@@ -95,6 +95,30 @@ function carregarDeJSON(txt) {
     return true;
   } catch (e) { return false; }
 }
+async function salvarDados() {
+  setSaveStatus('saving', 'Salvando...');
+  try {
+    await API.conforto.salvar({
+      modulo: 'conforto',
+      ordens: state.ordens,
+      ucs: state.ucs,
+      preventivas: state.preventivas,
+      manutencoes: state.manutencoes,
+      pecas: state.pecas,
+      requisicoes: state.requisicoes,
+      areas: state.areas,
+      fornecedores: state.fornecedores,
+      tecnicos: state.tecnicos,
+      rotinas: state.rotinas,
+      config: state.config,
+    });
+    setSaveStatus('ok', 'Salvo');
+  } catch (e) {
+    setSaveStatus('error', 'Erro ao salvar');
+    console.error('[conforto] salvarDados:', e);
+  }
+}
+
 function agendarSalvamento() {
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(salvarDados, 400);
@@ -400,7 +424,8 @@ function renderUCGrid() {
         <div class="uc-meta">Próx. Preventiva: ${proximaPreventiva(u.id)}</div>
         <div class="uc-meta">Responsável: ${nomeTec(u.responsavelId)}</div>
         <div class="uc-meta" style="margin-top:4px">Categoria: <span class="freq-tag">${u.categoria || 'Ar-Condicionado'}</span></div>
-        <div style="display:flex;gap:6px;margin-top:12px">
+        <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="abrirQrUC('${u.id}','${u.codigo} — ${u.nome.replace(/'/g,"\\'")}')">QR Preventiva</button>
           <button class="btn btn-secondary btn-sm" onclick="editarUC(${idxReal})">Editar</button>
           <button class="btn btn-danger btn-sm" onclick="excluirUC(${idxReal})">Excluir</button>
         </div>
@@ -1531,7 +1556,30 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(tentarCarregar, 300);
 });
 
-// ── EXPOR FUNÇÕES GLOBAIS ──
+window.abrirQrUC = function(ucId, label) {
+  const url = `${window.location.origin}/conforto-prev/${ucId}`;
+  const titulo = $('qr-uc-titulo');
+  const link   = $('qr-uc-link');
+  const canvas = $('qr-uc-canvas');
+  if (!titulo || !canvas) return;
+  titulo.textContent = label;
+  link.textContent   = url;
+  canvas.innerHTML   = '';
+  new QRCode(canvas, { text: url, width: 180, height: 180, colorDark: '#0f1c3f', colorLight: '#ffffff' });
+  window._qrUcUrl  = url;
+  window._qrUcSlug = ucId;
+  abrirModal('modal-qr-uc');
+};
+
+window.baixarQrUC = function() {
+  const wrap = $('qr-uc-canvas');
+  const img  = wrap.querySelector('img');
+  const cv   = wrap.querySelector('canvas');
+  const a    = document.createElement('a');
+  a.download = `qr-preventiva-${window._qrUcSlug}.png`;
+  a.href     = img ? img.src : cv.toDataURL('image/png');
+  a.click();
+};
 window.editarOS = editarOS;
 window.excluirOS = excluirOS;
 window.editarUC = editarUC;

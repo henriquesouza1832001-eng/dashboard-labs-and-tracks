@@ -215,12 +215,49 @@ def _load_conforto():
     try:
         rows = run_query(f"SELECT * FROM {S_CONFORTO}.config LIMIT 1")
         config = rows[0] if rows else {}
+        if isinstance(config.get("checklist_preventiva"), str):
+            try:
+                config["checklistPreventiva"] = json.loads(config["checklist_preventiva"])
+            except:
+                config["checklistPreventiva"] = []
     except:
         config = {}
+    try:
+        ucs = run_query(f"SELECT * FROM {S_CONFORTO}.ucs")
+        for u in ucs:
+            u["id"]             = u.get("id")
+            u["codigo"]         = u.get("codigo")
+            u["nome"]           = u.get("nome")
+            u["local"]          = u.get("local")
+            u["modelo"]         = u.get("modelo")
+            u["categoria"]      = u.get("categoria", "Ar-Condicionado")
+            u["tipo"]           = u.get("tipo")
+            u["capacidadeBtu"]  = u.get("capacidade_btu")
+            u["dataInstalacao"] = u.get("data_instalacao")
+            u["cicloFiltroDias"]= u.get("ciclo_filtro_dias")
+            u["responsavelId"]  = u.get("responsavel_id")
+            u["obs"]            = u.get("obs")
+    except:
+        ucs = []
+    try:
+        preventivas = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas")
+        for p in preventivas:
+            p["ucId"]          = p.get("uc_id")
+            p["tecnicoId"]     = p.get("tecnico_id")
+            p["dataPrevista"]  = p.get("data_prevista")
+            p["dataRealizada"] = p.get("data_realizada")
+            if isinstance(p.get("checklist"), str):
+                try:
+                    p["checklist"] = json.loads(p["checklist"])
+                except:
+                    p["checklist"] = []
+    except:
+        preventivas = []
     payload = {
-        "versao": "2.0", "ordens": [], "ucs": [], "preventivas": [],
-        "manutencoes": [], "pecas": [], "requisicoes": [], "areas": [],
-        "fornecedores": [], "tecnicos": [], "rotinas": [], "config": config,
+        "versao": "2.0", "ordens": [], "ucs": ucs,
+        "preventivas": preventivas, "manutencoes": [], "pecas": [],
+        "requisicoes": [], "areas": [], "fornecedores": [],
+        "tecnicos": [], "rotinas": [], "config": config,
     }
     cache_set("conforto", payload)
     return payload
@@ -698,21 +735,65 @@ async def get_conforto():
 async def save_conforto(request: Request):
     body = await request.json()
     u = get_usuario(request)
-    if "config" in body:
-        c = body["config"]
-        try:
+    try:
+        # UCs
+        for uc in body.get("ucs", []):
+            await arun_exec(f"""
+                MERGE INTO {S_CONFORTO}.ucs AS t
+                USING (SELECT ? AS id) AS s ON t.id = s.id
+                WHEN MATCHED THEN UPDATE SET
+                    codigo=?,nome=?,categoria=?,local=?,modelo=?,
+                    capacidade_btu=?,tipo=?,data_instalacao=?,
+                    ciclo_filtro_dias=?,responsavel_id=?,obs=?,
+                    atualizado_em=current_timestamp(),atualizado_por=?
+                WHEN NOT MATCHED THEN INSERT
+                    (id,codigo,nome,categoria,local,modelo,capacidade_btu,
+                     tipo,data_instalacao,ciclo_filtro_dias,responsavel_id,obs,atualizado_por)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, [
+                uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
+                uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
+                uc.get("tipo"), uc.get("dataInstalacao"), uc.get("cicloFiltroDias"),
+                uc.get("responsavelId"), uc.get("obs"), u,
+                uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
+                uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
+                uc.get("tipo"), uc.get("dataInstalacao"), uc.get("cicloFiltroDias"),
+                uc.get("responsavelId"), uc.get("obs"), u
+            ])
+        # Preventivas
+        for p in body.get("preventivas", []):
+            await arun_exec(f"""
+                MERGE INTO {S_CONFORTO}.preventivas AS t
+                USING (SELECT ? AS id) AS s ON t.id = s.id
+                WHEN MATCHED THEN UPDATE SET
+                    uc_id=?,tecnico_id=?,data_prevista=?,data_realizada=?,
+                    status=?,checklist=?,obs=?,
+                    atualizado_em=current_timestamp(),atualizado_por=?
+                WHEN NOT MATCHED THEN INSERT
+                    (id,uc_id,tecnico_id,data_prevista,data_realizada,
+                     status,checklist,obs,atualizado_por)
+                    VALUES (?,?,?,?,?,?,?,?,?)
+            """, [
+                p["id"], p.get("ucId"), p.get("tecnicoId"), p.get("dataPrevista"),
+                p.get("dataRealizada"), p.get("status"), json.dumps(p.get("checklist", [])), p.get("obs"), u,
+                p["id"], p.get("ucId"), p.get("tecnicoId"), p.get("dataPrevista"),
+                p.get("dataRealizada"), p.get("status"), json.dumps(p.get("checklist", [])), p.get("obs"), u
+            ])
+        # Config
+        if "config" in body:
+            c = body["config"]
             rows = await arun_query(f"SELECT COUNT(*) as n FROM {S_CONFORTO}.config")
             if rows and rows[0]["n"] > 0:
                 await arun_exec(f"""
                     UPDATE {S_CONFORTO}.config SET
-                        ciclo_filtro_dias=?, alerta_preventiva_dias=?, alerta_limpeza_dias=?,
-                        alerta_manutencao_dias=?, checklist_preventiva=?,
-                        frequencias_escritorio=?, frequencias_banheiro=?, frequencias_refeitorio=?,
-                        frequencias_area_tecnica=?, frequencias_corredor=?, frequencias_almoxarifado=?
+                        ciclo_filtro_dias=?,alerta_preventiva_dias=?,alerta_limpeza_dias=?,
+                        alerta_manutencao_dias=?,checklist_preventiva=?,
+                        frequencias_escritorio=?,frequencias_banheiro=?,frequencias_refeitorio=?,
+                        frequencias_area_tecnica=?,frequencias_corredor=?,frequencias_almoxarifado=?
                 """, [
                     c.get("cicloFiltroDias"), c.get("alertaPreventivaDias"),
                     c.get("alertaLimpezaDias"), c.get("alertaManutencaoDias"),
-                    str(c.get("checklistPreventiva", [])),
+                    json.dumps(c.get("checklistPreventiva", [])),
                     c.get("frequencias", {}).get("escritorio"),
                     c.get("frequencias", {}).get("banheiro"),
                     c.get("frequencias", {}).get("refeitorio"),
@@ -726,7 +807,7 @@ async def save_conforto(request: Request):
                 """, [
                     c.get("cicloFiltroDias", 90), c.get("alertaPreventivaDias", 7),
                     c.get("alertaLimpezaDias", 2), c.get("alertaManutencaoDias", 3),
-                    str(c.get("checklistPreventiva", [])),
+                    json.dumps(c.get("checklistPreventiva", [])),
                     c.get("frequencias", {}).get("escritorio", "Diário"),
                     c.get("frequencias", {}).get("banheiro", "Diário"),
                     c.get("frequencias", {}).get("refeitorio", "Diário"),
@@ -734,10 +815,12 @@ async def save_conforto(request: Request):
                     c.get("frequencias", {}).get("corredor", "Semanal"),
                     c.get("frequencias", {}).get("almoxarifado", "Quinzenal"),
                 ])
-        except Exception as e:
-            print(f"[conforto] erro ao salvar: {e}")
-            return JSONResponse({"erro": str(e)}, status_code=500)
+    except Exception as e:
+        print(f"[conforto] erro ao salvar: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("conforto")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_conforto)
     return JSONResponse({"ok": True})
 
 # ─── Atividades ───────────────────────────────────────────────────────────────
@@ -954,3 +1037,40 @@ async def favicon():
     return FileResponse(f"{BASE}/icons/icon-192.png", media_type="image/png")
 
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")
+
+@app.get("/conforto-prev/prev.css")
+async def prev_css():
+    return FileResponse(f"{BASE}/confortoprev/prev.css", media_type="text/css")
+
+@app.get("/conforto-prev/prev.js")
+async def prev_js():
+    return FileResponse(f"{BASE}/confortoprev/prev.js", media_type="application/javascript")
+
+@app.get("/conforto-prev/{uc_id}")
+async def prev_page(uc_id: str):
+    dados = get_cached("conforto")
+    ucs = dados.get("ucs", [])
+    uc = next((u for u in ucs if u.get("id") == uc_id), None)
+    checklist = dados.get("config", {}).get("checklistPreventiva", [])
+    return inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
+
+@app.post("/api/conforto/preventivas")
+async def criar_preventiva_qr(request: Request):
+    body = await request.json()
+    try:
+        await arun_exec(f"""
+            INSERT INTO {S_CONFORTO}.preventivas
+                (id, uc_id, tecnico_id, data_prevista, data_realizada, status, checklist, obs, origem, atualizado_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, [
+            body["id"], body.get("ucId"), body.get("tecnico"),
+            body.get("dataPrevista"), body.get("dataRealizada", body.get("dataPrevista")),
+            body.get("status", "Realizada"),
+            json.dumps(body.get("checklist", [])),
+            body.get("obs", ""), "qr", body.get("tecnico", "qr")
+        ])
+    except Exception as e:
+        print(f"[conforto] erro ao criar preventiva qr: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    cache_invalidate("conforto")
+    return JSONResponse({"ok": True})
