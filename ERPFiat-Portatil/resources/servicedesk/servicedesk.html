@@ -15,8 +15,19 @@
 </div>
 
 <div class="wrap">
+  <div class="abas">
+    <button class="aba-btn active" data-aba="abertos">Abertos</button>
+    <button class="aba-btn" data-aba="andamento">Em Andamento</button>
+  </div>
+
   <div class="filtros">
     <input type="text" id="sd-busca" placeholder="Buscar por título, local ou ID...">
+    <select id="sd-filtro-data">
+      <option value="todos">Todos os períodos</option>
+      <option value="hoje">Hoje</option>
+      <option value="semana">Esta semana</option>
+      <option value="antigos">Mais antigos</option>
+    </select>
     <label class="check-todos">
       <input type="checkbox" id="sd-ver-concluidos">
       Mostrar concluídos

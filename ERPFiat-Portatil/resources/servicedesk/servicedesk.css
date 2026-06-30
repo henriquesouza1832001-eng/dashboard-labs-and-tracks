@@ -13,6 +13,21 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:#0f1c3f
 
 .wrap{max-width:900px;margin:0 auto;padding:24px 20px}
 
+.abas{display:flex;gap:6px;margin-bottom:16px}
+.aba-btn{
+  padding:9px 18px;
+  border:1px solid #d0d8e8;
+  border-radius:8px;
+  background:#fff;
+  color:#4a5880;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.aba-btn.active{background:#2E5FA3;color:#fff;border-color:#2E5FA3}
+.aba-btn:hover:not(.active){border-color:#2E5FA3;color:#2E5FA3}
+
 .filtros{display:flex;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap}
 #sd-busca{
   flex:1;
@@ -25,6 +40,17 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f4f8;color:#0f1c3f
   outline:none;
 }
 #sd-busca:focus{border-color:#2E5FA3}
+
+#sd-filtro-data{
+  padding:11px 14px;
+  border:1px solid #d0d8e8;
+  border-radius:8px;
+  font-size:13px;
+  background:#fff;
+  outline:none;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+#sd-filtro-data:focus{border-color:#2E5FA3}
 
 .check-todos{display:flex;align-items:center;gap:6px;font-size:13px;color:#4a5880;cursor:pointer;white-space:nowrap}
 .check-todos input{width:16px;height:16px;cursor:pointer}

@@ -4,6 +4,8 @@ const $ = id => document.getElementById(id);
 
 let chamados = [];
 let verConcluidos = false;
+let abaAtiva = 'abertos';
+let filtroData = 'todos';
 let painelAberto = null;
 let fotosNovas = {};
 
@@ -28,10 +30,33 @@ function statusClasse(s) {
   return m[s] || 'st-aberto';
 }
 
+function dentroDoFiltroData(c) {
+  if (filtroData === 'todos') return true;
+  if (!c.dataAbertura) return filtroData === 'antigos';
+  const abertura = new Date(c.dataAbertura);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const inicioSemana = new Date(hoje); inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+
+  if (filtroData === 'hoje') return abertura >= hoje;
+  if (filtroData === 'semana') return abertura >= inicioSemana;
+  if (filtroData === 'antigos') return abertura < inicioSemana;
+  return true;
+}
+
 function renderLista() {
   const busca = ($('sd-busca').value || '').toLowerCase();
+
   const lista = chamados.filter(c => {
     if (!verConcluidos && c.status === 'Concluído') return false;
+    if (c.status === 'Cancelado' && !verConcluidos) return false;
+
+    if (abaAtiva === 'andamento') {
+      if (c.status !== 'Em Andamento') return false;
+    } else {
+      if (c.status === 'Em Andamento') return false;
+      if (!dentroDoFiltroData(c)) return false;
+    }
+
     if (!busca) return true;
     const alvo = [c.id, c.titulo, c.local].join(' ').toLowerCase();
     return alvo.includes(busca);
@@ -242,6 +267,20 @@ $('sd-busca').addEventListener('input', renderLista);
 $('sd-ver-concluidos').addEventListener('change', e => {
   verConcluidos = e.target.checked;
   renderLista();
+});
+$('sd-filtro-data').addEventListener('change', e => {
+  filtroData = e.target.value;
+  renderLista();
+});
+document.querySelectorAll('.aba-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    abaAtiva = btn.dataset.aba;
+    document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtroDataEl = $('sd-filtro-data');
+    filtroDataEl.style.display = abaAtiva === 'andamento' ? 'none' : '';
+    renderLista();
+  });
 });
 
 carregar();
