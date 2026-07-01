@@ -395,6 +395,10 @@ async function carregarPainel(){
     _painelDados = kpi;
     renderPainel(_painelMod);
     renderAlertas(kpi);
+    const ativs=(kpi.atividades?.atividades)||[];
+    const concluidas=ativs.filter(a=>a.status==='done').length;
+    const total=ativs.length;
+    setKpi(2, concluidas, total+' total', total?Math.round(concluidas/total*100):0);
   }catch(e){
     console.warn('[hub] carregarPainel falhou, tentando novamente em 8s:', e);
     if(b) b.innerHTML=`<div class="hp-vazio" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:32px 0">
