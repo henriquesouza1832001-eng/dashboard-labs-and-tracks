@@ -222,7 +222,7 @@ function renderPainelAtividades(d){
   const lblStatus={todo:'A Fazer',doing:'Em Andamento',blocked:'Bloqueado',done:'Concluído'};
   return`<div class="hp-sec">Pendentes — ${pendentes.length}</div>`+
   pendentes.slice(0,6).map(a=>`<div class="hp-row">
-    <div style="flex:1;min-width:0"><div class="hp-row-nome">${a.titulo}</div><div class="hp-row-sub">${a.responsavel||'—'}${a.prazo?' · '+a.prazo.split('-').reverse().join('/')':''}</div></div>
+    <div style="flex:1;min-width:0"><div class="hp-row-nome">${a.titulo}</div><div class="hp-row-sub">${a.responsavel||'—'}${a.prazo?' - '+a.prazo.split('-').reverse().join('/'):''}</div></div>
     ${hpBadge(lblStatus[a.status]||a.status,corStatus[a.status]||'gray')}
   </div>`).join('')+
   (concHoje.length?`<div class="hp-sec">Concluídas hoje — ${concHoje.length}</div>`+concHoje.slice(0,3).map(a=>`<div class="hp-row">
@@ -241,16 +241,16 @@ function renderPainelConforto(d){
     return Math.floor((hoje-new Date(ult.dataRealizada))/86400000)>=(u.cicloFiltroDias||90)-14;
   });
   const ultPrevs=prevs.filter(p=>p.status==='Realizada').sort((a,b)=>new Date(b.dataRealizada)-new Date(a.dataRealizada)).slice(0,5);
-  return`<div class="hp-sec">UCs — ${ucs.length} · Preventivas vencendo (14d): ${vencendo.length}</div>`+
+  return`<div class="hp-sec">UCs: ${ucs.length} | Preventivas vencendo (14d): ${vencendo.length}</div>`+
   (vencendo.length?vencendo.slice(0,4).map(u=>`<div class="hp-row">
-    <div style="flex:1;min-width:0"><div class="hp-row-nome">${u.nome||u.codigo||u.id}</div><div class="hp-row-sub">${u.local||'—'} · ${u.modelo||'—'}</div></div>
+    <div style="flex:1;min-width:0"><div class="hp-row-nome">${u.nome||u.codigo||u.id}</div><div class="hp-row-sub">${u.local||'—'} - ${u.modelo||'—'}</div></div>
     ${hpBadge('Vence em breve','red')}
   </div>`).join(''):'<div class="hp-vazio" style="padding:8px 0">Nenhuma preventiva vencendo.</div>')+
   (ultPrevs.length?`<div class="hp-sec">Últimas preventivas realizadas</div>`+ultPrevs.map(p=>{
     const uc=ucs.find(u=>u.id===p.ucId);
     const dt=p.dataRealizada?new Date(p.dataRealizada).toLocaleDateString('pt-BR'):'—';
     return`<div class="hp-row">
-      <div style="flex:1;min-width:0"><div class="hp-row-nome">${uc?.nome||p.ucId||'—'}</div><div class="hp-row-sub">${p.tecnicoId||'—'} · ${dt}</div></div>
+      <div style="flex:1;min-width:0"><div class="hp-row-nome">${uc?.nome||p.ucId||'—'}</div><div class="hp-row-sub">${p.tecnicoId||'—'} - ${dt}</div></div>
       ${hpBadge('Realizada','green')}
     </div>`;
   }).join(''):'');
@@ -262,12 +262,12 @@ function renderPainelAcesso(d){
   const solicitacoes=d.codin?.solicitacoes||[];
   const ativos=pessoas.filter(p=>p.status==='Ativo'||!p.status).length;
   const pendentes=solicitacoes.filter(s=>s.status==='Pendente');
-  return`<div class="hp-sec">Pessoas — ${pessoas.length} · ${ativos} ativas</div>`+
+  return`<div class="hp-sec">Pessoas: ${pessoas.length} | ${ativos} ativas</div>`+
   `<div class="hp-row"><div style="flex:1"><div class="hp-row-nome">Total de pessoas</div></div><div class="hp-row-val">${pessoas.length}</div></div>`+
   `<div class="hp-row"><div style="flex:1"><div class="hp-row-nome">Ativas</div></div>${hpBar(pessoas.length?Math.round(ativos/pessoas.length*100):0,'#1a7f4b')}<div class="hp-row-val" style="color:#1a7f4b">${ativos}</div></div>`+
   `<div class="hp-row"><div style="flex:1"><div class="hp-row-nome">Pontos CODIN</div></div><div class="hp-row-val">${pontos.length}</div></div>`+
   (pendentes.length?`<div class="hp-sec">Solicitações pendentes — ${pendentes.length}</div>`+pendentes.slice(0,4).map(s=>`<div class="hp-row">
-    <div style="flex:1;min-width:0"><div class="hp-row-nome">${s.nome||s.email||'—'}</div><div class="hp-row-sub">CODIN ${s.codin||'—'} · ${s.data?new Date(s.data).toLocaleDateString('pt-BR'):'—'}</div></div>
+    <div style="flex:1;min-width:0"><div class="hp-row-nome">${s.nome||s.email||'—'}</div><div class="hp-row-sub">CODIN ${s.codin||'—'} - ${s.data?new Date(s.data).toLocaleDateString('pt-BR'):'—'}</div></div>
     ${hpBadge('Pendente','orange')}
   </div>`).join(''):`<div class="hp-sec">Solicitações</div><div class="hp-vazio" style="padding:8px 0">Nenhuma pendente.</div>`);
 }
