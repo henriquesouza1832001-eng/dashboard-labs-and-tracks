@@ -372,15 +372,41 @@ if ($('el-urole'))  $('el-urole').textContent  = user.role;
 if (user.role === 'admin') { const p = $('pill-admin'); if(p) p.style.display = ''; }
 
 async function loadCache(){
-  const d = await API.hub.dados();
-  if(d.obras) {
-    setKpi(0, d.obras.andamento, d.obras.total + ' cadastradas', d.obras.total ? Math.round(d.obras.andamento/d.obras.total*100) : 0);
-    setKpi(3, d.obras.gasto_total ? (Math.round(d.obras.gasto_total/1000)+'k') : '—', 'budget executado', 0);
+  try{
+    const d = await API.hub.dados();
+    if(d.obras){
+      setKpi(0, d.obras.andamento, d.obras.total+' cadastradas', d.obras.total?Math.round(d.obras.andamento/d.obras.total*100):0);
+      setKpi(3, d.obras.gasto_total?(Math.round(d.obras.gasto_total/1000)+'k'):'—', 'budget executado', 0);
+    }
+    if(d.chamados){
+      setKpi(1, d.chamados.abertos, d.chamados.total+' total', d.chamados.total?Math.round(d.chamados.abertos/d.chamados.total*100):0);
+    }
+    preencherModCards(d);
+  }catch(e){
+    console.warn('[hub] loadCache falhou, tentando novamente em 5s:', e);
+    setTimeout(loadCache, 5000);
   }
-  if(d.chamados) {
-    setKpi(1, d.chamados.abertos, d.chamados.total + ' total', d.chamados.total ? Math.round(d.chamados.abertos/d.chamados.total*100) : 0);
-  }
-  preencherModCards(d);
 }
-loadCache();
-carregarPainel();
+
+async function carregarPainel(){
+  const b=$('hp-body');
+  try{
+    const kpi = await API.kpi.dados();
+    _painelDados = kpi;
+    renderPainel(_painelMod);
+    renderAlertas(kpi);
+  }catch(e){
+    console.warn('[hub] carregarPainel falhou, tentando novamente em 8s:', e);
+    if(b) b.innerHTML=`<div class="hp-vazio" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:32px 0">
+      <div>Erro ao carregar dados.</div>
+      <button onclick="location.reload()" style="font-size:11px;padding:6px 14px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--surface);font-family:var(--font)">Tentar novamente</button>
+    </div>`;
+    setTimeout(carregarPainel, 8000);
+  }
+}
+const _initTimeout = setTimeout(()=>{
+  const b=$('hp-body');
+  if(b&&b.innerHTML.includes('Carregando')) location.reload();
+}, 15000);
+
+Promise.all([loadCache(), carregarPainel()]).then(()=>clearTimeout(_initTimeout));
