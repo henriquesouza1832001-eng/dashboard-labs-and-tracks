@@ -102,16 +102,7 @@ function buildKpiMini(){
       <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-bar-${i}" style="width:${k.bar}%;background:${k.barCor}"></div></div>
     </div>`).join('');
 }
-function buildVidKpis(){
-  const kpis=CFG.kpisMini||[];
-  const html=kpis.map(k=>`
-    <div class="vid-kpi-box">
-      <div class="vid-kpi-lbl">${k.lbl}</div>
-      <div class="vid-kpi-val" style="color:var(--${k.cls==='bl'?'bl':k.cls==='gn'?'gn':k.cls==='rd'?'rd':'yw'})">${k.val}</div>
-      <div class="vid-kpi-sub">${k.sub}</div>
-    </div>`).join('');
-  const el=$('vid-kpis-1');if(el)el.innerHTML=html;
-}
+function buildVidKpis(){}
 
 // ── AÇÕES FUTURAS ──
 function buildAcoes(){
@@ -158,61 +149,179 @@ function buildVMO(){
   setTimeout(()=>{const f=$('obj-fill');if(f){f.style.transition='width 1.2s ease';f.style.width=prog+'%';}},400);
 }
 
-let gifLoaded=false;
-const savedGif = CFG.gif || null;
-if(savedGif){
-  const img=$('video-gif');
-  img.dataset.src=savedGif;
-  img.removeAttribute('src');
-  $('video-placeholder').style.display='none';
-  gifLoaded=true;
-  const cv=document.createElement('canvas');
-  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover';
-  cv.id='gif-canvas';
-  $('video-inner').insertBefore(cv,$('video-gif'));
-  const tmp=new Image();
-  tmp.onload=()=>{
-    cv.width=tmp.naturalWidth;cv.height=tmp.naturalHeight;
-    cv.getContext('2d').drawImage(tmp,0,0);
-  };
-  tmp.src=savedGif;
-}
-$('btn-gif-upload').addEventListener('click',e=>{e.stopPropagation();const inp=document.createElement('input');inp.type='file';inp.accept='image/gif,image/*';inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{
-  const src=ev.target.result;
-  const img=$('video-gif');
-  img.dataset.src=src;
-  img.src='';
-  img.classList.add('loaded');
-  $('video-placeholder').style.display='none';
-  gifLoaded=true;
-  CFG.gif = src;
-  saveCFG();
-};r.readAsDataURL(f);};inp.click();});
+// ── PAINEL DE MÓDULOS ──
+let _painelDados = null;
+let _painelMod = 'obras';
 
-const vi=$('video-inner');
-let hoverTimer=null;
-vi.addEventListener('mouseover',()=>{
-  clearTimeout(hoverTimer);
-  const img=$('video-gif');
-  if(img.dataset.src&&!img.classList.contains('playing')){
-    img.src=img.dataset.src;
-    img.classList.add('playing');
-    const cv=$('gif-canvas');if(cv)cv.style.opacity='0';
+function fmtRKs(v){ if(!v&&v!==0)return'—';const n=+v;if(Math.abs(n)>=1e6)return'R$'+(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return'R$'+(n/1e3).toFixed(1)+'k';return'R$'+Math.round(n); }
+function hpBar(pct,cor){ return `<div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:${Math.min(pct,100)}%;background:${cor}"></div></div>`; }
+function hpBadge(txt,cls){ return `<span class="hp-row-badge hp-badge-${cls}">${txt}</span>`; }
+
+function renderPainelObras(d){
+  const obras=(d.obras?.obras||[]).filter(o=>o.status==='Em Andamento'||o.status==='Planejado'||o.status==='Em Estudo');
+  if(!obras.length) return '<div class="hp-vazio">Nenhuma obra ativa.</div>';
+  const corStatus={  'Em Andamento':'orange','Planejado':'blue','Em Estudo':'gray','Concluído':'green','Suspenso':'red'};
+  return `<div class="hp-sec">Obras ativas — ${obras.length}</div>`+obras.slice(0,8).map(o=>{
+    const av=o.etapas?.length?Math.round(o.etapas.reduce((s,e)=>s+(e.avancoFisico||0),0)/o.etapas.length):0;
+    const corAv=av>=80?'#1a7f4b':av>=40?'#b07d00':'#2E5FA3';
+    return`<div class="hp-row">
+      <div style="flex:1;min-width:0"><div class="hp-row-nome">${o.nome}</div><div class="hp-row-sub">${o.responsavel||o.respNome||'—'} · ${o.local||'—'}</div></div>
+      ${hpBar(av,corAv)}
+      <span style="font-family:var(--mono);font-size:11px;color:${corAv};min-width:32px;text-align:right">${av}%</span>
+      ${hpBadge(o.status,corStatus[o.status]||'gray')}
+    </div>`;
+  }).join('');
+}
+
+function renderPainelCapex(d){
+  const budget=d.obras?.budget||[];
+  const lanc=d.obras?.lancamentos||[];
+  const obras=d.obras?.obras||[];
+  const totalB=budget.reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const totalR=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
+  const pct=totalB>0?Math.round(totalR/totalB*100):0;
+  const cor=pct>=100?'#c0392b':pct>=80?'#b07d00':'#2E5FA3';
+  const porObra=obras.map(o=>({
+    nome:o.nome,cod:o.cod,
+    budget:budget.filter(b=>b.obraCod===o.cod).reduce((s,b)=>s+(b.budgetAprov||0),0),
+    real:lanc.filter(l=>l.obraCod===o.cod).reduce((s,l)=>s+l.qtd*l.precoUnit,0)
+  })).filter(x=>x.budget>0).sort((a,b)=>b.real-a.real).slice(0,7);
+  return`<div class="hp-sec">Resumo geral</div>
+    <div class="hp-row">
+      <div style="flex:1"><div class="hp-row-nome">Budget total aprovado</div></div>
+      <div class="hp-row-val">${fmtRKs(totalB)}</div>
+    </div>
+    <div class="hp-row">
+      <div style="flex:1"><div class="hp-row-nome">Executado</div></div>
+      ${hpBar(pct,cor)}
+      <div class="hp-row-val" style="color:${cor}">${fmtRKs(totalR)}</div>
+    </div>
+    <div class="hp-row">
+      <div style="flex:1"><div class="hp-row-nome">Disponível</div></div>
+      <div class="hp-row-val" style="color:#1a7f4b">${fmtRKs(Math.max(totalB-totalR,0))}</div>
+    </div>
+    <div class="hp-sec">Por obra</div>`+
+  porObra.map(o=>{
+    const p=o.budget>0?Math.round(o.real/o.budget*100):0;
+    const c=p>=100?'#c0392b':p>=80?'#b07d00':'#2E5FA3';
+    return`<div class="hp-row">
+      <div style="flex:1;min-width:0"><div class="hp-row-nome">${o.nome}</div><div class="hp-row-sub">Budget: ${fmtRKs(o.budget)}</div></div>
+      ${hpBar(p,c)}
+      <div class="hp-row-val" style="color:${c}">${fmtRKs(o.real)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPainelAtividades(d){
+  const ativs=d.atividades?.atividades||[];
+  if(!ativs.length) return '<div class="hp-vazio">Nenhuma atividade cadastrada.</div>';
+  const hoje=new Date().toISOString().slice(0,10);
+  const pendentes=ativs.filter(a=>a.status==='todo'||a.status==='doing'||a.status==='blocked');
+  const concHoje=ativs.filter(a=>a.status==='done'&&(a.atualizado_em||'').slice(0,10)===hoje);
+  const corStatus={todo:'gray',doing:'orange',blocked:'red',done:'green'};
+  const lblStatus={todo:'A Fazer',doing:'Em Andamento',blocked:'Bloqueado',done:'Concluído'};
+  return`<div class="hp-sec">Pendentes — ${pendentes.length}</div>`+
+  pendentes.slice(0,6).map(a=>`<div class="hp-row">
+    <div style="flex:1;min-width:0"><div class="hp-row-nome">${a.titulo}</div><div class="hp-row-sub">${a.responsavel||'—'}${a.prazo?' · '+a.prazo.split('-').reverse().join('/')':''}</div></div>
+    ${hpBadge(lblStatus[a.status]||a.status,corStatus[a.status]||'gray')}
+  </div>`).join('')+
+  (concHoje.length?`<div class="hp-sec">Concluídas hoje — ${concHoje.length}</div>`+concHoje.slice(0,3).map(a=>`<div class="hp-row">
+    <div style="flex:1;min-width:0"><div class="hp-row-nome" style="color:var(--text-muted)">${a.titulo}</div></div>
+    ${hpBadge('Concluído','green')}
+  </div>`).join(''):'');
+}
+
+function renderPainelConforto(d){
+  const ucs=d.conforto?.ucs||[];
+  const prevs=d.conforto?.preventivas||[];
+  const hoje=new Date();
+  const vencendo=ucs.filter(u=>{
+    const ult=prevs.filter(p=>p.ucId===u.id&&p.status==='Realizada').sort((a,b)=>new Date(b.dataRealizada)-new Date(a.dataRealizada))[0];
+    if(!ult)return true;
+    return Math.floor((hoje-new Date(ult.dataRealizada))/86400000)>=(u.cicloFiltroDias||90)-14;
+  });
+  const ultPrevs=prevs.filter(p=>p.status==='Realizada').sort((a,b)=>new Date(b.dataRealizada)-new Date(a.dataRealizada)).slice(0,5);
+  return`<div class="hp-sec">UCs — ${ucs.length} · Preventivas vencendo (14d): ${vencendo.length}</div>`+
+  (vencendo.length?vencendo.slice(0,4).map(u=>`<div class="hp-row">
+    <div style="flex:1;min-width:0"><div class="hp-row-nome">${u.nome||u.codigo||u.id}</div><div class="hp-row-sub">${u.local||'—'} · ${u.modelo||'—'}</div></div>
+    ${hpBadge('Vence em breve','red')}
+  </div>`).join(''):'<div class="hp-vazio" style="padding:8px 0">Nenhuma preventiva vencendo.</div>')+
+  (ultPrevs.length?`<div class="hp-sec">Últimas preventivas realizadas</div>`+ultPrevs.map(p=>{
+    const uc=ucs.find(u=>u.id===p.ucId);
+    const dt=p.dataRealizada?new Date(p.dataRealizada).toLocaleDateString('pt-BR'):'—';
+    return`<div class="hp-row">
+      <div style="flex:1;min-width:0"><div class="hp-row-nome">${uc?.nome||p.ucId||'—'}</div><div class="hp-row-sub">${p.tecnicoId||'—'} · ${dt}</div></div>
+      ${hpBadge('Realizada','green')}
+    </div>`;
+  }).join(''):'');
+}
+
+function renderPainelAcesso(d){
+  const pessoas=d.codin?.pessoas||[];
+  const pontos=d.codin?.pontos||[];
+  const solicitacoes=d.codin?.solicitacoes||[];
+  const ativos=pessoas.filter(p=>p.status==='Ativo'||!p.status).length;
+  const pendentes=solicitacoes.filter(s=>s.status==='Pendente');
+  return`<div class="hp-sec">Pessoas — ${pessoas.length} · ${ativos} ativas</div>`+
+  `<div class="hp-row"><div style="flex:1"><div class="hp-row-nome">Total de pessoas</div></div><div class="hp-row-val">${pessoas.length}</div></div>`+
+  `<div class="hp-row"><div style="flex:1"><div class="hp-row-nome">Ativas</div></div>${hpBar(pessoas.length?Math.round(ativos/pessoas.length*100):0,'#1a7f4b')}<div class="hp-row-val" style="color:#1a7f4b">${ativos}</div></div>`+
+  `<div class="hp-row"><div style="flex:1"><div class="hp-row-nome">Pontos CODIN</div></div><div class="hp-row-val">${pontos.length}</div></div>`+
+  (pendentes.length?`<div class="hp-sec">Solicitações pendentes — ${pendentes.length}</div>`+pendentes.slice(0,4).map(s=>`<div class="hp-row">
+    <div style="flex:1;min-width:0"><div class="hp-row-nome">${s.nome||s.email||'—'}</div><div class="hp-row-sub">CODIN ${s.codin||'—'} · ${s.data?new Date(s.data).toLocaleDateString('pt-BR'):'—'}</div></div>
+    ${hpBadge('Pendente','orange')}
+  </div>`).join(''):`<div class="hp-sec">Solicitações</div><div class="hp-vazio" style="padding:8px 0">Nenhuma pendente.</div>`);
+}
+
+function renderPainelErgonomia(){
+  return`<div class="hp-vazio" style="padding:40px 0">
+    <div style="font-size:24px;margin-bottom:8px">🚧</div>
+    <div style="font-weight:600;color:var(--text);margin-bottom:4px">Ergonomia</div>
+    <div>Módulo em desenvolvimento</div>
+  </div>`;
+}
+
+function renderPainel(mod){
+  const body=$('hp-body');
+  if(!body)return;
+  _painelMod=mod;
+  if(!_painelDados){body.innerHTML='<div class="hp-loading">Carregando dados...</div>';return;}
+  const renders={
+    obras:()=>renderPainelObras(_painelDados),
+    capex:()=>renderPainelCapex(_painelDados),
+    atividades:()=>renderPainelAtividades(_painelDados),
+    conforto:()=>renderPainelConforto(_painelDados),
+    acesso:()=>renderPainelAcesso(_painelDados),
+    ergonomia:()=>renderPainelErgonomia(),
+  };
+  body.innerHTML=(renders[mod]||renders.obras)();
+}
+
+document.getElementById('hp-tabs').querySelectorAll('.hp-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.hp-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderPainel(btn.dataset.mod);
+  });
+});
+
+async function carregarPainel(){
+  try{
+    const kpi=await API.kpi.dados();
+    _painelDados={
+      obras:kpi.chamados?null:kpi.obras,
+      chamados:kpi.chamados,
+      atividades:kpi.atividades,
+      conforto:kpi.conforto,
+      codin:kpi.codin,
+    };
+    // kpi.dados retorna tudo — mapear corretamente
+    _painelDados=kpi;
+    renderPainel(_painelMod);
+  }catch(e){
+    const b=$('hp-body');
+    if(b)b.innerHTML='<div class="hp-vazio">Erro ao carregar dados.</div>';
   }
-});
-vi.addEventListener('mouseout',e=>{
-  if(vi.contains(e.relatedTarget))return;
-  hoverTimer=setTimeout(()=>{
-    const img=$('video-gif');
-    img.removeAttribute('src');
-    img.classList.remove('playing');
-    const cv=$('gif-canvas');if(cv)cv.style.opacity='1';
-  },80);
-});
-$('btn-kpi-toggle').addEventListener('click',e=>{
-  e.stopPropagation();
-  $('video-overlay').classList.toggle('open');
-});
+}
 
 function setKpi(i,val,sub,bar){
   const update=prefix=>{
@@ -221,7 +330,6 @@ function setKpi(i,val,sub,bar){
   };
   update('');update('mp-');
   if(CFG.kpisMini[i]){CFG.kpisMini[i].val=val;CFG.kpisMini[i].sub=sub;CFG.kpisMini[i].bar=bar;}
-  buildVidKpis();
 }
 
 function preencherModCards(d){
@@ -259,3 +367,4 @@ async function loadCache(){
   preencherModCards(d);
 }
 loadCache();
+carregarPainel();

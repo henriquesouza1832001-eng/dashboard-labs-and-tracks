@@ -130,21 +130,19 @@
         </div>
       </div>
 
-      <div class="card video-card" id="video-card">
-        <div class="card-hdr">
-          <div class="card-ttl" id="el-video-ttl">Vídeo / GIF</div>
+      <div class="card hub-painel" id="hub-painel">
+        <div class="card-hdr" style="padding:0;border-bottom:1px solid var(--border)">
+          <div class="hp-tabs" id="hp-tabs">
+            <button class="hp-tab active" data-mod="obras">Obras</button>
+            <button class="hp-tab" data-mod="capex">CAPEX</button>
+            <button class="hp-tab" data-mod="atividades">Atividades</button>
+            <button class="hp-tab" data-mod="conforto">Conforto</button>
+            <button class="hp-tab" data-mod="acesso">Acesso</button>
+            <button class="hp-tab" data-mod="ergonomia">Ergonomia</button>
+          </div>
         </div>
-        <button class="video-upload-btn" id="btn-gif-upload">+ Carregar GIF</button>
-        <button class="video-upload-btn" id="btn-kpi-toggle" style="right:130px">⊞ KPIs</button>
-        <div class="video-inner" id="video-inner">
-          <div class="video-placeholder" id="video-placeholder">
-            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <span>Clique para carregar</span>
-          </div>
-          <img id="video-gif" class="video-gif" src="" alt="">
-          <div class="video-overlay" id="video-overlay">
-            <div class="vid-kpi-grid" id="vid-kpis-1"></div>
-          </div>
+        <div class="hp-body" id="hp-body">
+          <div class="hp-loading">Carregando dados...</div>
         </div>
       </div>
     </div>
