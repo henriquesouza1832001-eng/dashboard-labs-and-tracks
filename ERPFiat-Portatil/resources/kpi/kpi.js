@@ -68,18 +68,29 @@ mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
     setTimeout(()=>desenharMicroBarras('mcv-codin',[{label:'Ativos',val:ativos||0,cor:'#3fb950'},{label:'Inativos',val:(pessoas.length-ativos)||0,cor:'#f85149'}]),80);
   }
   if(dCnf){
-    const regs=dCnf.registros||[];
-    const conform=regs.filter(r=>r.status==='Conforme'||r.situacao==='OK').length;
-    const nconf=regs.filter(r=>r.status==='Não Conforme'||r.situacao==='NOK').length;
-    const areas=new Set(regs.map(r=>r.area||r.local||'')).size;
-    const pct=regs.length>0?Math.round(conform/regs.length*100):0;
+    const ucs=dCnf.ucs||[];
+    const prevs=dCnf.preventivas||[];
+    const hoje=new Date();
+    const realizadas=prevs.filter(p=>p.status==='Realizada').length;
+    const pendentes=prevs.filter(p=>p.status==='Pendente'||p.status==='Agendada').length;
+    const vencendo=ucs.filter(u=>{
+      const ultPrev=prevs.filter(p=>p.ucId===u.id&&p.status==='Realizada').sort((a,b)=>new Date(b.dataRealizada)-new Date(a.dataRealizada))[0];
+      if(!ultPrev) return true;
+      const diasDesde=Math.floor((hoje-new Date(ultPrev.dataRealizada))/86400000);
+      return diasDesde>=(u.cicloFiltroDias||90)-14;
+    }).length;
+    const totalUcs=ucs.length;
+    const ucsPorTipo={};ucs.forEach(u=>{const t=u.categoria||'Ar-Condicionado';ucsPorTipo[t]=(ucsPorTipo[t]||0)+1;});
+    const topTipos=Object.entries(ucsPorTipo).sort((a,b)=>b[1]-a[1]).slice(0,5);
     document.getElementById('mkpis-conforto').innerHTML=
-      mkMicro(regs.length,'Registros','c-azul',"abrirModuloComDrill('conforto','cf-total')")+
-mkMicro(conform,'Conformes','c-verde',"abrirModuloComDrill('conforto','cf-conf')")+
-mkMicro(nconf,'Não conformes',nconf>0?'c-vermelho':'c-verde',"abrirModuloComDrill('conforto','cf-temp')")+
-mkMicro(pct+'%','Conformidade',pct>80?'c-verde':'c-vermelho',"abrirModuloComDrill('conforto','cf-areas')")
-    document.getElementById('mfoot-conforto').textContent=areas+' áreas · '+pct+'% conformidade';
-    setTimeout(()=>desenharMicroBarras('mcv-conforto',[{label:'Conforme',val:conform||0,cor:'#3fb950'},{label:'Não Conforme',val:nconf||0,cor:'#f85149'}]),80);
+      `<div class="mod-obras-total-fixo">${totalUcs} <span>UCs</span></div>`+
+      mkMicro(realizadas,'Preventivas realizadas','c-verde',"abrirModuloComDrill('conforto','cf-total')")+
+      mkMicro(pendentes,'Pendentes',pendentes>0?'c-laranja':'c-cinza',"abrirModuloComDrill('conforto','cf-conf')")+
+      mkMicro(vencendo,'Vencendo em 14d',vencendo>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('conforto','cf-temp')")+
+      mkMicro(prevs.length,'Total preventivas','c-azul',"abrirModuloComDrill('conforto','cf-areas')");
+    document.getElementById('mfoot-conforto').textContent=totalUcs+' UCs · '+realizadas+' preventivas realizadas';
+    const coresTipo=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7'];
+    setTimeout(()=>desenharMicroBarras('mcv-conforto',topTipos.length?topTipos.map((x,i)=>({label:x[0],val:x[1],cor:coresTipo[i%5]})):[{label:'Sem UCs',val:1,cor:'#d0d8e8'}]),80);
   }
   if(dErg){
     const avs=dErg.avaliacoes||[];
@@ -95,23 +106,25 @@ mkMicro(postos,'Postos','c-azul',"abrirModuloComDrill('ergonomia','erg-postos')"
     document.getElementById('mfoot-ergonomia').textContent=avs.length>0?Math.round(ok/avs.length*100)+'% aprovadas · '+pend+' pendentes':'—';
     setTimeout(()=>desenharMicroDonut('mcv-ergonomia',['Aprovadas','Reprovadas','Pendentes'],[ok||1,nok||1,pend||1],['#3fb950','#f85149','#d29922']),80);
   }
-  if(dCh){
+if(dCh){
     const cham=dCh.chamados||(Array.isArray(dCh)?dCh:[]);
     const total=cham.length;
     const abertos=cham.filter(c=>c.status==='Aberto').length;
-    const alta=cham.filter(c=>c.status==='Em Andamento'||c.status==='Em Atendimento').length;
-    const resolvidos=cham.filter(c=>['Resolvido','Fechado','Concluído'].includes(c.status)).length;
+    const andamento=cham.filter(c=>c.status==='Em Andamento'||c.status==='Em Atendimento').length;
+    const concluidos=cham.filter(c=>['Resolvido','Fechado','Concluído','Concluido'].includes(c.status)).length;
+    const criticos=cham.filter(c=>c.prioridade==='Critica'&&!['Resolvido','Fechado','Concluído','Concluido'].includes(c.status)).length;
+    const pctRes=Math.round(concluidos/Math.max(total,1)*100);
+    const catM={};cham.forEach(c=>{const cat=c.categoria||'Outros';catM[cat]=(catM[cat]||0)+1;});
+    const topCat=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,5);
     document.getElementById('mkpis-chamados').innerHTML=
-      mkMicro(total,'Total','c-azul',"abrirModuloComDrill('chamados','ch-total')")+
-mkMicro(abertos,'Abertos',abertos>0?'c-vermelho':'c-verde',"abrirModuloComDrill('chamados','ch-alta')")+
-mkMicro(alta,'Em andamento',alta>0?'c-laranja':'c-verde',"abrirModuloComDrill('chamados','ch-sem')")+
-mkMicro(resolvidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-resol')")
-    document.getElementById('mfoot-chamados').textContent=
-      Math.round(resolvidos/Math.max(total,1)*100)+'% resolvidos · '+alta+' críticos';
-    const sm={};cham.forEach(c=>{const s=c.status||'Aberto';sm[s]=(sm[s]||0)+1;});
-    const sl=Object.entries(sm).filter(x=>x[1]);
-    const coresCh=['#f85149','#e3711a','#3fb950','#58a6ff'];
-    setTimeout(()=>desenharMicroBarras('mcv-chamados',sl.map((x,i)=>({label:x[0],val:x[1],cor:coresCh[i%4]}))),80);
+      `<div class="mod-obras-total-fixo">${total} <span>chamados</span></div>`+
+      mkMicro(abertos,'Abertos',abertos>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('chamados','ch-alta')")+
+      mkMicro(andamento,'Em andamento',andamento>0?'c-laranja':'c-cinza',"abrirModuloComDrill('chamados','ch-sem')")+
+      mkMicro(concluidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-resol')")+
+      mkMicro(criticos,'Críticos',criticos>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('chamados','ch-total')");
+    document.getElementById('mfoot-chamados').textContent=pctRes+'% resolvidos · '+criticos+' críticos';
+    const coresCat=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7'];
+    setTimeout(()=>desenharMicroBarras('mcv-chamados',topCat.map((x,i)=>({label:x[0],val:x[1],cor:coresCat[i%5]}))),80);
   }
 }
 
