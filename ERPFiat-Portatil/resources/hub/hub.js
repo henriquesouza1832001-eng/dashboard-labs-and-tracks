@@ -65,32 +65,53 @@ function applyIdent(){
 }
 
 // ── ATIVIDADES ──
-function buildActs(){
-  const atv=CFG.atividades||[];
-  let done=atv.filter(a=>a.estado==='done').length;
-  $('el-acts').innerHTML=atv.map((a,i)=>`
-    <div class="act" data-i="${i}">
-      <div class="chk ${a.estado}"></div>
-      <div class="at ${a.estado==='done'?'done-t':''}">${a.texto}</div>
-      <div class="pil ${a.prio||'pl'}">${a.ptxt||''}</div>
-    </div>`).join('');
-  updateActPct(done,atv.length);
-  $('el-acts').querySelectorAll('.act').forEach(el=>el.addEventListener('click',function(){
-    const i=+this.dataset.i;
-    if(CFG.atividades[i].estado==='done')return;
-    CFG.atividades[i].estado='done';
-    this.querySelector('.chk').className='chk done';
-    this.querySelector('.at').classList.add('done-t');
-    updateActPct(CFG.atividades.filter(a=>a.estado==='done').length,CFG.atividades.length);
-  }));
-}
-function updateActPct(d,t){
-  $('el-act-pct').textContent=d+'/'+t;
-  const pct=t?Math.round(d/t*100):0;
-  $('el-act-bar').style.transition='width .8s ease';
-  $('el-act-bar').style.width=pct+'%';
-}
+function buildActs(){}
+function updateActPct(){}
 
+function renderAlertas(kpiDados){
+  const wrap=$('sb-alertas');
+  if(!wrap)return;
+  const alertas=[];
+  // Chamados críticos abertos
+  const cham=(kpiDados?.chamados?.chamados)||[];
+  const criticos=cham.filter(c=>c.prioridade==='Critica'&&!['Resolvido','Fechado','Concluido','Concluído'].includes(c.status));
+  if(criticos.length){
+    alertas.push({cor:'var(--rd)',ico:'🔴',txt:`${criticos.length} chamado${criticos.length>1?'s':''} crítico${criticos.length>1?'s':''} em aberto`,href:'/chamados'});
+  }
+  // Obras com prazo vencido
+  const obras=(kpiDados?.obras?.obras)||[];
+  const hoje=new Date();
+  const atrasadas=obras.filter(o=>o.dtFimPrev&&!o.dtFimReal&&new Date(o.dtFimPrev+'T00:00:00')<hoje&&o.status==='Em Andamento');
+  if(atrasadas.length){
+    alertas.push({cor:'var(--or)',ico:'🟠',txt:`${atrasadas.length} obra${atrasadas.length>1?'s':''} com prazo vencido`,href:'/obras'});
+  }
+  // Preventivas vencendo
+  const ucs=(kpiDados?.conforto?.ucs)||[];
+  const prevs=(kpiDados?.conforto?.preventivas)||[];
+  const vencendo=ucs.filter(u=>{
+    const ult=prevs.filter(p=>p.ucId===u.id&&p.status==='Realizada').sort((a,b)=>new Date(b.dataRealizada)-new Date(a.dataRealizada))[0];
+    if(!ult)return true;
+    return Math.floor((hoje-new Date(ult.dataRealizada))/86400000)>=(u.cicloFiltroDias||90)-14;
+  });
+  if(vencendo.length){
+    alertas.push({cor:'var(--yw)',ico:'🟡',txt:`${vencendo.length} UC${vencendo.length>1?'s':''} com preventiva vencendo`,href:'/conforto'});
+  }
+  // Solicitações CODIN pendentes
+  const solics=(kpiDados?.codin?.solicitacoes)||[];
+  const solicPend=solics.filter(s=>s.status==='Pendente');
+  if(solicPend.length){
+    alertas.push({cor:'var(--blue-mid)',ico:'🔵',txt:`${solicPend.length} solicitação${solicPend.length>1?'s':''} de acesso pendente${solicPend.length>1?'s':''}`,href:'/codin'});
+  }
+  if(!alertas.length){
+    wrap.innerHTML=`<div class="sb-alerta-ok"><span style="font-size:16px">✅</span><span>Nenhuma pendência no momento</span></div>`;
+    return;
+  }
+  wrap.innerHTML=alertas.map(a=>`
+    <a class="sb-alerta-item" href="${a.href}" style="border-left-color:${a.cor}">
+      <span class="sb-alerta-ico">${a.ico}</span>
+      <span class="sb-alerta-txt">${a.txt}</span>
+    </a>`).join('');
+}
 // ── KPI MINI (top-left) ──
 function buildKpiMini(){
   const kpis=CFG.kpisMini||[];
@@ -307,19 +328,14 @@ document.getElementById('hp-tabs').querySelectorAll('.hp-tab').forEach(btn=>{
 async function carregarPainel(){
   try{
     const kpi=await API.kpi.dados();
-    _painelDados={
-      obras:kpi.chamados?null:kpi.obras,
-      chamados:kpi.chamados,
-      atividades:kpi.atividades,
-      conforto:kpi.conforto,
-      codin:kpi.codin,
-    };
-    // kpi.dados retorna tudo — mapear corretamente
     _painelDados=kpi;
     renderPainel(_painelMod);
+    renderAlertas(kpi);
   }catch(e){
     const b=$('hp-body');
     if(b)b.innerHTML='<div class="hp-vazio">Erro ao carregar dados.</div>';
+    const w=$('sb-alertas');
+    if(w)w.innerHTML='<div class="sb-alerta-loading">Erro ao carregar.</div>';
   }
 }
 

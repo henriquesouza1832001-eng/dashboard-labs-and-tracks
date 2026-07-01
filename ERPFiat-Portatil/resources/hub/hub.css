@@ -79,24 +79,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sb-inst-sub{font-size:10px;color:var(--text-muted);margin-top:2px}
 .sb-badge{display:inline-block;font-size:8px;padding:2px 7px;border-radius:4px;background:var(--blue-mid);color:#fff;margin-top:6px;font-family:var(--mono);font-weight:600}
 
-.acts{display:flex;flex-direction:column;gap:2px}
-.act{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;cursor:pointer;transition:background .12s}
-.act:hover{background:var(--surface2)}
-.chk{width:14px;height:14px;border:1.5px solid var(--border);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.chk.done{background:var(--blue-mid);border-color:var(--blue-mid)}
-.chk.done::after{content:'✓';color:#fff;font-size:9px;line-height:1}
-.at{font-size:12px;color:var(--text-muted);flex:1;line-height:1.3}
-.done-t{color:var(--text-dim);text-decoration:line-through}
-.pil{font-size:8px;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0;font-family:var(--mono)}
-.pil.ph{background:#fdf0ef;color:var(--rd)}
-.pil.pm{background:var(--blue-pale);color:var(--blue-mid)}
-.pil.pl{background:var(--surface2);color:var(--text-dim)}
-
-.sb-meters{margin-top:auto;padding-top:16px;border-top:1px solid var(--border)}
-.sb-m-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px}
-.sb-m-val{font-family:var(--mono);font-weight:700}
-.mbar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:12px}
-.mfill{height:100%;border-radius:3px;transition:width 1s ease}
+.sb-alertas{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.sb-alerta-loading{font-size:11px;color:var(--text-dim);padding:8px 0}
+.sb-alerta-ok{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--gn);padding:10px 10px;background:#edfaf3;border-radius:8px;border:1px solid #b8e6c8}
+.sb-alerta-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 10px;border-radius:8px;
+  background:var(--surface2);border-left:3px solid var(--border);
+  text-decoration:none;transition:all .12s;
+}
+.sb-alerta-item:hover{background:var(--blue-pale)}
+.sb-alerta-ico{font-size:13px;flex-shrink:0}
+.sb-alerta-txt{font-size:11px;color:var(--text);line-height:1.3;font-weight:500}
 
 /* ── CONTENT GRID ── */
 .content{padding:22px 28px;display:flex;flex-direction:column;gap:18px;overflow-y:auto}
