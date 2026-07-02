@@ -42,9 +42,15 @@
       <input type="text" id="qr-nome" placeholder="seu.email@stellantis.com">
 
       <label>Fotos (opcional)</label>
-      <input type="file" id="qr-foto-input" accept="image/*" multiple style="display:none">
+      <input type="file" id="qr-foto-input-galeria" accept="image/*" multiple style="display:none">
+      <input type="file" id="qr-foto-input-camera" accept="image/*" capture="environment" style="display:none">
       <div id="qr-fotos-grid"></div>
-      <button id="qr-add-foto" type="button" class="btn-foto">+ Adicionar foto</button>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="qr-add-camera" type="button" class="btn-foto" style="flex:1">📷 Câmera</button>
+        <button id="qr-add-galeria" type="button" class="btn-foto" style="flex:1">🖼 Galeria</button>
+      </div>
+      <div style="font-size:11px;color:#8a9abf;margin-top:6px">Máximo 2MB por foto. Imagens maiores são comprimidas automaticamente.</div>
+      <div id="qr-foto-aviso" style="font-size:11px;color:#c0392b;margin-top:4px"></div>
 
       <div id="qr-erro"></div>
 

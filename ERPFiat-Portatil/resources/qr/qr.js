@@ -4,6 +4,42 @@ const $ = id => document.getElementById(id);
 
 let fotos = [];
 
+const MAX_KB = 2048;
+
+async function comprimirImagem(file) {
+  return new Promise(resolve => {
+    if (file.size / 1024 > MAX_KB * 1.5) {
+      $('qr-foto-aviso').textContent = `"${file.name}" era grande e foi comprimida automaticamente.`;
+      setTimeout(() => { if($('qr-foto-aviso')) $('qr-foto-aviso').textContent = ''; }, 4000);
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        const maxDim = 1600;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        let quality = 0.88;
+        const tryCompress = () => {
+          const data = canvas.toDataURL('image/jpeg', quality);
+          const kb = Math.round(data.length * 3 / 4 / 1024);
+          if (kb > MAX_KB && quality > 0.3) { quality -= 0.1; tryCompress(); }
+          else resolve(data);
+        };
+        tryCompress();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function slugParaNome(slug) {
   return slug.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
 }
@@ -37,20 +73,26 @@ function renderFotos() {
   });
 }
 
-$('qr-add-foto').addEventListener('click', () => $('qr-foto-input').click());
+$('qr-add-camera').addEventListener('click', () => $('qr-foto-input-camera').click());
+$('qr-add-galeria').addEventListener('click', () => $('qr-foto-input-galeria').click());
 
-$('qr-foto-input').addEventListener('change', e => {
+async function processarArquivos(arquivos) {
+  for (const arq of arquivos) {
+    const data = await comprimirImagem(arq);
+    fotos.push(data);
+  }
+  renderFotos();
+}
+
+$('qr-foto-input-camera').addEventListener('change', e => {
   const arquivos = Array.from(e.target.files);
-  let carregados = 0;
-  arquivos.forEach(arq => {
-    const leitor = new FileReader();
-    leitor.onload = ev => {
-      fotos.push(ev.target.result);
-      carregados++;
-      if (carregados === arquivos.length) renderFotos();
-    };
-    leitor.readAsDataURL(arq);
-  });
+  if (arquivos.length) processarArquivos(arquivos);
+  e.target.value = '';
+});
+
+$('qr-foto-input-galeria').addEventListener('change', e => {
+  const arquivos = Array.from(e.target.files);
+  if (arquivos.length) processarArquivos(arquivos);
   e.target.value = '';
 });
 
@@ -128,6 +170,7 @@ $('btn-novo-chamado').addEventListener('click', () => {
   fotos = [];
   renderFotos();
   $('qr-erro').textContent = '';
+  $('qr-foto-aviso').textContent = '';
   const btn = $('qr-enviar');
   btn.disabled = false;
   btn.textContent = 'Enviar Chamado';

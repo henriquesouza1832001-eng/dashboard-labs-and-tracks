@@ -3,6 +3,38 @@
 const $ = id => document.getElementById(id);
 
 let chamados = [];
+
+const MAX_KB = 2048;
+
+async function comprimirImagem(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        const maxDim = 1600;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        let quality = 0.88;
+        const tryCompress = () => {
+          const data = canvas.toDataURL('image/jpeg', quality);
+          const kb = Math.round(data.length * 3 / 4 / 1024);
+          if (kb > MAX_KB && quality > 0.3) { quality -= 0.1; tryCompress(); }
+          else resolve(data);
+        };
+        tryCompress();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 let verConcluidos = false;
 let abaAtiva = 'abertos';
 let filtroData = 'todos';
@@ -109,7 +141,11 @@ function renderLista() {
             </div>
           `).join('')}
         </div>
-        <button class="sd-btn-foto" data-addfoto="${c.id}">+ Adicionar foto</button>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="sd-btn-foto" data-addcamera="${c.id}" style="flex:1">📷 Câmera</button>
+          <button class="sd-btn-foto" data-addfoto="${c.id}" style="flex:1">🖼 Galeria</button>
+        </div>
+        <div style="font-size:11px;color:#8a9abf;margin-bottom:8px">Máx. 2MB por foto — imagens maiores são comprimidas automaticamente.</div>
 
         <div class="sd-acoes">
           <button data-salvar="${c.id}">Salvar atendimento</button>
@@ -146,8 +182,17 @@ function ligarEventos() {
   document.querySelectorAll('[data-addfoto]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      const input = $('sd-foto-input');
+      const input = $('sd-foto-input-galeria');
       input.dataset.alvo = btn.dataset.addfoto;
+      input.click();
+    });
+  });
+
+  document.querySelectorAll('[data-addcamera]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const input = $('sd-foto-input-camera');
+      input.dataset.alvo = btn.dataset.addcamera;
       input.click();
     });
   });
@@ -177,27 +222,23 @@ function ligarEventos() {
   });
 }
 
-$('sd-foto-input').addEventListener('change', e => {
-  const id = e.target.dataset.alvo;
-  const arquivos = Array.from(e.target.files);
+async function processarFotosSD(inputEl) {
+  const id = inputEl.dataset.alvo;
+  const arquivos = Array.from(inputEl.files);
   if (!arquivos.length) return;
   const chamado = chamados.find(c => c.id === id);
   const lista = fotosNovas[id] || [...(chamado.fotos || [])];
-  let carregadas = 0;
-  arquivos.forEach(arq => {
-    const leitor = new FileReader();
-    leitor.onload = ev => {
-      lista.push(ev.target.result);
-      carregadas++;
-      if (carregadas === arquivos.length) {
-        fotosNovas[id] = lista;
-        renderLista();
-      }
-    };
-    leitor.readAsDataURL(arq);
-  });
-  e.target.value = '';
-});
+  for (const arq of arquivos) {
+    const data = await comprimirImagem(arq);
+    lista.push(data);
+  }
+  fotosNovas[id] = lista;
+  renderLista();
+  inputEl.value = '';
+}
+
+$('sd-foto-input-galeria').addEventListener('change', e => processarFotosSD(e.target));
+$('sd-foto-input-camera').addEventListener('change', e => processarFotosSD(e.target));
 
 async function salvarAtendimento(id) {
   const chamado = chamados.find(c => c.id === id);
