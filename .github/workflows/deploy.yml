@@ -16,5 +16,15 @@ jobs:
           DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          databricks apps deploy dashboard-labs-and-tracks \
-            --git-branch main
+          curl -X POST \
+            -H "Authorization: Bearer $DATABRICKS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "source_code_path": "",
+              "git_source": {
+                "git_url": "https://github.com/henriquesouza1832001-eng/dashboard-labs-and-tracks",
+                "git_provider": "gitHub",
+                "git_branch": "main"
+              }
+            }' \
+            "$DATABRICKS_HOST/api/2.0/apps/dashboard-labs-and-tracks/deployments"
