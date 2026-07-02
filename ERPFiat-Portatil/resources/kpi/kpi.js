@@ -14,7 +14,7 @@ window.addEventListener('unhandledrejection',function(e){var b=document.getEleme
 const $=id=>document.getElementById(id);
 const fmt=(v,d=0)=>isNaN(v)?'0':Number(v).toFixed(d);
 const fmtRK=v=>{if(v===null||v===undefined)return'—';const n=Number(v);if(Math.abs(n)>=1e6)return'R$'+(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return'R$'+(n/1e3).toFixed(1)+'k';return'R$'+Math.round(n);};
-const tnome=n=>n&&n.length>18?n.slice(0,16)+'…':n||'—';
+const tnome=n=>n||'—';
 const fmtDate=s=>{if(!s)return'—';const p=s.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:s;};
 
 function tick(){const n=new Date();$('clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
@@ -729,7 +729,7 @@ function _obOvBase(d,tipo){
     const prazo=o.dtFimPrev?Math.floor((new Date(o.dtFimPrev+'T00:00:00')-hoje)/86400000):null;
     const corP=prazo===null?'var(--text-dim)':prazo<0?'var(--red)':prazo<=30?'var(--yellow)':'var(--green)';
     return`<tr style="cursor:pointer" onclick="abrirDetalheObra('${o.cod}')" title="${o.nome}">
-      <td style="font-weight:500;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tnome(o.nome)}</td>
+      <td style="font-weight:500;min-width:160px">${tnome(o.nome)}</td>
       <td>${badgeSt(o.status)}</td>
       <td>${pb(af,'#58a6ff')}</td>
       <td>${pb(pf,pf>85?'#f85149':pf>60?'#d29922':'#3fb950')}</td>
