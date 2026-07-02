@@ -474,67 +474,6 @@ function renderManutencoes() {
     : '<tr class="empty-row"><td colspan="9">Nenhuma manutenção registrada</td></tr>';
 }
 
-// ── RENDER CRONOGRAMA ──
-function renderCronograma() {
-  const mesInput = $('crono-mes');
-  const mesSel = mesInput?.value || hoje().slice(0, 7);
-  const [ano, mes] = mesSel.split('-').map(Number);
-  const diasNoMes = new Date(ano, mes, 0).getDate();
-
-  function buildCrono(containerId, tipoLabel, ordens) {
-    const el = $(containerId);
-    if (!el) return;
-    if (!ordens.length) {
-      el.innerHTML = '<div class="chart-empty">Nenhuma OS para exibir no período</div>';
-      return;
-    }
-
-    const areas = [...new Set(ordens.map(o => o.areaId))];
-    const dias = Array.from({ length: diasNoMes }, (_, i) => i + 1);
-
-    const header = `<div class="crono-header">
-      <div class="crono-cell-label">${tipoLabel}</div>
-      ${dias.map(d => `<div class="crono-cell-day">${d}</div>`).join('')}
-    </div>`;
-
-    const rows = areas.map(aId => {
-      const nomeA = nomeArea(aId);
-      const cells = dias.map(d => {
-        const dayStr = `${ano}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const os = ordens.find(o => o.areaId === aId && o.dataPrevista === dayStr);
-        if (os) {
-          const cls = os.tipo === 'civil' ? 'civil' : os.tipo === 'tecnica' ? 'tecnica' : 'ac';
-          return `<div class="crono-bar ${cls}" style="width:26px" title="${os.id} — ${os.status}"></div>`;
-        }
-        return `<div style="width:28px;height:18px"></div>`;
-      }).join('');
-      return `<div class="crono-row">
-        <div class="crono-row-label" title="${nomeA}">${nomeA}</div>
-        ${cells}
-      </div>`;
-    }).join('');
-
-    el.innerHTML = `<div class="crono-grid">${header}${rows}</div>`;
-  }
-
-  const ordensCivil = state.ordens.filter(o => o.tipo === 'civil' && o.dataPrevista?.startsWith(mesSel));
-  const ordensTec = state.ordens.filter(o => o.tipo === 'tecnica' && o.dataPrevista?.startsWith(mesSel));
-  const ordensAC = state.preventivas.filter(p => p.dataPrevista?.startsWith(mesSel)).map(p => ({
-    ...p, areaId: p.ucId, tipo: 'ac'
-  }));
-
-  buildCrono('crono-civil-full', 'ÁREA / DIA', ordensCivil);
-  buildCrono('crono-tec-full', 'ÁREA / DIA', ordensTec);
-  buildCrono('crono-ac-full', 'UC / DIA', ordensAC);
-
-  // Consolidado — todos juntos
-  const elCons = $('crono-consolidado-full');
-  if (elCons) {
-    const todos = [...ordensCivil, ...ordensTec, ...ordensAC];
-    buildCrono('crono-consolidado-full', 'ÁREA-UC / DIA', todos);
-  }
-}
-
 // ── RENDER PEÇAS ──
 function renderPecas() {
   const tbody = $('pecas-tbody');
