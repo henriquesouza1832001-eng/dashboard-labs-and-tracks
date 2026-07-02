@@ -25,7 +25,7 @@ JWT_SECRET   = os.getenv("JWT_SECRET")
 HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
 WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "d523a4cf58739a90")
-BASE         = "ERPFiat-Portatil/resources"
+BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ERPFiat-Portatil/resources")
 
 # ─── Schemas ──────────────────────────────────────────────────────────────────
 S_CHAMADOS   = "eng_lab.dashboard_labs_and_tracks_chamados"
