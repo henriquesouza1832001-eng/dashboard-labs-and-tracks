@@ -25,7 +25,7 @@
 }
 
 .main-scroll{flex:1;min-width:0;overflow-y:auto;height:calc(100vh - var(--topbar-h));display:flex;flex-direction:column;background:var(--bg)}
-#debug-bar{position:fixed;bottom:0;left:0;right:0;background:#fdf0ef;border-top:1px solid var(--red);color:var(--red);font-family:var(--mono);font-size:11px;padding:6px 12px;z-index:9999;display:none;white-space:pre-wrap;max-height:120px;overflow-y:auto}
+
 
 /* ── TOPBAR ── */
 .topbar{position:sticky;top:0;z-index:200;background:#243782;border-bottom:1px solid #1a2d6b;height:var(--topbar-h);padding:0 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(36,55,130,.2)}

@@ -1,11 +1,4 @@
-window.onerror = function(msg, src, line, col, err) {
-  var bar = document.getElementById('debug-bar');
-  if(bar){ bar.style.display='block'; bar.textContent += 'ERRO linha '+line+': '+msg+'\n'; }
-};
-window.addEventListener('unhandledrejection', function(e){
-  var bar = document.getElementById('debug-bar');
-  if(bar){ bar.style.display='block'; bar.textContent += 'PROMISE: '+(e.reason?.stack||e.reason)+'\n'; }
-});
+
 'use strict';
 let state = {
   pessoas: [], pontos: [], acessos: [],
