@@ -3,6 +3,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from databricks import sql
 import os, json, asyncio, hashlib, jwt, datetime, threading, time
+def to_date_or_none(v):
+    if not v or not str(v).strip():
+        return None
+    return v
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -873,10 +877,10 @@ async def save_conforto(request: Request):
             """, [
                 uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
                 uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
-                uc.get("tipo"), uc.get("dataInstalacao"), uc.get("cicloFiltroDias"),
+                uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")), uc.get("cicloFiltroDias"),
                 uc.get("responsavelId"), uc.get("obs"),
                 uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
-                uc.get("intervaloPrevDias", 0), uc.get("ultimaLimpezaFiltro"),
+                uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")),
                 json.dumps(uc.get("checklistProprio", [])), u
             ])
 
@@ -892,8 +896,8 @@ async def save_conforto(request: Request):
                      status,checklist,obs,origem,atualizado_por)
                 VALUES (?,?,?,?,?,?,?,?,?,?)
             """, [
-                p["id"], p.get("ucId"), p.get("tecnicoId"), p.get("dataPrevista"),
-                p.get("dataRealizada"), p.get("status"),
+                p["id"], p.get("ucId"), p.get("tecnicoId"), to_date_or_none(p.get("dataPrevista")),
+                to_date_or_none(p.get("dataRealizada")), p.get("status"),
                 json.dumps(p.get("checklist", [])), p.get("obs"),
                 p.get("origem", "manual"), u
             ])
@@ -911,7 +915,7 @@ async def save_conforto(request: Request):
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """, [
                 o["id"], o.get("tipo"), o.get("areaId"), o.get("responsavelId"),
-                o.get("dataPrevista"), o.get("dataRealizada"), o.get("status"),
+                to_date_or_none(o.get("dataPrevista")), to_date_or_none(o.get("dataRealizada")), o.get("status"),
                 o.get("horaInicio", "08:00"), o.get("horaFim", "09:00"),
                 o.get("obs"), o.get("origemRotina"), u
             ])
@@ -929,7 +933,7 @@ async def save_conforto(request: Request):
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """, [
                 m["id"], m.get("ucId"), m.get("tecnicoId"), m.get("falha"),
-                m.get("dataAbertura"), m.get("dataFechamento"), m.get("status"),
+                to_date_or_none(m.get("dataAbertura")), to_date_or_none(m.get("dataFechamento")), m.get("status"),
                 m.get("custoEstimado", 0), m.get("pecasUtilizadas"), m.get("obs"), u
             ])
 
@@ -963,7 +967,7 @@ async def save_conforto(request: Request):
                 VALUES (?,?,?,?,?,?,?,?)
             """, [
                 r["id"], r.get("pecaId"), r.get("quantidade"), r.get("destino"),
-                r.get("solicitanteId"), r.get("dataNecessidade"), r.get("status"), u
+                r.get("solicitanteId"), to_date_or_none(r.get("dataNecessidade")), r.get("status"), u
             ])
 
         # Áreas

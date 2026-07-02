@@ -509,12 +509,12 @@
     <div class="modal-header"><span class="modal-title" id="modal-preventiva-title">Nova Preventiva</span><button class="modal-close" id="modal-preventiva-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
       <div class="form-row"><div class="field"><label>UC *</label><select id="prev-uc"><option value="">—</option></select></div><div class="field"><label>Técnico</label><select id="prev-tec"><option value="">—</option></select></div></div>
-      <div class="form-row"><div class="field"><label>Data Prevista</label><input type="date" id="prev-prevista"></div><div class="field"><label>Data Realizada</label><input type="date" id="prev-realizada"></div></div>
-      <div class="form-row full"><div class="field"><label>Status</label><select id="prev-status"><option>Programada</option><option>Realizada</option><option>Atrasada</option></select></div></div>
-      <div class="field">
-        <label>Checklist</label>
-        <div id="prev-checklist" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px"></div>
-      </div>
+      <div class="form-row"><div class="field"><label>Data Prevista</label><input type="date" id="prev-data-prev"></div><div class="field"><label>Data Realizada</label><input type="date" id="prev-data-real"></div></div>
+<div class="form-row full"><div class="field"><label>Status</label><select id="prev-status"><option>Programada</option><option>Realizada</option><option>Atrasada</option></select></div></div>
+<div class="field">
+  <label>Checklist</label>
+  <div id="prev-checklist-wrap" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px"></div>
+</div>
       <div class="form-row full"><div class="field"><label>Observação</label><textarea id="prev-obs" rows="2"></textarea></div></div>
       <div class="field-err" id="prev-err"></div>
     </div>
