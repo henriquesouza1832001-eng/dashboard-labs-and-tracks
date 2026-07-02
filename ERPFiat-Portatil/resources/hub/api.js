@@ -8,6 +8,7 @@ async function req(endpoint, opts = {}, ttl = 0) {
     return _mem[endpoint];
   }
   const res = await fetch('/api' + endpoint, {
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', 'X-Ctrl-Token': sessionStorage.getItem('ctrl-token') || '', ...(opts.headers || {}) },
     ...opts
   });
