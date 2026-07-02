@@ -435,16 +435,30 @@ async def update_chamado(cid: str, request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
+        await arun_exec(f"""
+            UPDATE {S_CHAMADOS}.chamados SET
+                status=?, responsavel=?, idExterno=?, prioridade=?,
+                tipo=?, dataDesejada=?, dataConclusao=?,
+                atualizado_por=?
+            WHERE id=?
+        """, [
+            body.get("status"), body.get("responsavel"), body.get("idExterno"),
+            body.get("prioridade"), body.get("tipo"), body.get("dataDesejada"),
+            body.get("dataConclusao"), u, cid
+        ])
         await arun_exec(f"DELETE FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [cid])
         for foto in body.get("fotos", []):
             await arun_exec(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES (?,?)", [cid, foto])
         await arun_exec(f"DELETE FROM {S_CHAMADOS}.historico WHERE chamado_id=?", [cid])
         for h in body.get("historico", []):
-            await arun_exec(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES (?,?,?)", [cid, h.get("usuario"), h.get("acao")])
+            await arun_exec(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES (?,?,?)",
+                [cid, h.get("usuario"), h.get("acao")])
     except Exception as e:
         print(f"[chamados] erro ao atualizar {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("chamados")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_chamados)
     return JSONResponse({"ok": True})
 
 @app.delete("/api/chamados/{cid}")
