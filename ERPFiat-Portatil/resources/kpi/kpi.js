@@ -123,8 +123,33 @@ if(dCh){
       mkMicro(concluidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-resol')")+
       mkMicro(criticos,'Críticos',criticos>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('chamados','ch-total')");
     document.getElementById('mfoot-chamados').textContent=pctRes+'% resolvidos · '+criticos+' críticos';
-    const coresCat=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7'];
-    setTimeout(()=>desenharMicroBarras('mcv-chamados',topCat.map((x,i)=>({label:x[0],val:x[1],cor:coresCat[i%5]}))),80);
+    setTimeout(()=>{
+      const cv=document.getElementById('mcv-chamados');
+      if(!cv)return;
+      const wrap=cv.parentElement;
+      const dados=[
+        {l:'Abertos',v:abertos,c:'#c0392b'},
+        {l:'Andamento',v:andamento,c:'#b07d00'},
+        {l:'Concluídos',v:concluidos,c:'#1a7f4b'},
+        {l:'Outros',v:Math.max(total-abertos-andamento-concluidos,0),c:'#8a9abf'},
+      ].filter(x=>x.v>0);
+      const tam=90,cx=tam/2,cy=tam/2,r=34,inner=20;
+      const totalV=dados.reduce((s,x)=>s+x.v,0);
+      let angulo=-Math.PI/2;
+      let arcos='';
+      dados.forEach(d=>{
+        const fatia=totalV>0?(d.v/totalV)*Math.PI*2:0;
+        const x1=cx+r*Math.cos(angulo),y1=cy+r*Math.sin(angulo);
+        angulo+=fatia;
+        const x2=cx+r*Math.cos(angulo),y2=cy+r*Math.sin(angulo);
+        const xi1=cx+inner*Math.cos(angulo-fatia),yi1=cy+inner*Math.sin(angulo-fatia);
+        const xi2=cx+inner*Math.cos(angulo),yi2=cy+inner*Math.sin(angulo);
+        const large=fatia>Math.PI?1:0;
+        arcos+=`<path d="M${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${xi2},${yi2} A${inner},${inner} 0 ${large},0 ${xi1},${yi1} Z" fill="${d.c}" opacity="0.9"/>`;
+      });
+      const legenda=dados.map(d=>`<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text-muted)"><span style="width:8px;height:8px;border-radius:2px;background:${d.c};flex-shrink:0;display:inline-block"></span>${d.l}: ${d.v}</div>`).join('');
+      wrap.innerHTML=`<svg width="${tam}" height="${tam}" viewBox="0 0 ${tam} ${tam}">${arcos}</svg><div style="display:flex;flex-direction:column;gap:3px;margin-top:6px">${legenda}</div>`;
+    },80);
   }
 }
 
