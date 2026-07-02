@@ -463,6 +463,40 @@
       <div class="form-row"><div class="field"><label>Data de Instalação</label><input type="date" id="uc-data-inst"></div><div class="field"><label>Ciclo do Filtro (dias)</label><input type="number" id="uc-ciclo-filtro" min="1"></div></div>
       <div class="form-row"><div class="field"><label>Localização Detalhada</label><input type="text" id="uc-local-detalhe"></div><div class="field"><label>Responsável Técnico</label><select id="uc-resp"><option value="">—</option></select></div></div>
       <div class="form-row full"><div class="field"><label>Observação</label><textarea id="uc-obs" rows="2"></textarea></div></div>
+      <div class="form-row full"><div class="field">
+  <label>Checklist próprio desta UC</label>
+  <div style="font-size:11px;color:#8a9abf;margin-bottom:6px">Deixe vazio para usar o checklist global das configurações.</div>
+  <div id="uc-checklist-wrap" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+  <div style="display:flex;gap:8px">
+    <input type="text" id="uc-checklist-novo" placeholder="Novo item..." style="flex:1">
+    <button type="button" class="btn btn-secondary btn-sm" id="btn-uc-checklist-add">+ Adicionar</button>
+  </div>
+</div></div>
+<div class="form-row full"><div class="field">
+  <label>Intervalo de preventiva (dias)</label>
+  <input type="number" id="uc-intervalo-prev" min="1" placeholder="Ex: 90">
+</div></div>
+<div class="form-row full"><div class="field">
+  <label>Última limpeza de filtro</label>
+  <input type="date" id="uc-ultima-limpeza">
+</div></div>
+<div class="form-row full"><div class="field">
+  <label>Fabricante</label>
+  <input type="text" id="uc-fabricante" placeholder="Ex: Daikin, Springer...">
+</div></div>
+<div class="form-row full"><div class="field">
+  <label>Nº de série / patrimônio</label>
+  <input type="text" id="uc-serie">
+</div></div>
+<div class="form-row full"><div class="field">
+  <label>Status operacional</label>
+  <select id="uc-status-op">
+    <option value="Operacional">Operacional</option>
+    <option value="Em Manutenção">Em Manutenção</option>
+    <option value="Desativada">Desativada</option>
+    <option value="Em Instalação">Em Instalação</option>
+  </select>
+</div></div>
       <div class="field-err" id="uc-err"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" id="modal-uc-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-uc">Salvar</button></div>

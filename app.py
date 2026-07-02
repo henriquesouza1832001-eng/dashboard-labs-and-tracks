@@ -212,68 +212,163 @@ def _load_atividades():
     return payload
 
 def _load_conforto():
+    def safe_json(v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return []
+        return v or []
+
     try:
         rows = run_query(f"SELECT * FROM {S_CONFORTO}.config LIMIT 1")
         config = rows[0] if rows else {}
-        if isinstance(config.get("checklist_preventiva"), str):
-            try:
-                config["checklistPreventiva"] = json.loads(config["checklist_preventiva"])
-            except:
-                config["checklistPreventiva"] = []
+        if "checklist_preventiva" in config:
+            config["checklistPreventiva"] = safe_json(config.pop("checklist_preventiva"))
         config = json.loads(json.dumps(config, default=str))
     except Exception as e:
         print(f"[conforto] erro ao carregar config: {e}")
         config = {}
-    try:
-        ucs_raw = run_query(f"SELECT * FROM {S_CONFORTO}.ucs")
-        ucs = []
-        for u in ucs_raw:
-            ucs.append({
-                "id":             u.get("id"),
-                "codigo":         u.get("codigo"),
-                "nome":           u.get("nome"),
-                "local":          u.get("local"),
-                "modelo":         u.get("modelo"),
-                "categoria":      u.get("categoria") or "Ar-Condicionado",
-                "tipo":           u.get("tipo"),
-                "capacidadeBtu":  u.get("capacidade_btu"),
-                "dataInstalacao": str(u.get("data_instalacao") or ""),
-                "cicloFiltroDias":u.get("ciclo_filtro_dias"),
-                "responsavelId":  u.get("responsavel_id"),
-                "obs":            u.get("obs") or "",
-            })
-    except Exception as e:
-        print(f"[conforto] erro ao carregar ucs: {e}")
-        ucs = []
-    try:
-        prevs_raw = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas")
-        preventivas = []
-        for p in prevs_raw:
-            checklist = p.get("checklist") or "[]"
-            if isinstance(checklist, str):
-                try:
-                    checklist = json.loads(checklist)
-                except:
-                    checklist = []
-            preventivas.append({
-                "id":            p.get("id"),
-                "ucId":          p.get("uc_id"),
-                "tecnicoId":     p.get("tecnico_id"),
-                "dataPrevista":  str(p.get("data_prevista") or ""),
-                "dataRealizada": str(p.get("data_realizada") or ""),
-                "status":        p.get("status"),
-                "checklist":     checklist,
-                "obs":           p.get("obs") or "",
-                "origem":        p.get("origem") or "manual",
-            })
-    except Exception as e:
-        print(f"[conforto] erro ao carregar preventivas: {e}")
-        preventivas = []
+
+    def load_table(tabela, mapper):
+        try:
+            return [mapper(r) for r in run_query(f"SELECT * FROM {S_CONFORTO}.{tabela}")]
+        except Exception as e:
+            print(f"[conforto] erro ao carregar {tabela}: {e}")
+            return []
+
+    ucs = load_table("ucs", lambda u: {
+        "id":                  u.get("id"),
+        "codigo":              u.get("codigo"),
+        "nome":                u.get("nome"),
+        "local":               u.get("local"),
+        "modelo":              u.get("modelo"),
+        "categoria":           u.get("categoria") or "Ar-Condicionado",
+        "tipo":                u.get("tipo"),
+        "capacidadeBtu":       u.get("capacidade_btu"),
+        "dataInstalacao":      str(u.get("data_instalacao") or ""),
+        "cicloFiltroDias":     u.get("ciclo_filtro_dias"),
+        "responsavelId":       u.get("responsavel_id"),
+        "obs":                 u.get("obs") or "",
+        "fabricante":          u.get("fabricante") or "",
+        "serie":               u.get("serie") or "",
+        "statusOp":            u.get("status_op") or "Operacional",
+        "intervaloPrevDias":   u.get("intervalo_prev_dias") or 0,
+        "ultimaLimpezaFiltro": str(u.get("ultima_limpeza_filtro") or ""),
+        "checklistProprio":    safe_json(u.get("checklist_proprio")),
+    })
+
+    preventivas = load_table("preventivas", lambda p: {
+        "id":            p.get("id"),
+        "ucId":          p.get("uc_id"),
+        "tecnicoId":     p.get("tecnico_id"),
+        "dataPrevista":  str(p.get("data_prevista") or ""),
+        "dataRealizada": str(p.get("data_realizada") or ""),
+        "status":        p.get("status"),
+        "checklist":     safe_json(p.get("checklist")),
+        "obs":           p.get("obs") or "",
+        "origem":        p.get("origem") or "manual",
+    })
+
+    ordens = load_table("ordens", lambda o: {
+        "id":            o.get("id"),
+        "tipo":          o.get("tipo"),
+        "areaId":        o.get("area_id"),
+        "responsavelId": o.get("responsavel_id"),
+        "dataPrevista":  str(o.get("data_prevista") or ""),
+        "dataRealizada": str(o.get("data_realizada") or ""),
+        "status":        o.get("status"),
+        "horaInicio":    o.get("hora_inicio") or "08:00",
+        "horaFim":       o.get("hora_fim") or "09:00",
+        "obs":           o.get("obs") or "",
+        "origemRotina":  o.get("origem_rotina") or "",
+    })
+
+    manutencoes = load_table("manutencoes", lambda m: {
+        "id":             m.get("id"),
+        "ucId":           m.get("uc_id"),
+        "tecnicoId":      m.get("tecnico_id"),
+        "falha":          m.get("falha") or "",
+        "dataAbertura":   str(m.get("data_abertura") or ""),
+        "dataFechamento": str(m.get("data_fechamento") or ""),
+        "status":         m.get("status"),
+        "custoEstimado":  m.get("custo_estimado") or 0,
+        "pecasUtilizadas":m.get("pecas_utilizadas") or "",
+        "obs":            m.get("obs") or "",
+    })
+
+    pecas = load_table("pecas", lambda p: {
+        "id":         p.get("id"),
+        "codigo":     p.get("codigo"),
+        "descricao":  p.get("descricao") or "",
+        "categoria":  p.get("categoria") or "",
+        "fabricante": p.get("fabricante") or "",
+        "referencia": p.get("referencia") or "",
+        "unidade":    p.get("unidade") or "",
+        "estqAtual":  p.get("estq_atual") or 0,
+        "estqMinimo": p.get("estq_minimo") or 0,
+    })
+
+    requisicoes = load_table("requisicoes", lambda r: {
+        "id":             r.get("id"),
+        "pecaId":         r.get("peca_id"),
+        "quantidade":     r.get("quantidade") or 0,
+        "destino":        r.get("destino") or "",
+        "solicitanteId":  r.get("solicitante_id"),
+        "dataNecessidade":str(r.get("data_necessidade") or ""),
+        "status":         r.get("status"),
+    })
+
+    areas = load_table("areas", lambda a: {
+        "id":            a.get("id"),
+        "nome":          a.get("nome"),
+        "local":         a.get("local") or "",
+        "tipo":          a.get("tipo") or "",
+        "metragem":      a.get("metragem") or 0,
+        "freqCivil":     a.get("freq_civil") or "",
+        "freqTecnica":   a.get("freq_tecnica") or "",
+        "responsavelId": a.get("responsavel_id"),
+        "obs":           a.get("obs") or "",
+    })
+
+    fornecedores = load_table("fornecedores", lambda f: {
+        "id":          f.get("id"),
+        "nome":        f.get("nome"),
+        "cnpj":        f.get("cnpj") or "",
+        "tipoServico": f.get("tipo_servico") or "",
+        "contato":     f.get("contato") or "",
+        "telefone":    f.get("telefone") or "",
+        "email":       f.get("email") or "",
+        "ativo":       f.get("ativo") or "Sim",
+    })
+
+    tecnicos = load_table("tecnicos", lambda t: {
+        "id":           t.get("id"),
+        "nome":         t.get("nome"),
+        "matricula":    t.get("matricula") or "",
+        "especialidade":t.get("especialidade") or "",
+        "turno":        t.get("turno") or "",
+    })
+
+    rotinas = load_table("rotinas", lambda r: {
+        "id":            r.get("id"),
+        "nome":          r.get("nome"),
+        "tipo":          r.get("tipo"),
+        "areaId":        r.get("area_id"),
+        "responsavelId": r.get("responsavel_id"),
+        "frequencia":    r.get("frequencia"),
+        "diasSemana":    safe_json(r.get("dias_semana")),
+        "horaInicio":    r.get("hora_inicio") or "08:00",
+        "horaFim":       r.get("hora_fim") or "09:00",
+        "ativa":         bool(r.get("ativa", True)),
+    })
+
     payload = {
-        "versao": "2.0", "ordens": [], "ucs": ucs,
-        "preventivas": preventivas, "manutencoes": [], "pecas": [],
-        "requisicoes": [], "areas": [], "fornecedores": [],
-        "tecnicos": [], "rotinas": [], "config": config,
+        "modulo": "conforto", "versao": "2.0",
+        "ordens": ordens, "ucs": ucs, "preventivas": preventivas,
+        "manutencoes": manutencoes, "pecas": pecas, "requisicoes": requisicoes,
+        "areas": areas, "fornecedores": fornecedores, "tecnicos": tecnicos,
+        "rotinas": rotinas, "config": config,
     }
     cache_set("conforto", payload)
     return payload
@@ -757,94 +852,210 @@ async def atualizar_solicitacao_codin(sid: str, request: Request):
 
 # ─── Conforto ─────────────────────────────────────────────────────────────────
 
-@app.get("/api/conforto")
-async def get_conforto():
-    return JSONResponse(get_cached("conforto"))
-
 @app.post("/api/conforto")
 async def save_conforto(request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
         # UCs
+        ids_uc = [x["id"] for x in body.get("ucs", []) if x.get("id")]
+        if ids_uc:
+            ph = ",".join(["?" for _ in ids_uc])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.ucs WHERE id IN ({ph})", ids_uc)
         for uc in body.get("ucs", []):
             await arun_exec(f"""
-                MERGE INTO {S_CONFORTO}.ucs AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
-                WHEN MATCHED THEN UPDATE SET
-                    codigo=?,nome=?,categoria=?,local=?,modelo=?,
-                    capacidade_btu=?,tipo=?,data_instalacao=?,
-                    ciclo_filtro_dias=?,responsavel_id=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
-                WHEN NOT MATCHED THEN INSERT
-                    (id,codigo,nome,categoria,local,modelo,capacidade_btu,
-                     tipo,data_instalacao,ciclo_filtro_dias,responsavel_id,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                INSERT INTO {S_CONFORTO}.ucs
+                    (id,codigo,nome,categoria,local,modelo,capacidade_btu,tipo,
+                     data_instalacao,ciclo_filtro_dias,responsavel_id,obs,
+                     fabricante,serie,status_op,intervalo_prev_dias,
+                     ultima_limpeza_filtro,checklist_proprio,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, [
                 uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
                 uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
                 uc.get("tipo"), uc.get("dataInstalacao"), uc.get("cicloFiltroDias"),
-                uc.get("responsavelId"), uc.get("obs"), u,
-                uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
-                uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
-                uc.get("tipo"), uc.get("dataInstalacao"), uc.get("cicloFiltroDias"),
-                uc.get("responsavelId"), uc.get("obs"), u
+                uc.get("responsavelId"), uc.get("obs"),
+                uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
+                uc.get("intervaloPrevDias", 0), uc.get("ultimaLimpezaFiltro"),
+                json.dumps(uc.get("checklistProprio", [])), u
             ])
+
         # Preventivas
+        ids_prev = [x["id"] for x in body.get("preventivas", []) if x.get("id")]
+        if ids_prev:
+            ph = ",".join(["?" for _ in ids_prev])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.preventivas WHERE id IN ({ph})", ids_prev)
         for p in body.get("preventivas", []):
             await arun_exec(f"""
-                MERGE INTO {S_CONFORTO}.preventivas AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
-                WHEN MATCHED THEN UPDATE SET
-                    uc_id=?,tecnico_id=?,data_prevista=?,data_realizada=?,
-                    status=?,checklist=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
-                WHEN NOT MATCHED THEN INSERT
+                INSERT INTO {S_CONFORTO}.preventivas
                     (id,uc_id,tecnico_id,data_prevista,data_realizada,
-                     status,checklist,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?)
+                     status,checklist,obs,origem,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
             """, [
                 p["id"], p.get("ucId"), p.get("tecnicoId"), p.get("dataPrevista"),
-                p.get("dataRealizada"), p.get("status"), json.dumps(p.get("checklist", [])), p.get("obs"), u,
-                p["id"], p.get("ucId"), p.get("tecnicoId"), p.get("dataPrevista"),
-                p.get("dataRealizada"), p.get("status"), json.dumps(p.get("checklist", [])), p.get("obs"), u
+                p.get("dataRealizada"), p.get("status"),
+                json.dumps(p.get("checklist", [])), p.get("obs"),
+                p.get("origem", "manual"), u
             ])
+
+        # Ordens
+        ids_os = [x["id"] for x in body.get("ordens", []) if x.get("id")]
+        if ids_os:
+            ph = ",".join(["?" for _ in ids_os])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.ordens WHERE id IN ({ph})", ids_os)
+        for o in body.get("ordens", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.ordens
+                    (id,tipo,area_id,responsavel_id,data_prevista,data_realizada,
+                     status,hora_inicio,hora_fim,obs,origem_rotina,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            """, [
+                o["id"], o.get("tipo"), o.get("areaId"), o.get("responsavelId"),
+                o.get("dataPrevista"), o.get("dataRealizada"), o.get("status"),
+                o.get("horaInicio", "08:00"), o.get("horaFim", "09:00"),
+                o.get("obs"), o.get("origemRotina"), u
+            ])
+
+        # Manutenções
+        ids_man = [x["id"] for x in body.get("manutencoes", []) if x.get("id")]
+        if ids_man:
+            ph = ",".join(["?" for _ in ids_man])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.manutencoes WHERE id IN ({ph})", ids_man)
+        for m in body.get("manutencoes", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.manutencoes
+                    (id,uc_id,tecnico_id,falha,data_abertura,data_fechamento,
+                     status,custo_estimado,pecas_utilizadas,obs,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """, [
+                m["id"], m.get("ucId"), m.get("tecnicoId"), m.get("falha"),
+                m.get("dataAbertura"), m.get("dataFechamento"), m.get("status"),
+                m.get("custoEstimado", 0), m.get("pecasUtilizadas"), m.get("obs"), u
+            ])
+
+        # Peças
+        ids_peca = [x["id"] for x in body.get("pecas", []) if x.get("id")]
+        if ids_peca:
+            ph = ",".join(["?" for _ in ids_peca])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.pecas WHERE id IN ({ph})", ids_peca)
+        for p in body.get("pecas", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.pecas
+                    (id,codigo,descricao,categoria,fabricante,referencia,
+                     unidade,estq_atual,estq_minimo,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            """, [
+                p["id"], p.get("codigo"), p.get("descricao"), p.get("categoria"),
+                p.get("fabricante"), p.get("referencia"), p.get("unidade"),
+                p.get("estqAtual", 0), p.get("estqMinimo", 0), u
+            ])
+
+        # Requisições
+        ids_req = [x["id"] for x in body.get("requisicoes", []) if x.get("id")]
+        if ids_req:
+            ph = ",".join(["?" for _ in ids_req])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.requisicoes WHERE id IN ({ph})", ids_req)
+        for r in body.get("requisicoes", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.requisicoes
+                    (id,peca_id,quantidade,destino,solicitante_id,
+                     data_necessidade,status,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?)
+            """, [
+                r["id"], r.get("pecaId"), r.get("quantidade"), r.get("destino"),
+                r.get("solicitanteId"), r.get("dataNecessidade"), r.get("status"), u
+            ])
+
+        # Áreas
+        ids_area = [x["id"] for x in body.get("areas", []) if x.get("id")]
+        if ids_area:
+            ph = ",".join(["?" for _ in ids_area])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.areas WHERE id IN ({ph})", ids_area)
+        for a in body.get("areas", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.areas
+                    (id,nome,local,tipo,metragem,freq_civil,
+                     freq_tecnica,responsavel_id,obs,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            """, [
+                a["id"], a.get("nome"), a.get("local"), a.get("tipo"),
+                a.get("metragem", 0), a.get("freqCivil"), a.get("freqTecnica"),
+                a.get("responsavelId"), a.get("obs"), u
+            ])
+
+        # Fornecedores
+        ids_forn = [x["id"] for x in body.get("fornecedores", []) if x.get("id")]
+        if ids_forn:
+            ph = ",".join(["?" for _ in ids_forn])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.fornecedores WHERE id IN ({ph})", ids_forn)
+        for f in body.get("fornecedores", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.fornecedores
+                    (id,nome,cnpj,tipo_servico,contato,telefone,email,ativo,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            """, [
+                f["id"], f.get("nome"), f.get("cnpj"), f.get("tipoServico"),
+                f.get("contato"), f.get("telefone"), f.get("email"),
+                f.get("ativo", "Sim"), u
+            ])
+
+        # Técnicos
+        ids_tec = [x["id"] for x in body.get("tecnicos", []) if x.get("id")]
+        if ids_tec:
+            ph = ",".join(["?" for _ in ids_tec])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.tecnicos WHERE id IN ({ph})", ids_tec)
+        for t in body.get("tecnicos", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.tecnicos
+                    (id,nome,matricula,especialidade,turno,atualizado_por)
+                VALUES (?,?,?,?,?,?)
+            """, [
+                t["id"], t.get("nome"), t.get("matricula"),
+                t.get("especialidade"), t.get("turno"), u
+            ])
+
+        # Rotinas
+        ids_rot = [x["id"] for x in body.get("rotinas", []) if x.get("id")]
+        if ids_rot:
+            ph = ",".join(["?" for _ in ids_rot])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.rotinas WHERE id IN ({ph})", ids_rot)
+        for r in body.get("rotinas", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.rotinas
+                    (id,nome,tipo,area_id,responsavel_id,frequencia,
+                     dias_semana,hora_inicio,hora_fim,ativa,atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """, [
+                r["id"], r.get("nome"), r.get("tipo"), r.get("areaId"),
+                r.get("responsavelId"), r.get("frequencia"),
+                json.dumps(r.get("diasSemana", [])),
+                r.get("horaInicio", "08:00"), r.get("horaFim", "09:00"),
+                r.get("ativa", True), u
+            ])
+
         # Config
         if "config" in body:
             c = body["config"]
-            rows = await arun_query(f"SELECT COUNT(*) as n FROM {S_CONFORTO}.config")
-            if rows and rows[0]["n"] > 0:
-                await arun_exec(f"""
-                    UPDATE {S_CONFORTO}.config SET
-                        ciclo_filtro_dias=?,alerta_preventiva_dias=?,alerta_limpeza_dias=?,
-                        alerta_manutencao_dias=?,checklist_preventiva=?,
-                        frequencias_escritorio=?,frequencias_banheiro=?,frequencias_refeitorio=?,
-                        frequencias_area_tecnica=?,frequencias_corredor=?,frequencias_almoxarifado=?
-                """, [
-                    c.get("cicloFiltroDias"), c.get("alertaPreventivaDias"),
-                    c.get("alertaLimpezaDias"), c.get("alertaManutencaoDias"),
-                    json.dumps(c.get("checklistPreventiva", [])),
-                    c.get("frequencias", {}).get("escritorio"),
-                    c.get("frequencias", {}).get("banheiro"),
-                    c.get("frequencias", {}).get("refeitorio"),
-                    c.get("frequencias", {}).get("areaTecnica"),
-                    c.get("frequencias", {}).get("corredor"),
-                    c.get("frequencias", {}).get("almoxarifado"),
-                ])
-            else:
-                await arun_exec(f"""
-                    INSERT INTO {S_CONFORTO}.config VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                """, [
-                    c.get("cicloFiltroDias", 90), c.get("alertaPreventivaDias", 7),
-                    c.get("alertaLimpezaDias", 2), c.get("alertaManutencaoDias", 3),
-                    json.dumps(c.get("checklistPreventiva", [])),
-                    c.get("frequencias", {}).get("escritorio", "Diário"),
-                    c.get("frequencias", {}).get("banheiro", "Diário"),
-                    c.get("frequencias", {}).get("refeitorio", "Diário"),
-                    c.get("frequencias", {}).get("areaTecnica", "Semanal"),
-                    c.get("frequencias", {}).get("corredor", "Semanal"),
-                    c.get("frequencias", {}).get("almoxarifado", "Quinzenal"),
-                ])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.config")
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.config
+                    (ciclo_filtro_dias,alerta_preventiva_dias,alerta_limpeza_dias,
+                     alerta_manutencao_dias,checklist_preventiva,
+                     frequencias_escritorio,frequencias_banheiro,frequencias_refeitorio,
+                     frequencias_area_tecnica,frequencias_corredor,frequencias_almoxarifado)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """, [
+                c.get("cicloFiltroDias", 90), c.get("alertaPreventivaDias", 7),
+                c.get("alertaLimpezaDias", 2), c.get("alertaManutencaoDias", 3),
+                json.dumps(c.get("checklistPreventiva", [])),
+                c.get("frequencias", {}).get("escritorio", "Diário"),
+                c.get("frequencias", {}).get("banheiro", "Diário"),
+                c.get("frequencias", {}).get("refeitorio", "Diário"),
+                c.get("frequencias", {}).get("areaTecnica", "Semanal"),
+                c.get("frequencias", {}).get("corredor", "Semanal"),
+                c.get("frequencias", {}).get("almoxarifado", "Quinzenal"),
+            ])
+
     except Exception as e:
         print(f"[conforto] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -1074,7 +1285,8 @@ async def prev_page(uc_id: str):
     dados = get_cached("conforto")
     ucs = dados.get("ucs", [])
     uc = next((u for u in ucs if u.get("id") == uc_id), None)
-    checklist = dados.get("config", {}).get("checklistPreventiva", [])
+    checklist_proprio = (uc or {}).get("checklistProprio") or []
+    checklist = checklist_proprio if checklist_proprio else dados.get("config", {}).get("checklistPreventiva", [])
     return inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
 
 @app.post("/api/conforto/preventivas")
@@ -1099,22 +1311,3 @@ async def criar_preventiva_qr(request: Request):
     return JSONResponse({"ok": True})
 
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")
-async def criar_preventiva_qr(request: Request):
-    body = await request.json()
-    try:
-        await arun_exec(f"""
-            INSERT INTO {S_CONFORTO}.preventivas
-                (id, uc_id, tecnico_id, data_prevista, data_realizada, status, checklist, obs, origem, atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
-        """, [
-            body["id"], body.get("ucId"), body.get("tecnico"),
-            body.get("dataPrevista"), body.get("dataRealizada", body.get("dataPrevista")),
-            body.get("status", "Realizada"),
-            json.dumps(body.get("checklist", [])),
-            body.get("obs", ""), "qr", body.get("tecnico", "qr")
-        ])
-    except Exception as e:
-        print(f"[conforto] erro ao criar preventiva qr: {e}")
-        return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("conforto")
-    return JSONResponse({"ok": True})

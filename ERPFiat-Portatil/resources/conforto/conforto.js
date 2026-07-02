@@ -1051,6 +1051,35 @@ function abrirModalUC(idx = -1) {
   $('uc-local-detalhe').value = u?.local || '';
   $('uc-resp').value = u?.responsavelId || '';
   $('uc-obs').value = u?.obs || '';
+  $('uc-fabricante') && ($('uc-fabricante').value = u?.fabricante || '');
+  $('uc-serie') && ($('uc-serie').value = u?.serie || '');
+  $('uc-status-op') && ($('uc-status-op').value = u?.statusOp || 'Operacional');
+  $('uc-intervalo-prev') && ($('uc-intervalo-prev').value = u?.intervaloPrevDias || '');
+  $('uc-ultima-limpeza') && ($('uc-ultima-limpeza').value = u?.ultimaLimpezaFiltro || '');
+  const ucClWrap = $('uc-checklist-wrap');
+  if (ucClWrap) {
+    const items = u?.checklistProprio || [];
+    ucClWrap.innerHTML = items.map((it, i) => `
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="flex:1;font-size:13px">${it}</span>
+        <button type="button" onclick="removerChecklistUC(${i})" class="btn btn-danger btn-sm">✕</button>
+      </div>`).join('');
+    window._ucChecklistTemp = [...items];
+  }
+  $('btn-uc-checklist-add')?.removeEventListener('click', window._ucChecklistAddFn);
+  window._ucChecklistAddFn = () => {
+    const val = $('uc-checklist-novo').value.trim();
+    if (!val) return;
+    window._ucChecklistTemp.push(val);
+    $('uc-checklist-novo').value = '';
+    const i = window._ucChecklistTemp.length - 1;
+    $('uc-checklist-wrap').insertAdjacentHTML('beforeend', `
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="flex:1;font-size:13px">${val}</span>
+        <button type="button" onclick="removerChecklistUC(${i})" class="btn btn-danger btn-sm">✕</button>
+      </div>`);
+  };
+  $('btn-uc-checklist-add')?.addEventListener('click', window._ucChecklistAddFn);
   abrirModal('modal-uc');
 }
 
@@ -1059,6 +1088,12 @@ function salvarUC() {
   const nome = ($('uc-nome').value || '').trim();
   if (!codigo || !nome) { alert('Código e nome são obrigatórios.'); return; }
   const obj = {
+    fabricante: ($('uc-fabricante')?.value || '').trim(),
+    serie: ($('uc-serie')?.value || '').trim(),
+    statusOp: $('uc-status-op')?.value || 'Operacional',
+    intervaloPrevDias: parseInt($('uc-intervalo-prev')?.value) || 0,
+    ultimaLimpezaFiltro: $('uc-ultima-limpeza')?.value || '',
+    checklistProprio: window._ucChecklistTemp || [],
     categoria: $('uc-categoria').value,
     codigo,
     nome,
@@ -1419,8 +1454,18 @@ function excluirChecklistItem(idx) {
   renderConfiguracoes();
 }
 async function tentarCarregar(){
-  const d = window.__DADOS__ || await API.conforto.listar();
-  if(d&&d.modulo==='conforto')carregarDeJSON(JSON.stringify(d));
+  try {
+    const d = window.__DADOS__ || await API.conforto.listar();
+    if(d && d.modulo==='conforto') {
+      carregarDeJSON(JSON.stringify(d));
+      gerarOSdasRotinas();
+      renderTudo();
+      renderRotinas();
+    }
+  } catch(e) {
+    setSaveStatus('error', 'Erro ao carregar');
+    console.error('[conforto] tentarCarregar:', e);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1570,7 +1615,15 @@ window.abrirQrUC = function(ucId, label) {
   window._qrUcSlug = ucId;
   abrirModal('modal-qr-uc');
 };
-
+window.removerChecklistUC = function(i) {
+  window._ucChecklistTemp.splice(i, 1);
+  const wrap = $('uc-checklist-wrap');
+  if (wrap) wrap.innerHTML = window._ucChecklistTemp.map((it, idx) => `
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="flex:1;font-size:13px">${it}</span>
+      <button type="button" onclick="removerChecklistUC(${idx})" class="btn btn-danger btn-sm">✕</button>
+    </div>`).join('');
+};
 window.baixarQrUC = function() {
   const wrap = $('qr-uc-canvas');
   const img  = wrap.querySelector('img');
