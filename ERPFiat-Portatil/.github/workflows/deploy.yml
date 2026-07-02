@@ -1,0 +1,20 @@
+name: Deploy to Databricks
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Databricks CLI
+        run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Deploy app from Git
+        env:
+          DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          databricks apps deploy dashboard-labs-and-tracks \
+            --git-branch main
