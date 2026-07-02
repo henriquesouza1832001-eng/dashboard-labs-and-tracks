@@ -143,7 +143,8 @@ def inject(html_path, dados):
     with open(html_path, "r", encoding="utf-8") as f:
         html = f.read()
     script = f'<script>window.__DADOS__={json.dumps(dados, ensure_ascii=False, default=str)};</script>'
-    return HTMLResponse(html.replace("</body>", f"{script}\n</body>"))
+    return HTMLResponse(html.replace("</body>", f"{script}\n</body>"),
+                         headers={"Cache-Control": "no-store"})
 
 # ─── Loaders (síncronos — rodam em thread pool no startup e no refresh) ────────
 def _load_chamados():

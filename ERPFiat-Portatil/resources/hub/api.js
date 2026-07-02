@@ -3,7 +3,7 @@
 const _mem = {};
 const _exp = {};
 
-async function req(endpoint, opts = {}, ttl = 0) {
+async function req(endpoint, opts = {}, ttl = 0, _retry = false) {
   if (ttl > 0 && _mem[endpoint] && Date.now() < _exp[endpoint]) {
     return _mem[endpoint];
   }
@@ -13,6 +13,7 @@ async function req(endpoint, opts = {}, ttl = 0) {
     ...opts
   });
   if (res.status === 302 || res.status === 303 || res.redirected) {
+    if (!_retry) return req(endpoint, opts, ttl, true);
     window.location.reload();
     return;
   }
