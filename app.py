@@ -1205,6 +1205,10 @@ async def qr_css():
 async def qr_js():
     return FileResponse(f"{BASE}/qr/qr.js", media_type="application/javascript")
 
+@app.get("/qr/qrcode.min.js")
+async def qr_lib():
+    return FileResponse(f"{BASE}/qr/qrcode.min.js", media_type="application/javascript")
+
 @app.get("/qr/{area}")
 async def qr_abrir_chamado(area: str):
     return FileResponse(f"{BASE}/qr/qr.html")
