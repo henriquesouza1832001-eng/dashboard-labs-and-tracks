@@ -863,23 +863,17 @@ async def save_atividades(request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
+        ids = [a["id"] for a in body.get("atividades", [])]
+        if ids:
+            placeholders = ",".join(["?" for _ in ids])
+            await arun_exec(f"DELETE FROM {S_ATIVIDADES}.atividades WHERE id IN ({placeholders})", ids)
         for a in body.get("atividades", []):
             await arun_exec(f"""
-                MERGE INTO {S_ATIVIDADES}.atividades AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
-                WHEN MATCHED THEN UPDATE SET
-                    titulo=?,desc=?,status=?,prioridade=?,responsavel=?,obra=?,
-                    prazo=?,progresso=?,tags=?,criadoPor=?,criadoEm=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
-                WHEN NOT MATCHED THEN INSERT
+                INSERT INTO {S_ATIVIDADES}.atividades
                     (id,titulo,desc,status,prioridade,responsavel,obra,
                      prazo,progresso,tags,criadoPor,criadoEm,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, [
-                a["id"],
-                a.get("titulo"), a.get("desc"), a.get("status"), a.get("prioridade"),
-                a.get("responsavel"), a.get("obra"), a.get("prazo"), a.get("progresso", 0),
-                a.get("tags"), a.get("criadoPor"), a.get("criadoEm"), u,
                 a["id"],
                 a.get("titulo"), a.get("desc"), a.get("status"), a.get("prioridade"),
                 a.get("responsavel"), a.get("obra"), a.get("prazo"), a.get("progresso", 0),
@@ -895,6 +889,7 @@ async def save_atividades(request: Request):
         print(f"[atividades] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("atividades")
+    _load_atividades()
     return JSONResponse({"ok": True})
 
 # ─── Hub ──────────────────────────────────────────────────────────────────────
