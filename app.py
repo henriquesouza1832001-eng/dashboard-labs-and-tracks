@@ -862,10 +862,7 @@ async def save_conforto(request: Request):
     u = get_usuario(request)
     try:
         # UCs
-        ids_uc = [x["id"] for x in body.get("ucs", []) if x.get("id")]
-        if ids_uc:
-            ph = ",".join(["?" for _ in ids_uc])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.ucs WHERE id IN ({ph})", ids_uc)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.ucs")
         for uc in body.get("ucs", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.ucs
@@ -885,10 +882,7 @@ async def save_conforto(request: Request):
             ])
 
         # Preventivas
-        ids_prev = [x["id"] for x in body.get("preventivas", []) if x.get("id")]
-        if ids_prev:
-            ph = ",".join(["?" for _ in ids_prev])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.preventivas WHERE id IN ({ph})", ids_prev)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.preventivas")
         for p in body.get("preventivas", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.preventivas
@@ -903,10 +897,7 @@ async def save_conforto(request: Request):
             ])
 
         # Ordens
-        ids_os = [x["id"] for x in body.get("ordens", []) if x.get("id")]
-        if ids_os:
-            ph = ",".join(["?" for _ in ids_os])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.ordens WHERE id IN ({ph})", ids_os)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.ordens")
         for o in body.get("ordens", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.ordens
@@ -921,10 +912,7 @@ async def save_conforto(request: Request):
             ])
 
         # Manutenções
-        ids_man = [x["id"] for x in body.get("manutencoes", []) if x.get("id")]
-        if ids_man:
-            ph = ",".join(["?" for _ in ids_man])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.manutencoes WHERE id IN ({ph})", ids_man)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.manutencoes")
         for m in body.get("manutencoes", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.manutencoes
@@ -938,10 +926,7 @@ async def save_conforto(request: Request):
             ])
 
         # Peças
-        ids_peca = [x["id"] for x in body.get("pecas", []) if x.get("id")]
-        if ids_peca:
-            ph = ",".join(["?" for _ in ids_peca])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.pecas WHERE id IN ({ph})", ids_peca)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.pecas")
         for p in body.get("pecas", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.pecas
@@ -955,10 +940,7 @@ async def save_conforto(request: Request):
             ])
 
         # Requisições
-        ids_req = [x["id"] for x in body.get("requisicoes", []) if x.get("id")]
-        if ids_req:
-            ph = ",".join(["?" for _ in ids_req])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.requisicoes WHERE id IN ({ph})", ids_req)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.requisicoes")
         for r in body.get("requisicoes", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.requisicoes
@@ -971,10 +953,7 @@ async def save_conforto(request: Request):
             ])
 
         # Áreas
-        ids_area = [x["id"] for x in body.get("areas", []) if x.get("id")]
-        if ids_area:
-            ph = ",".join(["?" for _ in ids_area])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.areas WHERE id IN ({ph})", ids_area)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.areas")
         for a in body.get("areas", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.areas
@@ -988,10 +967,7 @@ async def save_conforto(request: Request):
             ])
 
         # Fornecedores
-        ids_forn = [x["id"] for x in body.get("fornecedores", []) if x.get("id")]
-        if ids_forn:
-            ph = ",".join(["?" for _ in ids_forn])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.fornecedores WHERE id IN ({ph})", ids_forn)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.fornecedores")
         for f in body.get("fornecedores", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.fornecedores
@@ -1004,10 +980,7 @@ async def save_conforto(request: Request):
             ])
 
         # Técnicos
-        ids_tec = [x["id"] for x in body.get("tecnicos", []) if x.get("id")]
-        if ids_tec:
-            ph = ",".join(["?" for _ in ids_tec])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.tecnicos WHERE id IN ({ph})", ids_tec)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.tecnicos")
         for t in body.get("tecnicos", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.tecnicos
@@ -1019,10 +992,7 @@ async def save_conforto(request: Request):
             ])
 
         # Rotinas
-        ids_rot = [x["id"] for x in body.get("rotinas", []) if x.get("id")]
-        if ids_rot:
-            ph = ",".join(["?" for _ in ids_rot])
-            await arun_exec(f"DELETE FROM {S_CONFORTO}.rotinas WHERE id IN ({ph})", ids_rot)
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.rotinas")
         for r in body.get("rotinas", []):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.rotinas
