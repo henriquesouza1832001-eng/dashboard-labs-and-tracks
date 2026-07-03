@@ -208,6 +208,7 @@ def _load_atividades():
     comentarios_todos = run_query(f"SELECT atividade_id, autor, texto, data FROM {S_ATIVIDADES}.comentarios ORDER BY data")
     comentarios_map = {}
     for c in comentarios_todos:
+        c["data"] = _ts(c.get("data")) or ""
         comentarios_map.setdefault(c["atividade_id"], []).append(c)
     for r in rows:
         r["comentarios"]   = comentarios_map.get(r["id"], [])
