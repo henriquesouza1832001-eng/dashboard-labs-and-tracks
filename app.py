@@ -425,6 +425,16 @@ async def health():
         keys = list(_cache.keys())
     return {"status": "ok", "cache": keys}
 
+@app.get("/api/admin/refresh-cache")
+async def refresh_cache():
+    loop = asyncio.get_event_loop()
+    for nome, fn in LOADERS.items():
+        try:
+            await loop.run_in_executor(None, fn)
+        except Exception as e:
+            print(f"[cache] erro ao refrescar {nome}: {e}")
+    return {"ok": True, "recarregados": list(LOADERS.keys())}
+
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/login")
 async def login(request: Request):
