@@ -919,22 +919,42 @@ async def save_conforto(request: Request):
                 json.dumps(uc.get("checklistProprio", [])), u
             ])
 
-        # Preventivas
-        await arun_exec(f"DELETE FROM {S_CONFORTO}.preventivas")
+        ids_front = [p["id"] for p in body.get("preventivas", [])]
+        if ids_front:
+            placeholders = ",".join(["?" for _ in ids_front])
+            await arun_exec(
+                f"DELETE FROM {S_CONFORTO}.preventivas WHERE id NOT IN ({placeholders}) AND origem != 'qr'",
+                ids_front
+            )
+        else:
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.preventivas WHERE origem != 'qr'")
         for p in body.get("preventivas", []):
             await arun_exec(f"""
-                INSERT INTO {S_CONFORTO}.preventivas
+                MERGE INTO {S_CONFORTO}.preventivas AS t
+                USING (SELECT
+                    ? AS id, ? AS uc_id, ? AS tecnico_id,
+                    ? AS data_prevista, ? AS data_realizada,
+                    ? AS status, ? AS checklist, ? AS obs,
+                    ? AS origem, ? AS atualizado_por
+                ) AS s ON t.id = s.id
+                WHEN MATCHED THEN UPDATE SET
+                    uc_id=s.uc_id, tecnico_id=s.tecnico_id,
+                    data_prevista=s.data_prevista, data_realizada=s.data_realizada,
+                    status=s.status, checklist=s.checklist, obs=s.obs,
+                    origem=s.origem, atualizado_por=s.atualizado_por
+                WHEN NOT MATCHED THEN INSERT
                     (id,uc_id,tecnico_id,data_prevista,data_realizada,
                      status,checklist,obs,origem,atualizado_por)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
+                VALUES
+                    (s.id,s.uc_id,s.tecnico_id,s.data_prevista,s.data_realizada,
+                     s.status,s.checklist,s.obs,s.origem,s.atualizado_por)
             """, [
-                p["id"], p.get("ucId"), p.get("tecnicoId"), to_date_or_none(p.get("dataPrevista")),
-                to_date_or_none(p.get("dataRealizada")), p.get("status"),
-                json.dumps(p.get("checklist", [])), p.get("obs"),
+                p["id"], p.get("ucId"), p.get("tecnicoId"),
+                to_date_or_none(p.get("dataPrevista")), to_date_or_none(p.get("dataRealizada")),
+                p.get("status"), json.dumps(p.get("checklist", [])), p.get("obs"),
                 p.get("origem", "manual"), u
             ])
 
-        # Ordens
         await arun_exec(f"DELETE FROM {S_CONFORTO}.ordens")
         for o in body.get("ordens", []):
             await arun_exec(f"""
@@ -1427,5 +1447,15 @@ async def criar_preventiva_qr(request: Request):
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("conforto")
     return JSONResponse({"ok": True})
+
+@app.delete("/api/conforto/preventivas/{pid}")
+async def deletar_preventiva(pid: str, request: Request):
+    try:
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.preventivas WHERE id=?", [pid])
+        cache_invalidate("conforto")
+        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")

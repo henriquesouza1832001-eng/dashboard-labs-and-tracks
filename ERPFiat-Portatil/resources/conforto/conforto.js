@@ -1168,7 +1168,16 @@ function salvarPreventiva() {
 }
 
 function editarPreventiva(idx) { abrirModalPreventiva(idx); }
-function excluirPreventiva(idx) { if (confirm('Excluir esta preventiva?')) { state.preventivas.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
+function excluirPreventiva(idx) {
+  if (!confirm('Excluir esta preventiva?')) return;
+  const p = state.preventivas[idx];
+  fetch(`/api/conforto/preventivas/${p.id}`, { method: 'DELETE' })
+    .then(r => { if (!r.ok) throw new Error(r.status); })
+    .catch(e => alert('Erro ao excluir: ' + e));
+  state.preventivas.splice(idx, 1);
+  agendarSalvamento();
+  renderTudo();
+}
 
 // ── MODAIS — MANUTENÇÃO ──
 function abrirModalManutencao(idx = -1) {
