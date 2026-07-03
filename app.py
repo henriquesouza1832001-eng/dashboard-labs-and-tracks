@@ -429,6 +429,15 @@ async def refresh_cache():
             print(f"[cache] erro ao refrescar {nome}: {e}")
     return {"ok": True, "recarregados": list(LOADERS.keys())}
 
+@app.get("/api/admin/debug-conforto")
+async def debug_conforto():
+    dados = get_cached("conforto")
+    return JSONResponse({
+        "ucs_count": len(dados.get("ucs", [])),
+        "ucs": dados.get("ucs", []),
+        "checklist": dados.get("config", {}).get("checklistPreventiva", []),
+    })
+
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/login")
 async def login(request: Request):
