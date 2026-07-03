@@ -980,7 +980,8 @@ function abrirModalUC(idx = -1) {
   $('modal-uc-title').textContent = idx >= 0 ? 'Editar Unidade de Climatização' : 'Nova Unidade de Climatização';
   popularSelects();
   $('uc-categoria').value = u?.categoria || 'Ar-Condicionado';
-  $('uc-codigo').value = u?.codigo || '';
+  const displayCodigo = document.getElementById('uc-codigo-display');
+  if(displayCodigo) displayCodigo.value = u?.codigo || '(novo — gerado ao salvar)';
   $('uc-nome').value = u?.nome || '';
   $('uc-modelo').value = u?.modelo || '';
   $('uc-btu').value = u?.capacidadeBtu || '';
@@ -1022,10 +1023,20 @@ function abrirModalUC(idx = -1) {
   abrirModal('modal-uc');
 }
 
+const PREFIXO_CAT = { 'Ar-Condicionado': 'UC', 'Bebedouro': 'BB', 'Climatizador': 'CL', 'Exaustor': 'EX' };
+
+function gerarCodigoUC(categoria) {
+  const prefix = PREFIXO_CAT[categoria] || 'UC';
+  const mesmoTipo = state.ucs.filter(u => (u.categoria || 'Ar-Condicionado') === categoria);
+  let n = mesmoTipo.length + 1;
+  while (state.ucs.find(u => u.codigo === `${prefix}-${String(n).padStart(3,'0')}`)) n++;
+  return `${prefix}-${String(n).padStart(3,'0')}`;
+}
+
 function salvarUC() {
-  const codigo = ($('uc-codigo').value || '').trim().toUpperCase();
   const nome = ($('uc-nome').value || '').trim();
-  if (!codigo || !nome) { alert('Código e nome são obrigatórios.'); return; }
+  const categoria = $('uc-categoria').value;
+  if (!nome) { alert('Nome é obrigatório.'); return; }
   const obj = {
     fabricante: ($('uc-fabricante')?.value || '').trim(),
     serie: ($('uc-serie')?.value || '').trim(),
@@ -1033,8 +1044,7 @@ function salvarUC() {
     intervaloPrevDias: parseInt($('uc-intervalo-prev')?.value) || 0,
     ultimaLimpezaFiltro: $('uc-ultima-limpeza')?.value || '',
     checklistProprio: window._ucChecklistTemp || [],
-    categoria: $('uc-categoria').value,
-    codigo,
+    categoria,
     nome,
     local: $('uc-local-detalhe').value.trim(),
     modelo: $('uc-modelo').value.trim(),
@@ -1047,9 +1057,11 @@ function salvarUC() {
   };
   if (state.editIdx.uc >= 0) {
     obj.id = state.ucs[state.editIdx.uc].id;
+    obj.codigo = state.ucs[state.editIdx.uc].codigo;
     state.ucs[state.editIdx.uc] = obj;
   } else {
     obj.id = gerarId('UC', state.ucs, 'id');
+    obj.codigo = gerarCodigoUC(categoria);
     state.ucs.push(obj);
   }
   fecharModal('modal-uc');

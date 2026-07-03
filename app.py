@@ -1300,7 +1300,9 @@ async def prev_page(uc_id: str):
             except:
                 checklist = []
     except Exception as e:
-        print(f"[prev_page] erro: {e}")
+        import traceback
+        print(f"[prev_page] erro ao buscar UC {uc_id}: {e}")
+        print(traceback.format_exc())
         uc = None
         checklist = []
     return inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
