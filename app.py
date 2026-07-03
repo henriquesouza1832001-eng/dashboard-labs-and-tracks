@@ -243,24 +243,18 @@ def _load_conforto():
             return []
 
     ucs = load_table("ucs", lambda u: {
-        "id":                  u.get("id"),
-        "codigo":              u.get("codigo"),
-        "nome":                u.get("nome"),
-        "local":               u.get("local"),
-        "modelo":              u.get("modelo"),
-        "categoria":           u.get("categoria") or "Ar-Condicionado",
-        "tipo":                u.get("tipo"),
-        "capacidadeBtu":       u.get("capacidade_btu"),
-        "dataInstalacao":      str(u.get("data_instalacao") or ""),
-        "cicloFiltroDias":     u.get("ciclo_filtro_dias"),
-        "responsavelId":       u.get("responsavel_id"),
-        "obs":                 u.get("obs") or "",
-        "fabricante":          u.get("fabricante") or "",
-        "serie":               u.get("serie") or "",
-        "statusOp":            u.get("status_op") or "Operacional",
-        "intervaloPrevDias":   u.get("intervalo_prev_dias") or 0,
-        "ultimaLimpezaFiltro": str(u.get("ultima_limpeza_filtro") or ""),
-        "checklistProprio":    safe_json(u.get("checklist_proprio")),
+        "id":              u.get("id"),
+        "codigo":          u.get("codigo"),
+        "nome":            u.get("nome"),
+        "local":           u.get("local"),
+        "modelo":          u.get("modelo"),
+        "categoria":       u.get("categoria") or "Ar-Condicionado",
+        "tipo":            u.get("tipo"),
+        "capacidadeBtu":   u.get("capacidade_btu"),
+        "dataInstalacao":  str(u.get("data_instalacao") or ""),
+        "cicloFiltroDias": u.get("ciclo_filtro_dias"),
+        "responsavelId":   u.get("responsavel_id"),
+        "obs":             u.get("obs") or "",
     })
 
     preventivas = load_table("preventivas", lambda p: {
