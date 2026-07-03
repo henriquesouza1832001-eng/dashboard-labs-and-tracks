@@ -178,6 +178,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
   <select class="filter-sel" id="filtro-resp"><option value="">Todos os responsáveis</option></select>
   <select class="filter-sel" id="filtro-obra"><option value="">Todas as obras</option></select>
   <select class="filter-sel" id="filtro-prior"><option value="">Todas as prioridades</option><option value="Alta">Alta</option><option value="Média">Média</option><option value="Baixa">Baixa</option></select>
+  <select class="filter-sel" id="filtro-status"><option value="">Todos os status</option><option value="todo">A Fazer</option><option value="doing">Em Andamento</option><option value="blocked">Bloqueado</option><option value="done">Concluído</option></select>
+  <select class="filter-sel" id="filtro-data"><option value="">Qualquer data</option><option value="hoje">Cadastradas hoje</option><option value="semana">Esta semana</option><option value="mes">Este mês</option><option value="vencidas">Prazo vencido</option></select>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
     <div class="view-toggle">
       <button class="view-btn active" id="btn-kanban" onclick="setView('kanban')">
@@ -219,7 +221,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 <!-- LISTA -->
 <div class="lista-wrap" id="view-lista" style="display:none">
   <table class="lista-table">
-    <thead><tr><th>TÍTULO</th><th>STATUS</th><th>PRIORIDADE</th><th>RESPONSÁVEL</th><th>OBRA</th><th>PRAZO</th><th>AÇÕES</th></tr></thead>
+    <thead><tr><th>TÍTULO</th><th>STATUS</th><th>PRIORIDADE</th><th>RESPONSÁVEL</th><th>OBRA</th><th>PRAZO</th><th>CADASTRADO</th><th>AÇÕES</th></tr></thead>
     <tbody id="lista-tbody"></tbody>
   </table>
 </div>
@@ -349,12 +351,27 @@ function filtradas(){
   const resp=$('filtro-resp').value;
   const obra=$('filtro-obra').value;
   const prior=$('filtro-prior').value;
-  return atividades.filter(a=>
-    (!search||a.titulo.toLowerCase().includes(search)||(a.desc||'').toLowerCase().includes(search))&&
-    (!resp||a.responsavel===resp)&&
-    (!obra||a.obra===obra)&&
-    (!prior||a.prioridade===prior)
-  );
+  const status=$('filtro-status')?.value||'';
+  const dataFiltro=$('filtro-data')?.value||'';
+  const agora=new Date();
+  const inicioDia=new Date(agora); inicioDia.setHours(0,0,0,0);
+  const inicioSemana=new Date(inicioDia); inicioSemana.setDate(inicioDia.getDate()-inicioDia.getDay());
+  const inicioMes=new Date(agora.getFullYear(),agora.getMonth(),1);
+  return atividades.filter(a=>{
+    if(search&&!a.titulo.toLowerCase().includes(search)&&!(a.desc||'').toLowerCase().includes(search)) return false;
+    if(resp&&a.responsavel!==resp) return false;
+    if(obra&&a.obra!==obra) return false;
+    if(prior&&a.prioridade!==prior) return false;
+    if(status&&a.status!==status) return false;
+    if(dataFiltro){
+      const criado=a.criadoEm?new Date(a.criadoEm):null;
+      if(dataFiltro==='hoje'&&(!criado||criado<inicioDia)) return false;
+      if(dataFiltro==='semana'&&(!criado||criado<inicioSemana)) return false;
+      if(dataFiltro==='mes'&&(!criado||criado<inicioMes)) return false;
+      if(dataFiltro==='vencidas'&&(!a.prazo||a.prazo>=hoje()||a.status==='done')) return false;
+    }
+    return true;
+  });
 }
 function render(){ viewAtual==='kanban'?renderKanban():renderLista(); }
 function renderKanban(){
@@ -396,6 +413,7 @@ function renderLista(){
   $('lista-tbody').innerHTML=lista.length?lista.map(a=>{
     const resp=usuarios.find(u=>u.id===a.responsavel);
     const vencido=a.prazo&&a.prazo<hoje()&&a.status!=='done';
+    const cadastrado=a.criadoEm?a.criadoEm.slice(0,10).split('-').reverse().join('/'):'—';
     return `<tr onclick="abrirAtiv('${a.id}')">
       <td><strong>${a.titulo}</strong>${a.tags?`<br><span style="font-size:10px;color:var(--text-muted)">${a.tags}</span>`:''}</td>
       <td><span class="status-badge ${badgeMap[a.status]||'s-todo'}">${statusMap[a.status]||a.status}</span></td>
@@ -403,9 +421,10 @@ function renderLista(){
       <td>${resp?resp.nome:'—'}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--blue-light)">${a.obra||'—'}</td>
       <td style="font-family:var(--mono);font-size:11px;color:${vencido?'var(--red)':'var(--text-muted)'}">${a.prazo?a.prazo.split('-').reverse().join('/'):'—'}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${cadastrado}</td>
       <td><button class="btn" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();excluirAtiv('${a.id}')">Excluir</button></td>
     </tr>`;
-  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">Nenhuma atividade encontrada</td></tr>';
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">Nenhuma atividade encontrada</td></tr>';
 }
 function setView(v){
   viewAtual=v;
@@ -494,7 +513,7 @@ function excluirAtiv(id){atividades=atividades.filter(x=>x.id!==id);agendarSalva
 ['modal-ativ-close','modal-ativ-cancel'].forEach(id=>$(id).onclick=()=>$('modal-ativ').classList.remove('open'));
 $('modal-ativ').onclick=e=>{if(e.target===$('modal-ativ'))$('modal-ativ').classList.remove('open');};
 $('btn-nova').onclick=()=>novaAtividade();
-['search','filtro-resp','filtro-obra','filtro-prior'].forEach(id=>{$(id).addEventListener('change',render);if(id==='search')$(id).addEventListener('input',render);});
+['search','filtro-resp','filtro-obra','filtro-prior','filtro-status','filtro-data'].forEach(id=>$(id)?.addEventListener('input',render));
 $('btn-abrir-ativ').onclick=()=>iniciarApp();
 $('btn-criar-ativ').onclick=()=>iniciarApp();
 

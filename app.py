@@ -1278,11 +1278,31 @@ async def prev_js():
 
 @app.get("/conforto-prev/{uc_id}")
 async def prev_page(uc_id: str):
-    dados = get_cached("conforto")
-    ucs = dados.get("ucs", [])
-    uc = next((u for u in ucs if u.get("id") == uc_id), None)
-    checklist_proprio = (uc or {}).get("checklistProprio") or []
-    checklist = checklist_proprio if checklist_proprio else dados.get("config", {}).get("checklistPreventiva", [])
+    try:
+        ucs_rows = await arun_query(f"SELECT * FROM {S_CONFORTO}.ucs WHERE id=? LIMIT 1", [uc_id])
+        uc = None
+        if ucs_rows:
+            u = ucs_rows[0]
+            uc = {
+                "id": u.get("id"),
+                "codigo": u.get("codigo"),
+                "nome": u.get("nome"),
+                "local": u.get("local"),
+                "modelo": u.get("modelo"),
+                "categoria": u.get("categoria") or "Ar-Condicionado",
+                "tipo": u.get("tipo"),
+            }
+        config_rows = await arun_query(f"SELECT checklist_preventiva FROM {S_CONFORTO}.config LIMIT 1")
+        checklist = []
+        if config_rows and config_rows[0].get("checklist_preventiva"):
+            try:
+                checklist = json.loads(config_rows[0]["checklist_preventiva"])
+            except:
+                checklist = []
+    except Exception as e:
+        print(f"[prev_page] erro: {e}")
+        uc = None
+        checklist = []
     return inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
 
 @app.post("/api/conforto/preventivas")
