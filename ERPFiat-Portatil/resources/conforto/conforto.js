@@ -283,15 +283,25 @@ function renderDashboard() {
   const osConc = totalOS.filter(o => o.status === 'Concluída');
   const pctConc = totalOS.length ? Math.round(osConc.length / totalOS.length * 100) : 0;
 
+  const prevRealizadas = state.preventivas.filter(p => p.status === 'Realizada' && p.duracaoMin != null);
+  const tempoMedio = prevRealizadas.length
+    ? Math.round(prevRealizadas.reduce((s, p) => s + p.duracaoMin, 0) / prevRealizadas.length)
+    : 0;
+  const hhTotal = prevRealizadas
+    .reduce((s, p) => s + (p.duracaoMin / 60 * (p.numPessoas || 1)), 0)
+    .toFixed(1);
+
   const kpis = [
-    { label: 'OS Civil Abertas', val: osCivil.length, cls: 'orange', sub: 'programadas + em execução' },
-    { label: 'OS Técnica Abertas', val: osTec.length, cls: 'orange', sub: 'programadas + em execução' },
-    { label: 'Preventivas (7 dias)', val: prevProximas.length, cls: 'yellow', sub: 'próximas no período' },
-    { label: 'Prev. Atrasadas', val: prevAtrasadas.length, cls: 'red', sub: 'vencidas sem realização' },
-    { label: 'Manutenções Abertas', val: manAbertas.length, cls: 'orange', sub: 'corretivas em aberto' },
-    { label: 'Peças Abaixo Mín.', val: pecasBaixas.length, cls: 'red', sub: 'requer reposição' },
-    { label: 'Total de UCs', val: state.ucs.length, cls: 'blue', sub: 'unidades cadastradas' },
-    { label: '% OS Concluídas', val: pctConc + '%', cls: 'green', sub: 'no mês corrente' }
+    { label: 'OS Civil Abertas',      val: osCivil.length,      cls: 'orange', sub: 'programadas + em execução' },
+    { label: 'OS Técnica Abertas',    val: osTec.length,        cls: 'orange', sub: 'programadas + em execução' },
+    { label: 'Preventivas (7 dias)',  val: prevProximas.length, cls: 'yellow', sub: 'próximas no período' },
+    { label: 'Prev. Atrasadas',       val: prevAtrasadas.length,cls: 'red',    sub: 'vencidas sem realização' },
+    { label: 'Manutenções Abertas',   val: manAbertas.length,   cls: 'orange', sub: 'corretivas em aberto' },
+    { label: 'Peças Abaixo Mín.',     val: pecasBaixas.length,  cls: 'red',    sub: 'requer reposição' },
+    { label: 'Total de UCs',          val: state.ucs.length,    cls: 'blue',   sub: 'unidades cadastradas' },
+    { label: '% OS Concluídas',       val: pctConc + '%',       cls: 'green',  sub: 'no mês corrente' },
+    { label: 'Tempo Médio Preventiva',val: tempoMedio + ' min', cls: 'blue',   sub: 'média das realizadas com timer' },
+    { label: 'HH Total Preventivas',  val: hhTotal + ' HH',     cls: 'purple', sub: 'homem-hora acumulado' }
   ];
 
   const grid = $('kpi-grid-dash');
@@ -437,20 +447,30 @@ function renderPreventivas() {
   const tbody = $('prev-tbody');
   if (!tbody) return;
   tbody.innerHTML = state.preventivas.length
-    ? state.preventivas.map((p, idx) => `<tr>
-        <td><span class="badge badge-muted">${p.id}</span></td>
-        <td>${nomeUC(p.ucId)}</td>
-        <td>${nomeTec(p.tecnicoId)}</td>
-        <td>${fmtD(p.dataPrevista)}</td>
-        <td>${fmtD(p.dataRealizada)}</td>
-        <td>${p.checklist ? p.checklist.filter(c => c.concluido).length + '/' + p.checklist.length : '—'}</td>
-        <td>${badgeStatusPrev(p.status)}</td>
-        <td><div class="row-actions">
-          <button class="action-btn" onclick="editarPreventiva(${idx})">${SVG_EDIT}</button>
-          <button class="action-btn danger" onclick="excluirPreventiva(${idx})">${SVG_TRASH}</button>
-        </div></td>
-      </tr>`).join('')
-    : '<tr class="empty-row"><td colspan="8">Nenhuma preventiva registrada</td></tr>';
+    ? state.preventivas.map((p, idx) => {
+        const dur = p.duracaoMin != null ? `${p.duracaoMin} min` : '—';
+        const hh  = (p.duracaoMin != null && p.numPessoas)
+          ? (p.duracaoMin / 60 * p.numPessoas).toFixed(2) + ' HH'
+          : '—';
+        const pessoas = p.numPessoas ? `${p.numPessoas} pessoa${p.numPessoas > 1 ? 's' : ''}` : '—';
+        return `<tr>
+          <td><span class="badge badge-muted">${p.id}</span></td>
+          <td>${nomeUC(p.ucId)}</td>
+          <td>${nomeTec(p.tecnicoId)}</td>
+          <td>${fmtD(p.dataPrevista)}</td>
+          <td>${fmtD(p.dataRealizada)}</td>
+          <td>${p.checklist ? p.checklist.filter(c => c.concluido).length + '/' + p.checklist.length : '—'}</td>
+          <td>${badgeStatusPrev(p.status)}</td>
+          <td>${dur}</td>
+          <td>${pessoas}</td>
+          <td>${hh}</td>
+          <td><div class="row-actions">
+            <button class="action-btn" onclick="editarPreventiva(${idx})">${SVG_EDIT}</button>
+            <button class="action-btn danger" onclick="excluirPreventiva(${idx})">${SVG_TRASH}</button>
+          </div></td>
+        </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="11">Nenhuma preventiva registrada</td></tr>';
 }
 
 function renderManutencoes() {

@@ -46,7 +46,13 @@
       </div>
 
       <div id="form-msg" class="form-msg" style="display:none"></div>
-      <button class="btn-submit" id="btn-submit" onclick="enviar()">Registrar Preventiva</button>
+      <button class="btn-submit" id="btn-iniciar" onclick="abrirModalInicio()">Iniciar Atividade</button>
+      <div id="timer-wrap" style="display:none;margin-top:16px;text-align:center">
+        <div style="font-size:13px;color:var(--text-muted,#666);margin-bottom:4px">Atividade em andamento</div>
+        <div id="timer-display" style="font-size:32px;font-weight:700;font-family:monospace;color:#2E5FA3;letter-spacing:2px">00:00:00</div>
+        <div id="timer-pessoas" style="font-size:12px;color:#666;margin-top:4px"></div>
+      </div>
+      <button class="btn-submit" id="btn-submit" style="display:none;margin-top:16px" onclick="enviar()">Registrar Preventiva</button>
     </div>
   </div>
 
@@ -62,102 +68,161 @@
     </div>
   </div>
 
-<script>
-  const DADOS = window.__DADOS__ || {};
-  const uc       = DADOS.uc || null;
-  const checklist = DADOS.checklist || [];
-  const ucId     = DADOS.uc_id || '';
-  document.getElementById('uc-codigo').textContent = uc?.codigo || ucId;
-  document.getElementById('uc-nome').textContent   = uc?.nome   || 'Unidade não encontrada';
-  document.getElementById('uc-local').textContent  = uc?.local  || '—';
-  document.getElementById('uc-modelo').textContent = uc?.modelo || '—';
-  if (uc?.categoria) {
-    document.querySelector('.uc-badge').textContent = uc.categoria.toUpperCase();
-  }
-  const extraWrap = document.createElement('div');
-  extraWrap.style.cssText = 'margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:rgba(255,255,255,0.7)';
-  if (uc?.tipo)            extraWrap.innerHTML += `<span>Tipo: <strong style="color:#fff">${uc.tipo}</strong></span>`;
-  if (uc?.capacidadeBtu)   extraWrap.innerHTML += `<span>BTU: <strong style="color:#fff">${uc.capacidadeBtu}</strong></span>`;
-  if (uc?.dataInstalacao && uc.dataInstalacao !== 'None' && uc.dataInstalacao !== '') {
-    const [y,m,d] = uc.dataInstalacao.split('-');
-    extraWrap.innerHTML += `<span>Instalado: <strong style="color:#fff">${d}/${m}/${y}</strong></span>`;
-  }
-  if (uc?.cicloFiltroDias) extraWrap.innerHTML += `<span>Ciclo filtro: <strong style="color:#fff">${uc.cicloFiltroDias} dias</strong></span>`;
-  if (uc?.obs)             extraWrap.innerHTML += `<span style="width:100%;color:rgba(255,255,255,0.6);font-style:italic">${uc.obs}</span>`;
-  document.getElementById('card-uc').appendChild(extraWrap);
-  document.getElementById('inp-data').value = new Date().toISOString().slice(0, 10);
-  const itensChecklist = checklist.map(c => typeof c === 'string' ? c : (c.item || ''));
-  const wrap = document.getElementById('checklist-wrap');
-  if (itensChecklist.length) {
-    wrap.innerHTML = itensChecklist.map((item, i) => `
-      <label class="check-item" for="cl-${i}">
-        <input type="checkbox" id="cl-${i}" data-item="${item.replace(/"/g,'&quot;')}">
-        <span class="check-box"></span>
-        <span class="check-label">${item}</span>
-      </label>
-    `).join('');
-  } else {
-    wrap.innerHTML = '<div class="check-empty">Nenhum item de checklist configurado.</div>';
-  }
+<!-- MODAL INÍCIO -->
+  <div id="modal-inicio" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:12px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:16px;color:#0f1c3f">Quantas pessoas farão a atividade?</div>
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:20px">
+        <button onclick="ajustarPessoas(-1)" style="width:40px;height:40px;border-radius:50%;border:1px solid #d0d8e8;background:#f0f4f8;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+        <span id="num-pessoas-display" style="font-size:36px;font-weight:700;color:#2E5FA3;min-width:48px;text-align:center">1</span>
+        <button onclick="ajustarPessoas(1)" style="width:40px;height:40px;border-radius:50%;border:1px solid #d0d8e8;background:#f0f4f8;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+      </div>
+      <button onclick="confirmarInicio()" style="width:100%;padding:14px;background:#2E5FA3;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">Iniciar ▶</button>
+    </div>
+  </div>
 
-  async function enviar() {
-    const tecnico = document.getElementById('inp-tecnico').value.trim();
-    const data    = document.getElementById('inp-data').value;
-    const obs     = document.getElementById('inp-obs').value.trim();
+  <script>
+const DADOS    = window.__DADOS__ || {};
+    const uc       = DADOS.uc || null;
+    const checklist = DADOS.checklist || [];
+    const ucId     = DADOS.uc_id || '';
 
-    if (!tecnico) { mostrarErro('Informe o nome do técnico.'); return; }
-    if (!data)    { mostrarErro('Informe a data da preventiva.'); return; }
+    // Card UC
+    document.getElementById('uc-codigo').textContent = uc?.codigo || ucId;
+    document.getElementById('uc-nome').textContent   = uc?.nome   || 'Unidade não encontrada';
+    document.getElementById('uc-local').textContent  = uc?.local  || '—';
+    document.getElementById('uc-modelo').textContent = uc?.modelo || '—';
+    if (uc?.categoria) document.querySelector('.uc-badge').textContent = uc.categoria.toUpperCase();
 
-    const itens = [...document.querySelectorAll('#checklist-wrap input[type=checkbox]')].map(el => ({
-      item: el.dataset.item,
-      concluido: el.checked
-    }));
+    // Detalhes extras
+    const extraWrap = document.createElement('div');
+    extraWrap.style.cssText = 'margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:rgba(255,255,255,0.7)';
+    if (uc?.tipo)          extraWrap.innerHTML += `<span>Tipo: <strong style="color:#fff">${uc.tipo}</strong></span>`;
+    if (uc?.capacidadeBtu) extraWrap.innerHTML += `<span>BTU: <strong style="color:#fff">${uc.capacidadeBtu}</strong></span>`;
+    if (uc?.obs)           extraWrap.innerHTML += `<span style="width:100%;font-style:italic">${uc.obs}</span>`;
+    document.getElementById('card-uc').appendChild(extraWrap);
 
-    const agora = new Date();
-    const body = {
-      id: 'prev-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,12),
-      ucId,
-      tecnico,
-      dataPrevista:  data,
-      dataRealizada: agora.toISOString(),
-      status: 'Realizada',
-      checklist: itens,
-      obs
-    };
+    // Data padrão
+    document.getElementById('inp-data').value = new Date().toISOString().slice(0, 10);
 
-    const btn = document.getElementById('btn-submit');
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.textContent = 'Enviando...';
-    document.getElementById('form-msg').style.display = 'none';
-
-    try {
-      const res = await fetch('/api/conforto/preventivas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) throw new Error('Erro ' + res.status);
-      const concluidos = itens.filter(i => i.concluido).length;
-      const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      document.getElementById('sucesso-sub').textContent =
-        `Técnico: ${tecnico} — ${data.split('-').reverse().join('/')} às ${hora}`;
-      document.getElementById('sucesso-detalhe').textContent =
-        `${concluidos} de ${itens.length} itens do checklist concluídos.`;
-      document.getElementById('tela-form').style.display   = 'none';
-      document.getElementById('tela-sucesso').style.display = 'block';
-    } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Registrar Preventiva';
-      mostrarErro('Falha ao enviar. Verifique a conexão e tente novamente.');
+    // Checklist
+    const itensChecklist = checklist.map(c => typeof c === 'string' ? c : (c.item || ''));
+    const wrap = document.getElementById('checklist-wrap');
+    if (itensChecklist.length) {
+      wrap.innerHTML = itensChecklist.map((item, i) => `
+        <label class="check-item" for="cl-${i}">
+          <input type="checkbox" id="cl-${i}" data-item="${item.replace(/"/g,'&quot;')}">
+          <span class="check-box"></span>
+          <span class="check-label">${item}</span>
+        </label>`).join('');
+    } else {
+      wrap.innerHTML = '<div class="check-empty">Nenhum item de checklist configurado.</div>';
     }
-  }
 
-  function mostrarErro(txt) {
-    const el = document.getElementById('form-msg');
-    el.textContent = txt;
-    el.style.display = 'block';
-  }
+    // ── Timer ──
+    let iniciado    = false;
+    let inicioEm    = null;
+    let numPessoas  = 1;
+    let timerInterv = null;
+
+    function ajustarPessoas(delta) {
+      numPessoas = Math.max(1, Math.min(20, numPessoas + delta));
+      document.getElementById('num-pessoas-display').textContent = numPessoas;
+    }
+
+    function abrirModalInicio() {
+      const modal = document.getElementById('modal-inicio');
+      modal.style.display = 'flex';
+    }
+
+    function confirmarInicio() {
+      document.getElementById('modal-inicio').style.display = 'none';
+      inicioEm = new Date();
+      iniciado = true;
+
+      document.getElementById('btn-iniciar').style.display = 'none';
+      document.getElementById('timer-wrap').style.display  = 'block';
+      document.getElementById('btn-submit').style.display  = 'block';
+      document.getElementById('timer-pessoas').textContent =
+        `${numPessoas} pessoa${numPessoas > 1 ? 's' : ''} · HH em andamento`;
+
+      timerInterv = setInterval(() => {
+        const diff = Math.floor((new Date() - inicioEm) / 1000);
+        const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+        const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+        const s = String(diff % 60).padStart(2, '0');
+        document.getElementById('timer-display').textContent = `${h}:${m}:${s}`;
+        const hh = (diff / 3600 * numPessoas).toFixed(2);
+        document.getElementById('timer-pessoas').textContent =
+          `${numPessoas} pessoa${numPessoas > 1 ? 's' : ''} · HH acumulado: ${hh}`;
+      }, 1000);
+    }
+
+    async function enviar() {
+      if (!iniciado) { mostrarErro('Clique em "Iniciar Atividade" antes de registrar.'); return; }
+      const tecnico = document.getElementById('inp-tecnico').value.trim();
+      const data    = document.getElementById('inp-data').value;
+      const obs     = document.getElementById('inp-obs').value.trim();
+      if (!tecnico) { mostrarErro('Informe o nome do técnico.'); return; }
+      if (!data)    { mostrarErro('Informe a data da preventiva.'); return; }
+
+      const fimEm     = new Date();
+      const duracaoMin = Math.round((fimEm - inicioEm) / 60000);
+      clearInterval(timerInterv);
+
+      const itens = [...document.querySelectorAll('#checklist-wrap input[type=checkbox]')].map(el => ({
+        item: el.dataset.item, concluido: el.checked
+      }));
+
+      const body = {
+        id:            'prev-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0, 12),
+        ucId,
+        tecnico,
+        dataPrevista:  data,
+        dataRealizada: fimEm.toISOString(),
+        status:        'Realizada',
+        checklist:     itens,
+        obs,
+        inicioEm:      inicioEm.toISOString(),
+        fimEm:         fimEm.toISOString(),
+        duracaoMin,
+        numPessoas
+      };
+
+      const btn = document.getElementById('btn-submit');
+      if (btn.disabled) return;
+      btn.disabled    = true;
+      btn.textContent = 'Enviando...';
+      document.getElementById('form-msg').style.display = 'none';
+
+      try {
+        const res = await fetch('/api/conforto/preventivas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('Erro ' + res.status);
+        const concluidos = itens.filter(i => i.concluido).length;
+        const hora = fimEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const hh   = (duracaoMin / 60 * numPessoas).toFixed(2);
+        document.getElementById('sucesso-sub').textContent =
+          `Técnico: ${tecnico} — ${data.split('-').reverse().join('/')} às ${hora}`;
+        document.getElementById('sucesso-detalhe').textContent =
+          `${concluidos}/${itens.length} itens · Duração: ${duracaoMin} min · HH: ${hh}`;
+        document.getElementById('tela-form').style.display    = 'none';
+        document.getElementById('tela-sucesso').style.display = 'block';
+      } catch (e) {
+        btn.disabled    = false;
+        btn.textContent = 'Registrar Preventiva';
+        mostrarErro('Falha ao enviar. Verifique a conexão e tente novamente.');
+      }
+    }
+
+    function mostrarErro(txt) {
+      const el = document.getElementById('form-msg');
+      el.textContent  = txt;
+      el.style.display = 'block';
+    }
 </script>
 </body>
 </html>

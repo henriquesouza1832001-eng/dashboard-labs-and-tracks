@@ -281,6 +281,10 @@ def _load_conforto():
         "checklist":     safe_json(p.get("checklist")),
         "obs":           p.get("obs") or "",
         "origem":        p.get("origem") or "manual",
+        "inicioEm":      _ts(p.get("inicio_em")) or "",
+        "fimEm":         _ts(p.get("fim_em")) or "",
+        "duracaoMin":    p.get("duracao_min"),
+        "numPessoas":    p.get("num_pessoas"),
     })
 
     ordens = load_table("ordens", lambda o: {
@@ -1395,15 +1399,19 @@ async def criar_preventiva_qr(request: Request):
     try:
         await arun_exec(f"""
             INSERT INTO {S_CONFORTO}.preventivas
-                (id, uc_id, tecnico_id, data_prevista, data_realizada, status, checklist, obs, origem, atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
+                (id, uc_id, tecnico_id, data_prevista, data_realizada, status,
+                 checklist, obs, origem, atualizado_por,
+                 inicio_em, fim_em, duracao_min, num_pessoas)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, [
             body["id"], body.get("ucId"), None,
             body.get("dataPrevista"), body.get("dataRealizada", body.get("dataPrevista")),
             body.get("status", "Realizada"),
             json.dumps(body.get("checklist", [])),
             f"[QR] Técnico: {body.get('tecnico','')} | {body.get('obs','')}".strip(' |'),
-            "qr", body.get("tecnico", "qr")
+            "qr", body.get("tecnico", "qr"),
+            body.get("inicioEm"), body.get("fimEm"),
+            body.get("duracaoMin"), body.get("numPessoas")
         ])
     except Exception as e:
         print(f"[conforto] erro ao criar preventiva qr: {e}")
