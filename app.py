@@ -1277,7 +1277,7 @@ async def prev_js():
     return FileResponse(f"{BASE}/confortoprev/prev.js", media_type="application/javascript")
 
 @app.get("/conforto-prev/{uc_id}")
-async def prev_page(uc_id: str):
+async def prev_page(uc_id: str, request: Request):
     try:
         ucs_rows = await arun_query(f"SELECT * FROM {S_CONFORTO}.ucs WHERE id=? LIMIT 1", [uc_id])
         uc = None
@@ -1305,7 +1305,11 @@ async def prev_page(uc_id: str):
         print(traceback.format_exc())
         uc = None
         checklist = []
-    return inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
+    from fastapi.responses import HTMLResponse
+    html = inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
+    html.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    html.headers["Pragma"] = "no-cache"
+    return html
 
 @app.post("/api/conforto/preventivas")
 async def criar_preventiva_qr(request: Request):
