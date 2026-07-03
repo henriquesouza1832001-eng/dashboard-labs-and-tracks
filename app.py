@@ -1104,6 +1104,21 @@ async def save_atividades(request: Request):
     await loop.run_in_executor(None, _load_atividades)
     return JSONResponse({"ok": True})
 
+@app.post("/api/atividades/{aid}/comentarios")
+async def add_comentario(aid: str, request: Request):
+    body = await request.json()
+    u = get_usuario(request)
+    try:
+        await arun_exec(f"""
+            INSERT INTO {S_ATIVIDADES}.comentarios (atividade_id, autor, texto)
+            VALUES (?,?,?)
+        """, [aid, body.get("autor"), body.get("texto")])
+    except Exception as e:
+        print(f"[comentario] erro: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    cache_invalidate("atividades")
+    return JSONResponse({"ok": True})
+
 # ─── Hub ──────────────────────────────────────────────────────────────────────
 @app.get("/api/hub/config")
 async def get_hub_config(request: Request):
