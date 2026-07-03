@@ -91,7 +91,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 /* LISTA */
 .lista-wrap{flex:1;overflow-y:auto;padding:20px 24px;background:var(--bg);}
 .lista-table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
-.lista-table th{text-align:left;padding:11px 16px;color:var(--text3);font-size:10.5px;font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.05em;background:var(--bg);}
+.lista-table th{text-align:left;padding:11px 16px;color:var(--text3);font-size:10.5px;font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.05em;background:var(--bg);cursor:pointer;user-select:none;}
+.lista-table th:hover{color:var(--text);}
+.lista-table th.sort-asc::after{content:' ▲';font-size:8px;}
+.lista-table th.sort-desc::after{content:' ▼';font-size:8px;}
 .lista-table td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);}
 .lista-table tr:last-child td{border-bottom:none;}
 .lista-table tr:hover td{background:var(--blue-bg);cursor:pointer;}
@@ -227,7 +230,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 <!-- LISTA -->
 <div class="lista-wrap" id="view-lista" style="display:none">
   <table class="lista-table">
-    <thead><tr><th>TÍTULO</th><th>STATUS</th><th>PRIORIDADE</th><th>RESPONSÁVEL</th><th>OBRA</th><th>PRAZO</th><th>CADASTRADO</th><th>AÇÕES</th></tr></thead>
+    <thead id="lista-thead"><tr><th data-col="titulo">TÍTULO</th><th data-col="status">STATUS</th><th data-col="prioridade">PRIORIDADE</th><th data-col="responsavel">RESPONSÁVEL</th><th data-col="obra">OBRA</th><th data-col="prazo">PRAZO</th><th data-col="criadoEm">CADASTRADO</th><th>AÇÕES</th></tr></thead>
     <tbody id="lista-tbody"></tbody>
   </table>
 </div>
@@ -411,8 +414,28 @@ function cardHTML(a){
     </div>
   </div>`;
 }
+let _sortCol='';
+let _sortDir=1;
+
+function ordenarLista(lista){
+  if(!_sortCol) return lista;
+  const prioOrd={Alta:1,Média:2,Baixa:3};
+  const statusOrd={todo:1,doing:2,blocked:3,standby:4,done:5};
+  return [...lista].sort((a,b)=>{
+    let va=a[_sortCol]||'';
+    let vb=b[_sortCol]||'';
+    if(_sortCol==='prioridade'){ va=prioOrd[va]||99; vb=prioOrd[vb]||99; return (va-vb)*_sortDir; }
+    if(_sortCol==='status'){ va=statusOrd[va]||99; vb=statusOrd[vb]||99; return (va-vb)*_sortDir; }
+    if(_sortCol==='responsavel'){
+      va=usuarios.find(u=>u.id===va)?.nome||'';
+      vb=usuarios.find(u=>u.id===vb)?.nome||'';
+    }
+    return va.toString().localeCompare(vb.toString(),'pt-BR')*_sortDir;
+  });
+}
+
 function renderLista(){
-  const lista=filtradas();
+  const lista=ordenarLista(filtradas());
   const statusMap={todo:'A Fazer',doing:'Em Andamento',blocked:'Em Estudo',standby:'Standby',done:'Concluído'};
   const badgeMap={todo:'s-todo',doing:'s-doing',blocked:'s-blocked',standby:'s-standby',done:'s-done'};
   const prioClass={Alta:'alta',Média:'media',Baixa:'baixa'};
@@ -432,6 +455,17 @@ function renderLista(){
     </tr>`;
   }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">Nenhuma atividade encontrada</td></tr>';
 }
+document.getElementById('lista-thead')?.querySelectorAll('th[data-col]').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const col=th.dataset.col;
+    if(_sortCol===col){ _sortDir*=-1; }
+    else{ _sortCol=col; _sortDir=1; }
+    document.querySelectorAll('#lista-thead th').forEach(t=>t.classList.remove('sort-asc','sort-desc'));
+    th.classList.add(_sortDir===1?'sort-asc':'sort-desc');
+    renderLista();
+  });
+});
+
 function setView(v){
   viewAtual=v;
   $('view-kanban').style.display=v==='kanban'?'flex':'none';
@@ -477,18 +511,28 @@ function abrirAtiv(id){
 }
 function renderComentarios(a){
   const coms=a.comentarios||[];
-  $('lista-comentarios').innerHTML=coms.length?coms.map(c=>`
-    <div class="comentario">
-      <div class="com-header"><span class="com-autor">${c.autor}</span><span class="com-data">${c.data}</span></div>
+  const authUser = window.__authUser || {};
+  const isAdmin = authUser.role === 'admin';
+  $('lista-comentarios').innerHTML=coms.length?coms.map((c,i)=>{
+    const podeExcluir = isAdmin || c.autor === authUser.nome;
+    return `<div class="comentario" id="com-item-${i}">
+      <div class="com-header">
+        <span class="com-autor">${c.autor}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="com-data">${c.data}</span>
+          ${podeExcluir?`<button onclick="excluirComentario(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0" title="Excluir comentário">✕</button>`:''}
+        </div>
+      </div>
       <div class="com-texto">${c.texto}</div>
-    </div>`).join(''):'<div style="color:var(--text-muted);font-size:12px;margin-bottom:10px">Sem comentários ainda.</div>';
+    </div>`;
+  }).join(''):'<div style="color:var(--text-muted);font-size:12px;margin-bottom:10px">Sem comentários ainda.</div>';
 }
 async function adicionarComentario(){
   const texto=$('com-texto').value.trim();
   if(!texto||!editId)return;
   const a=atividades.find(x=>x.id===editId);
   if(!a)return;
-  const autor=usuarioAtual?.nome||'Anônimo';
+  const autor=(window.__authUser?.nome)||(usuarioAtual?.nome)||'Anônimo';
   try{
     await fetch(`/api/atividades/${editId}/comentarios`,{
       method:'POST',
@@ -501,6 +545,23 @@ async function adicionarComentario(){
     $('com-texto').value='';
   }catch(e){
     alert('Erro ao salvar comentário.');
+  }
+}
+async function excluirComentario(idx){
+  if(!confirm('Excluir este comentário?')) return;
+  const a=atividades.find(x=>x.id===editId);
+  if(!a||!a.comentarios) return;
+  a.comentarios.splice(idx,1);
+  try{
+    await fetch(`/api/atividades/${editId}/comentarios/rewrite`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({comentarios:a.comentarios})
+    });
+    renderComentarios(a);
+  }catch(e){
+    alert('Erro ao excluir comentário.');
+    a.comentarios.splice(idx,0,a.comentarios[idx]);
   }
 }
 $('btn-salvar-ativ').onclick=()=>{
