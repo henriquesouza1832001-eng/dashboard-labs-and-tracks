@@ -1,20 +1,11 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Preventiva — Conforto</title>
-  <link rel="stylesheet" href="/conforto-prev/prev.css">
-</head>
-</head>
 <body>
   <div class="topbar">
     <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     <span class="topbar-title">Registro de Preventiva</span>
   </div>
 
-  <!-- TELA PRINCIPAL -->
-  <div id="tela-form">
+  <!-- TELA 1: SELEÇÃO DE TÉCNICOS -->
+  <div id="tela-tecnicos">
     <div class="card-uc" id="card-uc">
       <div class="uc-badge">AR-CONDICIONADO</div>
       <div class="uc-codigo" id="uc-codigo">—</div>
@@ -25,76 +16,85 @@
         <span id="uc-modelo">—</span>
       </div>
     </div>
-
     <div class="form-wrap">
-      <div class="section-title">Técnico responsável</div>
-      <div class="field">
-        <label>Nome do técnico *</label>
-        <input type="text" id="inp-tecnico" placeholder="Seu nome completo" autocomplete="name">
+      <div class="section-title">Quem vai realizar a atividade?</div>
+      <div class="field-hint">Selecione todos os técnicos presentes</div>
+      <div id="lista-tecnicos" class="tecnico-lista"></div>
+      <div class="field" style="margin-top:16px">
+        <label>Não está na lista? Digite o nome</label>
+        <input type="text" id="inp-outro-tec" placeholder="Nome completo...">
+        <button class="btn-add-outro" onclick="adicionarOutro()">+ Adicionar</button>
       </div>
+      <div id="tecnicos-extras" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+      <div id="tec-err" class="form-msg" style="display:none"></div>
+      <button class="btn-submit" id="btn-iniciar" onclick="iniciarAtividade()">Iniciar Atividade ▶</button>
+    </div>
+  </div>
+
+  <!-- TELA 2: FORMULÁRIO -->
+  <div id="tela-form" style="display:none">
+    <div class="form-wrap">
+      <div id="resumo-tecnicos" style="margin-bottom:16px;padding:12px;background:#f0f4f8;border-radius:8px;font-size:13px;color:#2E5FA3;font-weight:600"></div>
+      <div class="section-title">Data da preventiva</div>
       <div class="field">
-        <label>Data da preventiva *</label>
         <input type="date" id="inp-data">
       </div>
-
-      <div class="section-title" style="margin-top:24px">Checklist de verificação</div>
+      <div class="section-title" style="margin-top:20px">Checklist de verificação</div>
       <div id="checklist-wrap" class="checklist-wrap"></div>
-
       <div class="field" style="margin-top:20px">
         <label>Observações</label>
         <textarea id="inp-obs" rows="3" placeholder="Anote qualquer ocorrência ou ponto de atenção..."></textarea>
       </div>
-
       <div id="form-msg" class="form-msg" style="display:none"></div>
-      <button class="btn-submit" id="btn-iniciar" onclick="abrirModalInicio()">Iniciar Atividade</button>
-      <div id="timer-wrap" style="display:none;margin-top:16px;text-align:center">
-        <div style="font-size:13px;color:var(--text-muted,#666);margin-bottom:4px">Atividade em andamento</div>
-        <div id="timer-display" style="font-size:32px;font-weight:700;font-family:monospace;color:#2E5FA3;letter-spacing:2px">00:00:00</div>
-        <div id="timer-pessoas" style="font-size:12px;color:#666;margin-top:4px"></div>
-      </div>
-      <button class="btn-submit" id="btn-submit" style="display:none;margin-top:16px" onclick="enviar()">Registrar Preventiva</button>
+      <button class="btn-submit" id="btn-finalizar" onclick="abrirTelaFoto()">Finalizar Preventiva →</button>
     </div>
   </div>
 
-  <!-- TELA SUCESSO -->
+  <!-- TELA 3: FOTO -->
+  <div id="tela-foto" style="display:none">
+    <div class="form-wrap">
+      <div class="section-title">Registre uma foto da atividade</div>
+      <div class="field-hint">Obrigatório · apenas câmera, sem galeria</div>
+      <div id="foto-preview-wrap" style="display:none;margin:16px 0;text-align:center">
+        <img id="foto-preview" style="max-width:100%;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.12)">
+        <div style="margin-top:8px;font-size:12px;color:#4CAF50;font-weight:600">✓ Foto registrada</div>
+      </div>
+      <input type="file" id="inp-foto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this)">
+      <button class="btn-submit" id="btn-camera" onclick="abrirCamera()" style="background:#1a7f4b">
+        📷 Tirar Foto
+      </button>
+      <div id="foto-err" class="form-msg" style="display:none;margin-top:12px"></div>
+      <button class="btn-submit" id="btn-enviar" onclick="enviar()" style="display:none;margin-top:12px">
+        Confirmar e Enviar ✓
+      </button>
+    </div>
+  </div>
+
+  <!-- TELA 4: SUCESSO -->
   <div id="tela-sucesso" style="display:none">
     <div class="sucesso-wrap">
       <div class="sucesso-icon">
         <svg width="32" height="32" fill="none" stroke="#1a7f4b" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div class="sucesso-titulo">Preventiva registrada!</div>
-      <div class="sucesso-sub" id="sucesso-sub">Os dados foram salvos com sucesso.</div>
+      <div class="sucesso-sub" id="sucesso-sub"></div>
       <div class="sucesso-detalhe" id="sucesso-detalhe"></div>
     </div>
   </div>
 
-<!-- MODAL INÍCIO -->
-  <div id="modal-inicio" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center;padding:20px">
-    <div style="background:#fff;border-radius:12px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
-      <div style="font-size:16px;font-weight:700;margin-bottom:16px;color:#0f1c3f">Quantas pessoas farão a atividade?</div>
-      <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:20px">
-        <button onclick="ajustarPessoas(-1)" style="width:40px;height:40px;border-radius:50%;border:1px solid #d0d8e8;background:#f0f4f8;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-        <span id="num-pessoas-display" style="font-size:36px;font-weight:700;color:#2E5FA3;min-width:48px;text-align:center">1</span>
-        <button onclick="ajustarPessoas(1)" style="width:40px;height:40px;border-radius:50%;border:1px solid #d0d8e8;background:#f0f4f8;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-      </div>
-      <button onclick="confirmarInicio()" style="width:100%;padding:14px;background:#2E5FA3;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">Iniciar ▶</button>
-    </div>
-  </div>
-
   <script>
-const DADOS    = window.__DADOS__ || {};
-    const uc       = DADOS.uc || null;
+    const DADOS     = window.__DADOS__ || {};
+    const uc        = DADOS.uc || null;
     const checklist = DADOS.checklist || [];
-    const ucId     = DADOS.uc_id || '';
+    const ucId      = DADOS.uc_id || '';
+    const tecListaBase = DADOS.tecnicos || [];  // array de nomes pré-cadastrados
 
-    // Card UC
+    // ── Card UC ──
     document.getElementById('uc-codigo').textContent = uc?.codigo || ucId;
     document.getElementById('uc-nome').textContent   = uc?.nome   || 'Unidade não encontrada';
     document.getElementById('uc-local').textContent  = uc?.local  || '—';
     document.getElementById('uc-modelo').textContent = uc?.modelo || '—';
     if (uc?.categoria) document.querySelector('.uc-badge').textContent = uc.categoria.toUpperCase();
-
-    // Detalhes extras
     const extraWrap = document.createElement('div');
     extraWrap.style.cssText = 'margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:rgba(255,255,255,0.7)';
     if (uc?.tipo)          extraWrap.innerHTML += `<span>Tipo: <strong style="color:#fff">${uc.tipo}</strong></span>`;
@@ -102,10 +102,10 @@ const DADOS    = window.__DADOS__ || {};
     if (uc?.obs)           extraWrap.innerHTML += `<span style="width:100%;font-style:italic">${uc.obs}</span>`;
     document.getElementById('card-uc').appendChild(extraWrap);
 
-    // Data padrão
+    // ── Data padrão ──
     document.getElementById('inp-data').value = new Date().toISOString().slice(0, 10);
 
-    // Checklist
+    // ── Checklist ──
     const itensChecklist = checklist.map(c => typeof c === 'string' ? c : (c.item || ''));
     const wrap = document.getElementById('checklist-wrap');
     if (itensChecklist.length) {
@@ -119,65 +119,125 @@ const DADOS    = window.__DADOS__ || {};
       wrap.innerHTML = '<div class="check-empty">Nenhum item de checklist configurado.</div>';
     }
 
-    // ── Timer ──
-    let iniciado    = false;
-    let inicioEm    = null;
-    let numPessoas  = 1;
-    let timerInterv = null;
+    // ── Lista de técnicos ──
+    const tecExtras = [];
+    const listaTec = document.getElementById('lista-tecnicos');
+    listaTec.innerHTML = tecListaBase.map((nome, i) => `
+      <label class="check-item" for="tec-${i}">
+        <input type="checkbox" id="tec-${i}" data-nome="${nome}">
+        <span class="check-box"></span>
+        <span class="check-label">${nome}</span>
+      </label>`).join('') || '<div class="check-empty">Nenhum técnico pré-cadastrado.</div>';
 
-    function ajustarPessoas(delta) {
-      numPessoas = Math.max(1, Math.min(20, numPessoas + delta));
-      document.getElementById('num-pessoas-display').textContent = numPessoas;
+    function adicionarOutro() {
+      const inp = document.getElementById('inp-outro-tec');
+      const nome = inp.value.trim();
+      if (!nome) return;
+      if (tecExtras.includes(nome)) { inp.value = ''; return; }
+      tecExtras.push(nome);
+      inp.value = '';
+      const wrap = document.getElementById('tecnicos-extras');
+      wrap.innerHTML = tecExtras.map((n, i) => `
+        <span style="background:#e8eef6;padding:4px 10px;border-radius:20px;font-size:13px;display:flex;align-items:center;gap:6px">
+          ${n}
+          <button onclick="removerExtra(${i})" style="background:none;border:none;cursor:pointer;color:#e53935;font-size:14px;line-height:1">✕</button>
+        </span>`).join('');
     }
 
-    function abrirModalInicio() {
-      const modal = document.getElementById('modal-inicio');
-      modal.style.display = 'flex';
+    function removerExtra(i) {
+      tecExtras.splice(i, 1);
+      const wrap = document.getElementById('tecnicos-extras');
+      wrap.innerHTML = tecExtras.map((n, idx) => `
+        <span style="background:#e8eef6;padding:4px 10px;border-radius:20px;font-size:13px;display:flex;align-items:center;gap:6px">
+          ${n}
+          <button onclick="removerExtra(${idx})" style="background:none;border:none;cursor:pointer;color:#e53935;font-size:14px;line-height:1">✕</button>
+        </span>`).join('');
     }
 
-    function confirmarInicio() {
-      document.getElementById('modal-inicio').style.display = 'none';
-      inicioEm = new Date();
-      iniciado = true;
+    // ── Estado global ──
+    let inicioEm   = null;
+    let tecSelecionados = [];
+    let fotoBase64 = null;
 
-      document.getElementById('btn-iniciar').style.display = 'none';
-      document.getElementById('timer-wrap').style.display  = 'block';
-      document.getElementById('btn-submit').style.display  = 'block';
-      document.getElementById('timer-pessoas').textContent =
-        `${numPessoas} pessoa${numPessoas > 1 ? 's' : ''} · HH em andamento`;
+    function iniciarAtividade() {
+      const selecionados = [...document.querySelectorAll('#lista-tecnicos input[type=checkbox]:checked')]
+        .map(el => el.dataset.nome);
+      tecSelecionados = [...selecionados, ...tecExtras];
+      if (tecSelecionados.length === 0) {
+        const err = document.getElementById('tec-err');
+        err.textContent = 'Selecione ao menos um técnico.';
+        err.style.display = 'block';
+        return;
+      }
+      inicioEm = new Date();  // timestamp silencioso
+      document.getElementById('tela-tecnicos').style.display = 'none';
+      document.getElementById('tela-form').style.display     = 'block';
+      document.getElementById('resumo-tecnicos').textContent =
+        `👷 ${tecSelecionados.join(', ')}`;
+    }
 
-      timerInterv = setInterval(() => {
-        const diff = Math.floor((new Date() - inicioEm) / 1000);
-        const h = String(Math.floor(diff / 3600)).padStart(2, '0');
-        const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-        const s = String(diff % 60).padStart(2, '0');
-        document.getElementById('timer-display').textContent = `${h}:${m}:${s}`;
-        const hh = (diff / 3600 * numPessoas).toFixed(2);
-        document.getElementById('timer-pessoas').textContent =
-          `${numPessoas} pessoa${numPessoas > 1 ? 's' : ''} · HH acumulado: ${hh}`;
-      }, 1000);
+    function abrirTelaFoto() {
+      const data = document.getElementById('inp-data').value;
+      if (!data) { mostrarErro('Informe a data da preventiva.'); return; }
+      document.getElementById('form-msg').style.display = 'none';
+      document.getElementById('tela-form').style.display = 'none';
+      document.getElementById('tela-foto').style.display = 'block';
+    }
+
+    function abrirCamera() {
+      document.getElementById('inp-foto').click();
+    }
+
+    function previewFoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      // comprime até 2MB
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          const MAX = 1280;
+          if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          let q = 0.85;
+          let b64 = canvas.toDataURL('image/jpeg', q);
+          while (b64.length > 2 * 1024 * 1024 && q > 0.3) {
+            q -= 0.1;
+            b64 = canvas.toDataURL('image/jpeg', q);
+          }
+          fotoBase64 = b64;
+          document.getElementById('foto-preview').src = b64;
+          document.getElementById('foto-preview-wrap').style.display = 'block';
+          document.getElementById('btn-camera').textContent = '📷 Tirar Outra Foto';
+          document.getElementById('btn-enviar').style.display = 'block';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     }
 
     async function enviar() {
-      if (!iniciado) { mostrarErro('Clique em "Iniciar Atividade" antes de registrar.'); return; }
-      const tecnico = document.getElementById('inp-tecnico').value.trim();
-      const data    = document.getElementById('inp-data').value;
-      const obs     = document.getElementById('inp-obs').value.trim();
-      if (!tecnico) { mostrarErro('Informe o nome do técnico.'); return; }
-      if (!data)    { mostrarErro('Informe a data da preventiva.'); return; }
-
-      const fimEm     = new Date();
+      if (!fotoBase64) {
+        const err = document.getElementById('foto-err');
+        err.textContent = 'Tire a foto antes de enviar.';
+        err.style.display = 'block';
+        return;
+      }
+      const fimEm      = new Date();
       const duracaoMin = Math.round((fimEm - inicioEm) / 60000);
-      clearInterval(timerInterv);
-
-      const itens = [...document.querySelectorAll('#checklist-wrap input[type=checkbox]')].map(el => ({
+      const data       = document.getElementById('inp-data').value;
+      const obs        = document.getElementById('inp-obs').value.trim();
+      const itens      = [...document.querySelectorAll('#checklist-wrap input[type=checkbox]')].map(el => ({
         item: el.dataset.item, concluido: el.checked
       }));
 
       const body = {
         id:            'prev-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0, 12),
         ucId,
-        tecnico,
+        tecnicos:      tecSelecionados,
         dataPrevista:  data,
         dataRealizada: fimEm.toISOString(),
         status:        'Realizada',
@@ -186,14 +246,15 @@ const DADOS    = window.__DADOS__ || {};
         inicioEm:      inicioEm.toISOString(),
         fimEm:         fimEm.toISOString(),
         duracaoMin,
-        numPessoas
+        numPessoas:    tecSelecionados.length,
+        foto:          fotoBase64
       };
 
-      const btn = document.getElementById('btn-submit');
+      const btn = document.getElementById('btn-enviar');
       if (btn.disabled) return;
       btn.disabled    = true;
       btn.textContent = 'Enviando...';
-      document.getElementById('form-msg').style.display = 'none';
+      document.getElementById('foto-err').style.display = 'none';
 
       try {
         const res = await fetch('/api/conforto/preventivas', {
@@ -204,17 +265,19 @@ const DADOS    = window.__DADOS__ || {};
         if (!res.ok) throw new Error('Erro ' + res.status);
         const concluidos = itens.filter(i => i.concluido).length;
         const hora = fimEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const hh   = (duracaoMin / 60 * numPessoas).toFixed(2);
+        const hh   = (duracaoMin / 60 * tecSelecionados.length).toFixed(2);
         document.getElementById('sucesso-sub').textContent =
-          `Técnico: ${tecnico} — ${data.split('-').reverse().join('/')} às ${hora}`;
+          `${tecSelecionados.join(', ')} — ${data.split('-').reverse().join('/')} às ${hora}`;
         document.getElementById('sucesso-detalhe').textContent =
-          `${concluidos}/${itens.length} itens · Duração: ${duracaoMin} min · HH: ${hh}`;
-        document.getElementById('tela-form').style.display    = 'none';
+          `${concluidos}/${itens.length} itens · ${duracaoMin} min · ${hh} HH`;
+        document.getElementById('tela-foto').style.display    = 'none';
         document.getElementById('tela-sucesso').style.display = 'block';
       } catch (e) {
         btn.disabled    = false;
-        btn.textContent = 'Registrar Preventiva';
-        mostrarErro('Falha ao enviar. Verifique a conexão e tente novamente.');
+        btn.textContent = 'Confirmar e Enviar ✓';
+        const err = document.getElementById('foto-err');
+        err.textContent = 'Falha ao enviar. Verifique a conexão e tente novamente.';
+        err.style.display = 'block';
       }
     }
 
@@ -223,6 +286,5 @@ const DADOS    = window.__DADOS__ || {};
       el.textContent  = txt;
       el.style.display = 'block';
     }
-</script>
+  </script>
 </body>
-</html>

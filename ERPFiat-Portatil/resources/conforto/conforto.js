@@ -290,6 +290,22 @@ function renderDashboard() {
   const hhTotal = prevRealizadas
     .reduce((s, p) => s + (p.duracaoMin / 60 * (p.numPessoas || 1)), 0)
     .toFixed(1);
+  const hhPorTec = {};
+  state.preventivas
+    .filter(p => p.status === 'Realizada' && p.duracaoMin != null && p.dataRealizada?.startsWith(mes))
+    .forEach(p => {
+      const nomes = Array.isArray(p.tecnicos) && p.tecnicos.length
+        ? p.tecnicos : [nomeTec(p.tecnicoId)];
+      const hhCada = p.duracaoMin / 60;
+      nomes.forEach(n => { hhPorTec[n] = (hhPorTec[n] || 0) + hhCada; });
+    });
+  const rankingTec = Object.entries(hhPorTec)
+    .sort((a, b) => b[1] - a[1])
+    .map(([n, h]) => `${n}: ${h.toFixed(1)}h`)
+    .join(' · ') || '—';
+
+  const rankEl = $('dash-ranking-tec');
+  if (rankEl) rankEl.textContent = rankingTec;
 
   const kpis = [
     { label: 'OS Civil Abertas',      val: osCivil.length,      cls: 'orange', sub: 'programadas + em execução' },
@@ -456,7 +472,7 @@ function renderPreventivas() {
         return `<tr>
           <td><span class="badge badge-muted">${p.id}</span></td>
           <td>${nomeUC(p.ucId)}</td>
-          <td>${nomeTec(p.tecnicoId)}</td>
+          <td>${Array.isArray(p.tecnicos) && p.tecnicos.length ? p.tecnicos.join(', ') : nomeTec(p.tecnicoId)}</td>
           <td>${fmtD(p.dataPrevista)}</td>
           <td>${fmtD(p.dataRealizada)}</td>
           <td>${p.checklist ? p.checklist.filter(c => c.concluido).length + '/' + p.checklist.length : '—'}</td>

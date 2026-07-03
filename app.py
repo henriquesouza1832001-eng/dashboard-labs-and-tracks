@@ -285,6 +285,8 @@ def _load_conforto():
         "fimEm":         _ts(p.get("fim_em")) or "",
         "duracaoMin":    p.get("duracao_min"),
         "numPessoas":    p.get("num_pessoas"),
+        "tecnicos":      safe_json(p.get("tecnicos")) or [],
+        "fotoUrl":       p.get("foto_url") or "",
     })
 
     ordens = load_table("ordens", lambda o: {
@@ -1388,7 +1390,11 @@ async def prev_page(uc_id: str, request: Request):
         uc = None
         checklist = []
     from fastapi.responses import HTMLResponse
-    html = inject(f"{BASE}/confortoprev/prev.html", {"uc": uc, "checklist": checklist, "uc_id": uc_id})
+    tec_rows = await arun_query(f"SELECT nome FROM {S_CONFORTO}.tecnicos ORDER BY nome")
+    tecnicos_nomes = [t["nome"] for t in tec_rows] if tec_rows else []
+    html = inject(f"{BASE}/confortoprev/prev.html", {
+        "uc": uc, "checklist": checklist, "uc_id": uc_id, "tecnicos": tecnicos_nomes
+    })
     html.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     html.headers["Pragma"] = "no-cache"
     return html
@@ -1401,17 +1407,20 @@ async def criar_preventiva_qr(request: Request):
             INSERT INTO {S_CONFORTO}.preventivas
                 (id, uc_id, tecnico_id, data_prevista, data_realizada, status,
                  checklist, obs, origem, atualizado_por,
-                 inicio_em, fim_em, duracao_min, num_pessoas)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 inicio_em, fim_em, duracao_min, num_pessoas,
+                 tecnicos, foto_url)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, [
             body["id"], body.get("ucId"), None,
             body.get("dataPrevista"), body.get("dataRealizada", body.get("dataPrevista")),
             body.get("status", "Realizada"),
             json.dumps(body.get("checklist", [])),
-            f"[QR] Técnico: {body.get('tecnico','')} | {body.get('obs','')}".strip(' |'),
-            "qr", body.get("tecnico", "qr"),
+            body.get("obs", ""),
+            "qr", json.dumps(body.get("tecnicos", [])),
             body.get("inicioEm"), body.get("fimEm"),
-            body.get("duracaoMin"), body.get("numPessoas")
+            body.get("duracaoMin"), body.get("numPessoas"),
+            json.dumps(body.get("tecnicos", [])),
+            body.get("foto")
         ])
     except Exception as e:
         print(f"[conforto] erro ao criar preventiva qr: {e}")
