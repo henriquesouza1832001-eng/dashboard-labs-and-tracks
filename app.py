@@ -1104,6 +1104,17 @@ async def save_atividades(request: Request):
     await loop.run_in_executor(None, _load_atividades)
     return JSONResponse({"ok": True})
 
+@app.delete("/api/atividades/{aid}")
+async def delete_atividade(aid: str):
+    try:
+        await arun_exec(f"DELETE FROM {S_ATIVIDADES}.atividades WHERE id=?", [aid])
+        await arun_exec(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [aid])
+    except Exception as e:
+        print(f"[atividades] erro ao excluir {aid}: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    cache_invalidate("atividades")
+    return JSONResponse({"ok": True})
+
 @app.post("/api/atividades/{aid}/comentarios")
 async def add_comentario(aid: str, request: Request):
     body = await request.json()

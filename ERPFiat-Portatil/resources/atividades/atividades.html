@@ -292,10 +292,10 @@ let atividades = [];
 let saveTimeout = null;
 let editId = null;
 let viewAtual = 'kanban';
-const usuarioAtual = JSON.parse(sessionStorage.getItem('usuario-atual')||'null');
+const usuarioAtual = window.__authUser || JSON.parse(sessionStorage.getItem('usuario-atual')||'null');
 const usuarios = [];
 
-if(usuarioAtual) $('user-logado').textContent = '● ' + usuarioAtual.nome;
+if(usuarioAtual) $('user-logado').textContent = '● ' + (usuarioAtual.nome||usuarioAtual.email||'');
 function setSaveStatus(s,txt){
   const el=$('save-status'); el.className='save-status '+s;
   $('save-txt').textContent=txt||s;
@@ -532,7 +532,7 @@ async function adicionarComentario(){
   if(!texto||!editId)return;
   const a=atividades.find(x=>x.id===editId);
   if(!a)return;
-  const autor=(window.__authUser?.nome)||(usuarioAtual?.nome)||'Anônimo';
+  const autor=window.__authUser?.nome||window.__authUser?.email||usuarioAtual?.nome||'Anônimo';
   try{
     await fetch(`/api/atividades/${editId}/comentarios`,{
       method:'POST',
@@ -585,7 +585,15 @@ $('btn-salvar-ativ').onclick=()=>{
   $('modal-ativ').classList.remove('open');
 };
 function excluirAtivAtual(){if(editId&&confirm('Excluir?')){excluirAtiv(editId);$('modal-ativ').classList.remove('open');}}
-function excluirAtiv(id){atividades=atividades.filter(x=>x.id!==id);agendarSalvamento();render();}
+async function excluirAtiv(id){
+  atividades=atividades.filter(x=>x.id!==id);
+  render();
+  try{
+    await fetch(`/api/atividades/${id}`,{method:'DELETE',headers:{'Content-Type':'application/json','X-Ctrl-Token':sessionStorage.getItem('ctrl-token')||''}});
+  }catch(e){
+    console.error('[atividades] erro ao excluir:',e);
+  }
+}
 ['modal-ativ-close','modal-ativ-cancel'].forEach(id=>$(id).onclick=()=>$('modal-ativ').classList.remove('open'));
 $('modal-ativ').onclick=e=>{if(e.target===$('modal-ativ'))$('modal-ativ').classList.remove('open');};
 $('btn-nova').onclick=()=>novaAtividade();
