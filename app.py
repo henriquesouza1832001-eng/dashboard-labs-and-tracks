@@ -1121,8 +1121,8 @@ async def add_comentario(aid: str, request: Request):
     u = get_usuario(request)
     try:
         await arun_exec(f"""
-            INSERT INTO {S_ATIVIDADES}.comentarios (atividade_id, autor, texto)
-            VALUES (?,?,?)
+            INSERT INTO {S_ATIVIDADES}.comentarios (atividade_id, autor, texto, data)
+            VALUES (?,?,?,current_timestamp())
         """, [aid, body.get("autor"), body.get("texto")])
     except Exception as e:
         print(f"[comentario] erro: {e}")

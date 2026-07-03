@@ -281,6 +281,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
   </div>
 </div>
 <script src="/hub/pwa.js"></script>
+<script src="../hub/auth.js"></script>
 <script src="../hub/api.js"></script>
 <script src="../hub/cache.js"></script>
 <script>
@@ -514,12 +515,13 @@ function renderComentarios(a){
   const authUser = window.__authUser || {};
   const isAdmin = authUser.role === 'admin';
   $('lista-comentarios').innerHTML=coms.length?coms.map((c,i)=>{
-    const podeExcluir = isAdmin || c.autor === authUser.nome;
+    const podeExcluir = isAdmin || c.autor === authUser.nome || c.autor === authUser.email;
+    const dataFmt = c.data && c.data !== 'null' && c.data !== null ? c.data : '—';
     return `<div class="comentario" id="com-item-${i}">
       <div class="com-header">
-        <span class="com-autor">${c.autor}</span>
+        <span class="com-autor">${c.autor||'—'}</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="com-data">${c.data}</span>
+          <span class="com-data">${dataFmt}</span>
           ${podeExcluir?`<button onclick="excluirComentario(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0" title="Excluir comentário">✕</button>`:''}
         </div>
       </div>
