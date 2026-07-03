@@ -204,7 +204,17 @@ def _load_codin():
     return payload
 
 def _load_atividades():
-    rows = run_query(f"SELECT * FROM {S_ATIVIDADES}.atividades ORDER BY criadoEm DESC")
+    rows = run_query(f"""
+        SELECT * FROM (
+            SELECT *, ROW_NUMBER() OVER (
+                PARTITION BY id ORDER BY atualizado_em DESC NULLS LAST
+            ) AS _rn
+            FROM {S_ATIVIDADES}.atividades
+        ) WHERE _rn = 1
+        ORDER BY criadoEm DESC
+    """)
+    for r in rows:
+        r.pop("_rn", None)
     comentarios_todos = run_query(f"SELECT atividade_id, autor, texto, data FROM {S_ATIVIDADES}.comentarios ORDER BY data")
     comentarios_map = {}
     for c in comentarios_todos:
