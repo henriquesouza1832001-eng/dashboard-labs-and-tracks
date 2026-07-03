@@ -100,6 +100,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .s-doing{background:var(--yellow-bg);color:var(--yellow);border:1px solid #f0d080;}
 .s-done{background:var(--green-bg);color:var(--green);border:1px solid #b8e6c8;}
 .s-blocked{background:var(--blue-bg);color:var(--blue);border:1px solid #c5d4f0;}
+.s-standby{background:#f0f4f8;color:#8a9abf;border:1px solid #d0d8e8;}
 
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,28,63,0.4);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);}
@@ -178,7 +179,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
   <select class="filter-sel" id="filtro-resp"><option value="">Todos os responsáveis</option></select>
   <select class="filter-sel" id="filtro-obra"><option value="">Todas as obras</option></select>
   <select class="filter-sel" id="filtro-prior"><option value="">Todas as prioridades</option><option value="Alta">Alta</option><option value="Média">Média</option><option value="Baixa">Baixa</option></select>
-  <select class="filter-sel" id="filtro-status"><option value="">Todos os status</option><option value="todo">A Fazer</option><option value="doing">Em Andamento</option><option value="blocked">Em Estudo</option><option value="done">Concluído</option></select>
+  <select class="filter-sel" id="filtro-status"><option value="">Todos os status</option><option value="todo">A Fazer</option><option value="doing">Em Andamento</option><option value="blocked">Em Estudo</option><option value="standby">Standby</option><option value="done">Concluído</option></select>
   <select class="filter-sel" id="filtro-data"><option value="">Qualquer data</option><option value="hoje">Cadastradas hoje</option><option value="semana">Esta semana</option><option value="mes">Este mês</option><option value="vencidas">Prazo vencido</option></select>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
     <div class="view-toggle">
@@ -212,6 +213,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
     <div class="col-cards" id="cards-blocked"></div>
     <button class="add-card-btn" onclick="novaAtividade('blocked')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar</button>
   </div>
+  <div class="kanban-col" style="min-width:240px">
+    <div class="col-header"><div class="col-title"><div class="col-dot" style="background:#8a9abf"></div>Standby</div><span class="col-count" id="cnt-standby">0</span></div>
+    <div class="col-cards" id="cards-standby"></div>
+    <button class="add-card-btn" onclick="novaAtividade('standby')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar</button>
+  </div>
   <div class="kanban-col-done">
     <div class="col-header"><div class="col-title"><div class="col-dot" style="background:var(--green)"></div>Concluído</div><span class="col-count" id="cnt-done">0</span></div>
     <div class="col-cards" id="cards-done"></div>
@@ -237,7 +243,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
       <div class="field"><label>Descrição</label><textarea id="a-desc" rows="3" placeholder="Detalhes, critérios de aceite…"></textarea></div>
       <div class="form-row">
         <div class="field"><label>Status</label>
-          <select id="a-status"><option value="todo">A Fazer</option><option value="doing">Em Andamento</option><option value="blocked">Em Estudo</option><option value="done">Concluído</option></select>
+          <select id="a-status"><option value="todo">A Fazer</option><option value="doing">Em Andamento</option><option value="blocked">Em Estudo</option><option value="standby">Standby</option><option value="done">Concluído</option></select>
         </div>
         <div class="field"><label>Prioridade</label>
           <select id="a-prior"><option value="Média">Média</option><option value="Alta">Alta</option><option value="Baixa">Baixa</option></select>
@@ -313,7 +319,7 @@ function aplicarFiltroURL(){
   const p = new URLSearchParams(location.search);
   const status = p.get('status');
   if(!status) return;
-  const colId = { todo:'col-todo', doing:'col-doing', blocked:'col-blocked', done:'col-done' }[status];
+  const colId = { todo:'col-todo', doing:'col-doing', blocked:'col-blocked', standby:'col-standby', done:'col-done' }[status];
   if(colId){
     setView('kanban');
     setTimeout(()=>{
@@ -376,7 +382,7 @@ function filtradas(){
 function render(){ viewAtual==='kanban'?renderKanban():renderLista(); }
 function renderKanban(){
   const lista=filtradas();
-  ['todo','doing','blocked','done'].forEach(col=>{
+  ['todo','doing','blocked','standby','done'].forEach(col=>{
     const cards=lista.filter(a=>a.status===col);
     $('cnt-'+col).textContent=cards.length;
     $('cards-'+col).innerHTML=cards.map(a=>cardHTML(a)).join('');
@@ -407,8 +413,8 @@ function cardHTML(a){
 }
 function renderLista(){
   const lista=filtradas();
-  const statusMap={todo:'A Fazer',doing:'Em Andamento',blocked:'Em Estudo',done:'Concluído'};
-  const badgeMap={todo:'s-todo',doing:'s-doing',blocked:'s-blocked',done:'s-done'};
+  const statusMap={todo:'A Fazer',doing:'Em Andamento',blocked:'Em Estudo',standby:'Standby',done:'Concluído'};
+  const badgeMap={todo:'s-todo',doing:'s-doing',blocked:'s-blocked',standby:'s-standby',done:'s-done'};
   const prioClass={Alta:'alta',Média:'media',Baixa:'baixa'};
   $('lista-tbody').innerHTML=lista.length?lista.map(a=>{
     const resp=usuarios.find(u=>u.id===a.responsavel);
