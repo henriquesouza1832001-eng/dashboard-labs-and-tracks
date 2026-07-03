@@ -1346,21 +1346,34 @@ async def prev_page(uc_id: str, request: Request):
         if ucs_rows:
             u = ucs_rows[0]
             uc = {
-                "id": u.get("id"),
-                "codigo": u.get("codigo"),
-                "nome": u.get("nome"),
-                "local": u.get("local"),
-                "modelo": u.get("modelo"),
-                "categoria": u.get("categoria") or "Ar-Condicionado",
-                "tipo": u.get("tipo"),
+                "id":              u.get("id"),
+                "codigo":          u.get("codigo"),
+                "nome":            u.get("nome"),
+                "local":           u.get("local"),
+                "modelo":          u.get("modelo"),
+                "categoria":       u.get("categoria") or "Ar-Condicionado",
+                "tipo":            u.get("tipo"),
+                "capacidadeBtu":   u.get("capacidade_btu"),
+                "dataInstalacao":  str(u.get("data_instalacao") or ""),
+                "cicloFiltroDias": u.get("ciclo_filtro_dias"),
+                "responsavelId":   u.get("responsavel_id"),
+                "obs":             u.get("obs") or "",
+                "checklistProprio": (
+                    json.loads(u["checklist_proprio"])
+                    if u.get("checklist_proprio") and isinstance(u.get("checklist_proprio"), str)
+                    else (u.get("checklist_proprio") or [])
+                ),
             }
         config_rows = await arun_query(f"SELECT checklist_preventiva FROM {S_CONFORTO}.config LIMIT 1")
-        checklist = []
+        checklist_global = []
         if config_rows and config_rows[0].get("checklist_preventiva"):
             try:
-                checklist = json.loads(config_rows[0]["checklist_preventiva"])
+                checklist_global = json.loads(config_rows[0]["checklist_preventiva"])
             except:
-                checklist = []
+                checklist_global = []
+        checklist = (uc.get("checklistProprio") or []) if uc else []
+        if not checklist:
+            checklist = checklist_global
     except Exception as e:
         import traceback
         print(f"[prev_page] erro ao buscar UC {uc_id}: {e}")
@@ -1382,11 +1395,12 @@ async def criar_preventiva_qr(request: Request):
                 (id, uc_id, tecnico_id, data_prevista, data_realizada, status, checklist, obs, origem, atualizado_por)
             VALUES (?,?,?,?,?,?,?,?,?,?)
         """, [
-            body["id"], body.get("ucId"), body.get("tecnico"),
+            body["id"], body.get("ucId"), None,
             body.get("dataPrevista"), body.get("dataRealizada", body.get("dataPrevista")),
             body.get("status", "Realizada"),
             json.dumps(body.get("checklist", [])),
-            body.get("obs", ""), "qr", body.get("tecnico", "qr")
+            f"[QR] Técnico: {body.get('tecnico','')} | {body.get('obs','')}".strip(' |'),
+            "qr", body.get("tecnico", "qr")
         ])
     except Exception as e:
         print(f"[conforto] erro ao criar preventiva qr: {e}")

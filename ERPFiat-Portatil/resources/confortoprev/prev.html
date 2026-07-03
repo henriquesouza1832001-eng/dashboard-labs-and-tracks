@@ -61,97 +61,102 @@
     </div>
   </div>
 
-  <script>
-    const DADOS = window.__DADOS__ || {};
-    const uc       = DADOS.uc || null;
-    const checklist = DADOS.checklist || [];
-    const ucId     = DADOS.uc_id || '';
+<script>
+  const DADOS = window.__DADOS__ || {};
+  const uc       = DADOS.uc || null;
+  const checklist = DADOS.checklist || [];
+  const ucId     = DADOS.uc_id || '';
+  document.getElementById('uc-codigo').textContent = uc?.codigo || ucId;
+  document.getElementById('uc-nome').textContent   = uc?.nome   || 'Unidade não encontrada';
+  document.getElementById('uc-local').textContent  = uc?.local  || '—';
+  document.getElementById('uc-modelo').textContent = uc?.modelo || '—';
+  if (uc?.categoria) {
+    document.querySelector('.uc-badge').textContent = uc.categoria.toUpperCase();
+  }
+  const extraWrap = document.createElement('div');
+  extraWrap.style.cssText = 'margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:rgba(255,255,255,0.7)';
+  if (uc?.tipo)            extraWrap.innerHTML += `<span>Tipo: <strong style="color:#fff">${uc.tipo}</strong></span>`;
+  if (uc?.capacidadeBtu)   extraWrap.innerHTML += `<span>BTU: <strong style="color:#fff">${uc.capacidadeBtu}</strong></span>`;
+  if (uc?.dataInstalacao && uc.dataInstalacao !== 'None' && uc.dataInstalacao !== '') {
+    const [y,m,d] = uc.dataInstalacao.split('-');
+    extraWrap.innerHTML += `<span>Instalado: <strong style="color:#fff">${d}/${m}/${y}</strong></span>`;
+  }
+  if (uc?.cicloFiltroDias) extraWrap.innerHTML += `<span>Ciclo filtro: <strong style="color:#fff">${uc.cicloFiltroDias} dias</strong></span>`;
+  if (uc?.obs)             extraWrap.innerHTML += `<span style="width:100%;color:rgba(255,255,255,0.6);font-style:italic">${uc.obs}</span>`;
+  document.getElementById('card-uc').appendChild(extraWrap);
+  document.getElementById('inp-data').value = new Date().toISOString().slice(0, 10);
+  const itensChecklist = checklist.map(c => typeof c === 'string' ? c : (c.item || ''));
+  const wrap = document.getElementById('checklist-wrap');
+  if (itensChecklist.length) {
+    wrap.innerHTML = itensChecklist.map((item, i) => `
+      <label class="check-item" for="cl-${i}">
+        <input type="checkbox" id="cl-${i}" data-item="${item.replace(/"/g,'&quot;')}">
+        <span class="check-box"></span>
+        <span class="check-label">${item}</span>
+      </label>
+    `).join('');
+  } else {
+    wrap.innerHTML = '<div class="check-empty">Nenhum item de checklist configurado.</div>';
+  }
 
-    // Preenche card da UC
-    document.getElementById('uc-codigo').textContent = uc?.codigo || ucId;
-    document.getElementById('uc-nome').textContent   = uc?.nome   || 'Unidade não encontrada';
-    document.getElementById('uc-local').textContent  = uc?.local  || '—';
-    document.getElementById('uc-modelo').textContent = uc?.modelo || '—';
-    if (uc?.categoria) {
-      document.querySelector('.uc-badge').textContent = uc.categoria.toUpperCase();
+  async function enviar() {
+    const tecnico = document.getElementById('inp-tecnico').value.trim();
+    const data    = document.getElementById('inp-data').value;
+    const obs     = document.getElementById('inp-obs').value.trim();
+
+    if (!tecnico) { mostrarErro('Informe o nome do técnico.'); return; }
+    if (!data)    { mostrarErro('Informe a data da preventiva.'); return; }
+
+    const itens = [...document.querySelectorAll('#checklist-wrap input[type=checkbox]')].map(el => ({
+      item: el.dataset.item,
+      concluido: el.checked
+    }));
+
+    const agora = new Date();
+    const body = {
+      id: 'prev-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,12),
+      ucId,
+      tecnico,
+      dataPrevista:  data,
+      dataRealizada: agora.toISOString(),
+      status: 'Realizada',
+      checklist: itens,
+      obs
+    };
+
+    const btn = document.getElementById('btn-submit');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    document.getElementById('form-msg').style.display = 'none';
+
+    try {
+      const res = await fetch('/api/conforto/preventivas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Erro ' + res.status);
+      const concluidos = itens.filter(i => i.concluido).length;
+      const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('sucesso-sub').textContent =
+        `Técnico: ${tecnico} — ${data.split('-').reverse().join('/')} às ${hora}`;
+      document.getElementById('sucesso-detalhe').textContent =
+        `${concluidos} de ${itens.length} itens do checklist concluídos.`;
+      document.getElementById('tela-form').style.display   = 'none';
+      document.getElementById('tela-sucesso').style.display = 'block';
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Registrar Preventiva';
+      mostrarErro('Falha ao enviar. Verifique a conexão e tente novamente.');
     }
+  }
 
-    // Preenche data padrão
-    document.getElementById('inp-data').value = new Date().toISOString().slice(0, 10);
-
-    // Renderiza checklist
-    const wrap = document.getElementById('checklist-wrap');
-    if (checklist.length) {
-      wrap.innerHTML = checklist.map((item, i) => `
-        <label class="check-item" for="cl-${i}">
-          <input type="checkbox" id="cl-${i}" data-item="${item.replace(/"/g,'&quot;')}">
-          <span class="check-box"></span>
-          <span class="check-label">${item}</span>
-        </label>
-      `).join('');
-    } else {
-      wrap.innerHTML = '<div class="check-empty">Nenhum item de checklist configurado.</div>';
-    }
-
-    async function enviar() {
-      const tecnico = document.getElementById('inp-tecnico').value.trim();
-      const data    = document.getElementById('inp-data').value;
-      const obs     = document.getElementById('inp-obs').value.trim();
-      const msg     = document.getElementById('form-msg');
-
-      if (!tecnico) { mostrarErro('Informe o nome do técnico.'); return; }
-      if (!data)    { mostrarErro('Informe a data da preventiva.'); return; }
-
-      const itens = [...document.querySelectorAll('#checklist-wrap input[type=checkbox]')].map(el => ({
-        item: el.dataset.item,
-        concluido: el.checked
-      }));
-
-      const agora = new Date();
-      const dataHora = agora.toISOString();
-      const body = {
-        id: 'prev-qr-' + Date.now().toString(36),
-        ucId,
-        tecnico,
-        dataPrevista:  data,
-        dataRealizada: dataHora,
-        status: 'Realizada',
-        checklist: itens,
-        obs
-      };
-
-      const btn = document.getElementById('btn-submit');
-      btn.disabled = true;
-      btn.textContent = 'Enviando...';
-      msg.style.display = 'none';
-
-      try {
-        const res = await fetch('/api/conforto/preventivas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        if (!res.ok) throw new Error('Erro ' + res.status);
-        const concluidos = itens.filter(i => i.concluido).length;
-        const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('sucesso-sub').textContent =
-          `Técnico: ${tecnico} — ${data.split('-').reverse().join('/')} às ${hora}`;
-        document.getElementById('sucesso-detalhe').textContent =
-          `${concluidos} de ${itens.length} itens do checklist concluídos.`;
-        document.getElementById('tela-form').style.display   = 'none';
-        document.getElementById('tela-sucesso').style.display = 'block';
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = 'Registrar Preventiva';
-        mostrarErro('Falha ao enviar. Verifique a conexão e tente novamente.');
-      }
-    }
-
-    function mostrarErro(txt) {
-      const el = document.getElementById('form-msg');
-      el.textContent = txt;
-      el.style.display = 'block';
-    }
-  </script>
+  function mostrarErro(txt) {
+    const el = document.getElementById('form-msg');
+    el.textContent = txt;
+    el.style.display = 'block';
+  }
+</script>
 </body>
 </html>
