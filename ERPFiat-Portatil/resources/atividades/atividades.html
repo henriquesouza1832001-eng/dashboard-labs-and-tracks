@@ -201,27 +201,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 </div>
 <!-- KANBAN -->
 <div class="kanban-wrap" id="view-kanban">
-  <div class="kanban-col-todo">
+  <div class="kanban-col">
     <div class="col-header"><div class="col-title"><div class="col-dot" style="background:var(--text-muted)"></div>A Fazer</div><span class="col-count" id="cnt-todo">0</span></div>
     <div class="col-cards" id="cards-todo"></div>
     <button class="add-card-btn" onclick="novaAtividade('todo')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar</button>
   </div>
-  <div class="kanban-col-doing">
+  <div class="kanban-col">
     <div class="col-header"><div class="col-title"><div class="col-dot" style="background:var(--yellow)"></div>Em Andamento</div><span class="col-count" id="cnt-doing">0</span></div>
     <div class="col-cards" id="cards-doing"></div>
     <button class="add-card-btn" onclick="novaAtividade('doing')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar</button>
   </div>
-  <div class="kanban-col-blocked">
+  <div class="kanban-col">
     <div class="col-header"><div class="col-title"><div class="col-dot" style="background:var(--blue)"></div>Em Estudo</div><span class="col-count" id="cnt-blocked">0</span></div>
     <div class="col-cards" id="cards-blocked"></div>
     <button class="add-card-btn" onclick="novaAtividade('blocked')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar</button>
   </div>
-  <div class="kanban-col" style="min-width:240px">
+  <div class="kanban-col">
     <div class="col-header"><div class="col-title"><div class="col-dot" style="background:#8a9abf"></div>Standby</div><span class="col-count" id="cnt-standby">0</span></div>
     <div class="col-cards" id="cards-standby"></div>
     <button class="add-card-btn" onclick="novaAtividade('standby')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar</button>
   </div>
-  <div class="kanban-col-done">
+  <div class="kanban-col">
     <div class="col-header"><div class="col-title"><div class="col-dot" style="background:var(--green)"></div>Concluído</div><span class="col-count" id="cnt-done">0</span></div>
     <div class="col-cards" id="cards-done"></div>
     <button class="add-card-btn" onclick="novaAtividade('done')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar</button>
@@ -515,10 +515,9 @@ function abrirAtiv(id){
 }
 function renderComentarios(a){
   const coms=a.comentarios||[];
-  const authUser = window.__authUser || {};
-  const isAdmin = authUser.role === 'admin';
+  const isAdmin = usuarioAtual?.role === 'admin';
   $('lista-comentarios').innerHTML=coms.length?coms.map((c,i)=>{
-    const podeExcluir = isAdmin || c.autor === authUser.nome || c.autor === authUser.email;
+    const podeExcluir = isAdmin || c.autor === usuarioAtual?.nome || c.autor === usuarioAtual?.email;
     const dataFmt = c.data && c.data !== 'null' && c.data !== null ? c.data : '—';
     return `<div class="comentario" id="com-item-${i}">
       <div class="com-header">
@@ -537,7 +536,7 @@ async function adicionarComentario(){
   if(!texto||!editId)return;
   const a=atividades.find(x=>x.id===editId);
   if(!a)return;
-  const autor=window.__authUser?.nome||window.__authUser?.email||usuarioAtual?.nome||'Anônimo';
+  const autor=usuarioAtual?.nome||usuarioAtual?.email||'Anônimo';
   try{
     await fetch(`/api/atividades/${editId}/comentarios`,{
       method:'POST',
