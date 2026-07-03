@@ -870,6 +870,10 @@ async def atualizar_solicitacao_codin(sid: str, request: Request):
 
 # ─── Conforto ─────────────────────────────────────────────────────────────────
 
+@app.get("/api/conforto")
+async def get_conforto():
+    return JSONResponse(get_cached("conforto"))
+
 @app.post("/api/conforto")
 async def save_conforto(request: Request):
     body = await request.json()
