@@ -143,6 +143,9 @@ def inject(html_path, dados):
     with open(html_path, "r", encoding="utf-8") as f:
         html = f.read()
     script = f'<script>window.__DADOS__={json.dumps(dados, ensure_ascii=False, default=str)};</script>'
+    if "</head>" in html:
+        return HTMLResponse(html.replace("</head>", f"{script}\n</head>"),
+                             headers={"Cache-Control": "no-store"})
     return HTMLResponse(html.replace("</body>", f"{script}\n</body>"),
                          headers={"Cache-Control": "no-store"})
 
