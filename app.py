@@ -1641,22 +1641,29 @@ async def portal_auth(request: Request):
 async def portal_atividades(request: Request):
     try:
         manutencoes = await arun_query(f"""
-            SELECT id, uc_id, tipo, falha, status, data_abertura,
+            SELECT id, uc_id, tipo, falha, status,
+                   CAST(data_abertura AS STRING) AS data_abertura,
                    tecnicos, duracao_min, num_pessoas, pausas, obs
             FROM {S_CONFORTO}.manutencoes
             WHERE status IN ('Em Aberto', 'Em Andamento', 'Aguardando Peça')
             ORDER BY data_abertura DESC
         """)
         preventivas = await arun_query(f"""
-            SELECT id, uc_id, status, data_prevista, tecnicos
+            SELECT id, uc_id, status,
+                   CAST(data_prevista AS STRING) AS data_prevista,
+                   tecnicos
             FROM {S_CONFORTO}.preventivas
             WHERE status IN ('Pendente', 'Em Atraso')
             ORDER BY data_prevista ASC
         """)
-        return JSONResponse({
-            "manutencoes": manutencoes or [],
-            "preventivas": preventivas or []
-        })
+        import json as _json
+        return HTMLResponse(
+            content=_json.dumps({
+                "manutencoes": manutencoes or [],
+                "preventivas": preventivas or []
+            }, default=str),
+            media_type="application/json"
+        )
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
