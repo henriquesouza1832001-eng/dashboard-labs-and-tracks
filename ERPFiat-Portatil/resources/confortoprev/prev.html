@@ -604,7 +604,7 @@
           localStorage.removeItem('ativ_id_atual');
         }
       }
-      idAtivFinal = localStorage.getItem('ativ_id_atual');
+      idAtivFinal = localStorage.getItem('ativ_id_atual') || (window._ativRetomada && window._ativRetomada.id) || null;
       const pausa = {
         motivo: motivoFinal,
         inicio: inicioEm.toISOString(),
@@ -618,6 +618,7 @@
       try {
         let res;
         if (idAtivFinal) {
+          localStorage.setItem('ativ_id_atual', idAtivFinal);
           res = await fetch(`/api/conforto/manutencoes/${idAtivFinal}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
