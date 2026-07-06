@@ -39,6 +39,13 @@
         <div style="font-size:12px;font-weight:400;opacity:0.8">Intervenção planejada</div>
       </button>
     </div>
+    <div style="margin-top:20px;text-align:center">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em">Equipe</div>
+      <a href="/conforto-prev/portal"
+        style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-weight:600;color:var(--text2);text-decoration:none">
+        📋 Ver Atividades em Aberto
+      </a>
+    </div>
   </div>
 </div>
   <!-- TELA 1: SELEÇÃO DE TÉCNICOS -->
@@ -116,6 +123,44 @@
         <textarea id="inp-obs" rows="3" placeholder="Anote qualquer ocorrência ou ponto de atenção..."></textarea>
       </div>
       <div id="form-msg" class="form-msg" style="display:none"></div>
+
+      <!-- PARALIZAÇÃO -->
+      <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+        <div class="section-title" style="color:var(--red)">Precisa paralisar a atividade?</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
+            <input type="radio" name="motivo-pausa" value="Falta de peça" id="mp1">
+            <span style="font-size:13px">🔩 Falta de peça</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
+            <input type="radio" name="motivo-pausa" value="Aguardando liberação de acesso" id="mp2">
+            <span style="font-size:13px">🔐 Aguardando liberação de acesso</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
+            <input type="radio" name="motivo-pausa" value="Aguardando aprovação" id="mp3">
+            <span style="font-size:13px">📋 Aguardando aprovação</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
+            <input type="radio" name="motivo-pausa" value="Problema de segurança" id="mp4">
+            <span style="font-size:13px">⚠️ Problema de segurança</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
+            <input type="radio" name="motivo-pausa" value="Fim de turno" id="mp5">
+            <span style="font-size:13px">🕐 Fim de turno</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
+            <input type="radio" name="motivo-pausa" value="Outro" id="mp6">
+            <span style="font-size:13px">📝 Outro</span>
+          </label>
+        </div>
+        <input type="text" id="inp-pausa-detalhe" placeholder="Detalhe (opcional)..."
+          style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;margin-bottom:8px;display:none">
+        <button class="btn-submit" id="btn-paralisar" onclick="paralisarAtividade()"
+          style="background:var(--red);margin-top:0">
+          ⏸ Registrar Paralização
+        </button>
+      </div>
+
       <button class="btn-submit" id="btn-finalizar" onclick="abrirTelaFoto()">Finalizar →</button>
     </div>
   </div>
@@ -480,6 +525,82 @@
       const el = document.getElementById('form-msg');
       el.textContent  = txt;
       el.style.display = 'block';
+    }
+    document.querySelectorAll('input[name="motivo-pausa"]').forEach(r => {
+      r.addEventListener('change', () => {
+        document.getElementById('inp-pausa-detalhe').style.display =
+          r.value === 'Outro' ? 'block' : 'none';
+      });
+    });
+
+    async function paralisarAtividade() {
+      const motivo = document.querySelector('input[name="motivo-pausa"]:checked')?.value;
+      if (!motivo) { alert('Selecione o motivo da paralização.'); return; }
+      const detalhe = document.getElementById('inp-pausa-detalhe').value.trim();
+      const motivoFinal = motivo === 'Outro' && detalhe ? `Outro: ${detalhe}` : motivo;
+      const fimParcial = new Date();
+      const duracaoParcial = Math.round((fimParcial - inicioEm) / 60000);
+      const idAtiv = localStorage.getItem('ativ_id_atual');
+      const pausa = {
+        motivo: motivoFinal,
+        inicio: inicioEm.toISOString(),
+        fim: fimParcial.toISOString(),
+        duracaoMin: duracaoParcial
+      };
+
+      const btn = document.getElementById('btn-paralisar');
+      btn.disabled = true; btn.textContent = 'Registrando...';
+
+      try {
+        if (idAtiv) {
+          await fetch(`/api/conforto/manutencoes/${idAtiv}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'Em Andamento',
+              duracaoMin: duracaoParcial,
+              pausas: [pausa],
+              obs: `[Paralizado: ${motivoFinal}]`
+            })
+          });
+        } else {
+          const novoId = 'man-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,12);
+          await fetch('/api/conforto/manutencoes-qr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: novoId,
+              ucId, tipo: tipoRegistro === 'corretiva' ? 'Corretiva' : 'Manutenção',
+              tecnicos: tecSelecionados,
+              falha: `Paralizado: ${motivoFinal}`,
+              status: 'Em Andamento',
+              dataAbertura: new Date().toISOString().split('T')[0],
+              obs: document.getElementById('inp-obs').value.trim(),
+              inicioEm: inicioEm.toISOString(),
+              duracaoMin: duracaoParcial,
+              numPessoas: tecSelecionados.length,
+              pausas: [pausa]
+            })
+          });
+          localStorage.setItem('ativ_id_atual', novoId);
+          localStorage.setItem('ativ_em_andamento', JSON.stringify({
+            id: novoId, inicioEm: inicioEm.toISOString(), tipo: tipoRegistro
+          }));
+        }
+        document.getElementById('sucesso-titulo').textContent = 'Atividade Paralizada';
+        document.getElementById('sucesso-sub').textContent =
+          `Motivo: ${motivoFinal}`;
+        document.getElementById('sucesso-detalhe').textContent =
+          `${duracaoParcial} min registrados · Retome pelo portal da equipe`;
+        document.querySelector('.sucesso-icon svg').setAttribute('stroke', '#e65100');
+        document.querySelector('.sucesso-titulo').style.color = '#e65100';
+        document.getElementById('tela-form').style.display    = 'none';
+        document.getElementById('tela-sucesso').style.display = 'block';
+
+      } catch(e) {
+        btn.disabled = false; btn.textContent = '⏸ Registrar Paralização';
+        alert('Erro ao registrar. Tente novamente.');
+      }
     }
   </script>
 </body>

@@ -265,8 +265,17 @@
       <div style="margin-top:16px" id="bloco-pausa" style="display:none">
         <div class="section-title">Registrar Pausa</div>
         <div class="pausa-form">
-          <textarea id="inp-motivo-pausa" placeholder="Motivo da pausa (ex: aguardando peça, almoço, fim de turno...)"></textarea>
-          <button class="btn-action btn-registrar" onclick="registrarPausa()">Registrar Pausa</button>
+          <select id="sel-motivo-pausa" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);color:var(--text);background:#fff">
+            <option value="">— Selecione o motivo —</option>
+            <option>Falta de peça</option>
+            <option>Aguardando liberação de acesso</option>
+            <option>Aguardando aprovação</option>
+            <option>Problema de segurança</option>
+            <option>Fim de turno</option>
+            <option>Outro</option>
+          </select>
+          <textarea id="inp-motivo-pausa" placeholder="Detalhe adicional (opcional)..."></textarea>
+          <button class="btn-action btn-registrar" onclick="registrarPausa()">Registrar Paralização</button>
         </div>
       </div>
 
@@ -471,8 +480,10 @@
     // ── Registrar pausa ──
     async function registrarPausa() {
       if (!atividadeAtual) return;
-      const motivo = document.getElementById('inp-motivo-pausa').value.trim();
-      if (!motivo) { alert('Informe o motivo da pausa.'); return; }
+      const sel    = document.getElementById('sel-motivo-pausa').value;
+      const detalhe = document.getElementById('inp-motivo-pausa').value.trim();
+      if (!sel) { alert('Selecione o motivo da paralização.'); return; }
+      const motivo = sel === 'Outro' && detalhe ? `Outro: ${detalhe}` : sel;
 
       const pausas = parsePausas(atividadeAtual.pausas);
       pausas.push({ motivo, inicio: new Date().toISOString(), fim: null });
