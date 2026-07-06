@@ -590,7 +590,21 @@
       const motivoFinal = motivo === 'Outro' && detalhe ? `Outro: ${detalhe}` : motivo;
       const fimParcial = new Date();
       const duracaoParcial = Math.round((fimParcial - inicioEm) / 60000);
-      const idAtiv = localStorage.getItem('ativ_id_atual');
+      let idAtivFinal = localStorage.getItem('ativ_id_atual');
+      if (idAtivFinal) {
+        try {
+          const check = await fetch(`/api/conforto/manutencoes/${idAtivFinal}`);
+          if (!check.ok) {
+            localStorage.removeItem('ativ_id_atual');
+          } else {
+            const checkData = await check.json();
+            if (checkData.error) localStorage.removeItem('ativ_id_atual');
+          }
+        } catch(_) {
+          localStorage.removeItem('ativ_id_atual');
+        }
+      }
+      idAtivFinal = localStorage.getItem('ativ_id_atual');
       const pausa = {
         motivo: motivoFinal,
         inicio: inicioEm.toISOString(),
@@ -603,8 +617,8 @@
 
       try {
         let res;
-        if (idAtiv) {
-          res = await fetch(`/api/conforto/manutencoes/${idAtiv}`, {
+        if (idAtivFinal) {
+          res = await fetch(`/api/conforto/manutencoes/${idAtivFinal}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

@@ -271,23 +271,34 @@ def _load_conforto():
         "obs":             u.get("obs") or "",
     })
 
-    preventivas = load_table("preventivas", lambda p: {
-        "id":            p.get("id"),
-        "ucId":          p.get("uc_id"),
-        "tecnicoId":     p.get("tecnico_id"),
-        "dataPrevista":  str(p.get("data_prevista") or ""),
-        "dataRealizada": str(p.get("data_realizada") or ""),
-        "status":        p.get("status"),
-        "checklist":     safe_json(p.get("checklist")),
-        "obs":           p.get("obs") or "",
-        "origem":        p.get("origem") or "manual",
-        "inicioEm":      _ts(p.get("inicio_em")) or "",
-        "fimEm":         _ts(p.get("fim_em")) or "",
-        "duracaoMin":    p.get("duracao_min"),
-        "numPessoas":    p.get("num_pessoas"),
-        "tecnicos":      safe_json(p.get("tecnicos")) or [],
-        "fotoUrl":       p.get("foto_url") or "",
-    })
+    prev_rows = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas ORDER BY data_prevista DESC")
+    prev_checklist = run_query(f"SELECT preventiva_id, item, concluido, ordem FROM {S_CONFORTO}.preventiva_checklist ORDER BY ordem")
+    prev_tecnicos  = run_query(f"SELECT preventiva_id, nome_tecnico FROM {S_CONFORTO}.preventiva_tecnicos")
+    prev_cl_map  = {}
+    for c in prev_checklist:
+        prev_cl_map.setdefault(c["preventiva_id"], []).append({"item": c["item"], "concluido": bool(c["concluido"])})
+    prev_tec_map = {}
+    for t in prev_tecnicos:
+        prev_tec_map.setdefault(t["preventiva_id"], []).append(t["nome_tecnico"])
+    preventivas = []
+    for p in prev_rows:
+        preventivas.append({
+            "id":            p.get("id"),
+            "ucId":          p.get("uc_id"),
+            "tecnicoId":     p.get("tecnico_id"),
+            "dataPrevista":  str(p.get("data_prevista") or ""),
+            "dataRealizada": str(p.get("data_realizada") or ""),
+            "status":        p.get("status"),
+            "checklist":     prev_cl_map.get(p["id"], []),
+            "obs":           p.get("obs") or "",
+            "origem":        p.get("origem") or "manual",
+            "inicioEm":      _ts(p.get("inicio_em")) or "",
+            "fimEm":         _ts(p.get("fim_em")) or "",
+            "duracaoMin":    p.get("duracao_min"),
+            "numPessoas":    p.get("num_pessoas"),
+            "tecnicos":      prev_tec_map.get(p["id"], []),
+            "fotoUrl":       p.get("foto_url") or "",
+        })
 
     ordens = load_table("ordens", lambda o: {
         "id":            o.get("id"),
@@ -303,27 +314,52 @@ def _load_conforto():
         "origemRotina":  o.get("origem_rotina") or "",
     })
 
-    manutencoes = load_table("manutencoes", lambda m: {
-        "id":             m.get("id"),
-        "ucId":           m.get("uc_id"),
-        "tecnicoId":      m.get("tecnico_id"),
-        "tipo":           m.get("tipo") or "Manutenção",
-        "falha":          m.get("falha") or "",
-        "dataAbertura":   str(m.get("data_abertura") or ""),
-        "dataFechamento": str(m.get("data_fechamento") or ""),
-        "status":         m.get("status"),
-        "custoEstimado":  m.get("custo_estimado", 0),
-        "pecasUtilizadas":m.get("pecas_utilizadas") or "",
-        "obs":            m.get("obs") or "",
-        "origem":         m.get("origem") or "manual",
-        "inicioEm":       _ts(m.get("inicio_em")) or "",
-        "fimEm":          _ts(m.get("fim_em")) or "",
-        "duracaoMin":     m.get("duracao_min"),
-        "numPessoas":     m.get("num_pessoas"),
-        "tecnicos":       safe_json(m.get("tecnicos")) or [],
-        "fotoUrl":        m.get("foto_url") or "",
-        "pausas":         safe_json(m.get("pausas")) or [],
-    })
+    man_rows    = run_query(f"SELECT * FROM {S_CONFORTO}.manutencoes ORDER BY data_abertura DESC")
+    man_sessoes = run_query(f"SELECT manutencao_id, tipo_sessao, inicio_em, fim_em, duracao_min, motivo_pausa FROM {S_CONFORTO}.manutencao_sessoes ORDER BY inicio_em")
+    man_tecs    = run_query(f"SELECT manutencao_id, nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos")
+    man_pecas   = run_query(f"SELECT manutencao_id, peca_id, nome_peca, quantidade FROM {S_CONFORTO}.manutencao_pecas")
+    man_ses_map = {}
+    for s in man_sessoes:
+        man_ses_map.setdefault(s["manutencao_id"], []).append({
+            "tipoSessao": s["tipo_sessao"],
+            "inicioEm":   _ts(s.get("inicio_em")) or "",
+            "fimEm":      _ts(s.get("fim_em")) or "",
+            "duracaoMin": s.get("duracao_min"),
+            "motivoPausa":s.get("motivo_pausa") or "",
+        })
+    man_tec_map = {}
+    for t in man_tecs:
+        man_tec_map.setdefault(t["manutencao_id"], []).append(t["nome_tecnico"])
+    man_pec_map = {}
+    for p in man_pecas:
+        man_pec_map.setdefault(p["manutencao_id"], []).append({
+            "pecaId": p.get("peca_id"), "nome": p.get("nome_peca"), "quantidade": p.get("quantidade")
+        })
+    manutencoes = []
+    for m in man_rows:
+        sessoes = man_ses_map.get(m["id"], [])
+        duracao_total = sum(s["duracaoMin"] or 0 for s in sessoes if s["tipoSessao"] == "trabalho")
+        num_pessoas   = len(man_tec_map.get(m["id"], [])) or m.get("num_pessoas") or 1
+        manutencoes.append({
+            "id":             m.get("id"),
+            "ucId":           m.get("uc_id"),
+            "tecnicoId":      m.get("tecnico_id"),
+            "tipo":           m.get("tipo") or "Manutenção",
+            "falha":          m.get("falha") or "",
+            "dataAbertura":   str(m.get("data_abertura") or ""),
+            "dataFechamento": str(m.get("data_fechamento") or ""),
+            "status":         m.get("status"),
+            "custoEstimado":  m.get("custo_estimado", 0),
+            "obs":            m.get("obs") or "",
+            "origem":         m.get("origem") or "manual",
+            "fotoUrl":        m.get("foto_url") or "",
+            "tecnicos":       man_tec_map.get(m["id"], []),
+            "sessoes":        sessoes,
+            "pecas":          man_pec_map.get(m["id"], []),
+            "duracaoMin":     duracao_total,
+            "numPessoas":     num_pessoas,
+            "hhTotal":        round(duracao_total / 60 * num_pessoas, 2),
+        })
 
     pecas = load_table("pecas", lambda p: {
         "id":         p.get("id"),
@@ -378,18 +414,25 @@ def _load_conforto():
         "turno":        t.get("turno") or "",
     })
 
-    rotinas = load_table("rotinas", lambda r: {
-        "id":            r.get("id"),
-        "nome":          r.get("nome"),
-        "tipo":          r.get("tipo"),
-        "areaId":        r.get("area_id"),
-        "responsavelId": r.get("responsavel_id"),
-        "frequencia":    r.get("frequencia"),
-        "diasSemana":    safe_json(r.get("dias_semana")),
-        "horaInicio":    r.get("hora_inicio") or "08:00",
-        "horaFim":       r.get("hora_fim") or "09:00",
-        "ativa":         bool(r.get("ativa", True)),
-    })
+    rot_rows = run_query(f"SELECT * FROM {S_CONFORTO}.rotinas ORDER BY nome")
+    rot_dias = run_query(f"SELECT rotina_id, dia_semana FROM {S_CONFORTO}.rotina_dias")
+    rot_dias_map = {}
+    for d in rot_dias:
+        rot_dias_map.setdefault(d["rotina_id"], []).append(d["dia_semana"])
+    rotinas = []
+    for r in rot_rows:
+        rotinas.append({
+            "id":            r.get("id"),
+            "nome":          r.get("nome"),
+            "tipo":          r.get("tipo"),
+            "areaId":        r.get("area_id"),
+            "responsavelId": r.get("responsavel_id"),
+            "frequencia":    r.get("frequencia"),
+            "diasSemana":    rot_dias_map.get(r["id"], []),
+            "horaInicio":    r.get("hora_inicio") or "08:00",
+            "horaFim":       r.get("hora_fim") or "09:00",
+            "ativa":         bool(r.get("ativa", True)),
+        })
 
     payload = {
         "modulo": "conforto", "versao": "2.0",
@@ -925,13 +968,13 @@ async def _salvar_ucs(body, u):
                 ciclo_filtro_dias=?, responsavel_id=?, obs=?,
                 fabricante=?, serie=?, status_op=?,
                 intervalo_prev_dias=?, ultima_limpeza_filtro=?,
-                checklist_proprio=?, atualizado_por=?
+                atualizado_por=?
             WHEN NOT MATCHED THEN INSERT
                 (id,codigo,nome,categoria,local,modelo,capacidade_btu,tipo,
                  data_instalacao,ciclo_filtro_dias,responsavel_id,obs,
                  fabricante,serie,status_op,intervalo_prev_dias,
-                 ultima_limpeza_filtro,checklist_proprio,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 ultima_limpeza_filtro,atualizado_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, [
             uc["id"],
             uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
@@ -940,15 +983,21 @@ async def _salvar_ucs(body, u):
             uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
             uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
             uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")),
-            json.dumps(uc.get("checklistProprio", [])), u,
+            u,
             uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
             uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
             uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
             uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
             uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
             uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")),
-            json.dumps(uc.get("checklistProprio", [])), u
+            u
         ])
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.uc_checklist WHERE uc_id=?", [uc["id"]])
+        for i, item in enumerate(uc.get("checklistProprio", [])):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.uc_checklist (id,uc_id,item,ordem,atualizado_por)
+                VALUES (?,?,?,?,?)
+            """, [f"{uc['id']}_c_{i}", uc["id"], item, i, u])
 
 async def _salvar_preventivas(body, u):
     ids_front = [p["id"] for p in body.get("preventivas", [])]
@@ -965,24 +1014,37 @@ async def _salvar_preventivas(body, u):
             MERGE INTO {S_CONFORTO}.preventivas AS t
             USING (SELECT ? AS id, ? AS uc_id, ? AS tecnico_id,
                 ? AS data_prevista, ? AS data_realizada, ? AS status,
-                ? AS checklist, ? AS obs, ? AS origem, ? AS atualizado_por
+                ? AS obs, ? AS origem, ? AS atualizado_por
             ) AS s ON t.id = s.id
             WHEN MATCHED THEN UPDATE SET
                 uc_id=s.uc_id, tecnico_id=s.tecnico_id,
                 data_prevista=s.data_prevista, data_realizada=s.data_realizada,
-                status=s.status, checklist=s.checklist, obs=s.obs,
+                status=s.status, obs=s.obs,
                 origem=s.origem, atualizado_por=s.atualizado_por
             WHEN NOT MATCHED THEN INSERT
                 (id,uc_id,tecnico_id,data_prevista,data_realizada,
-                 status,checklist,obs,origem,atualizado_por)
+                 status,obs,origem,atualizado_por)
             VALUES (s.id,s.uc_id,s.tecnico_id,s.data_prevista,s.data_realizada,
-                 s.status,s.checklist,s.obs,s.origem,s.atualizado_por)
+                 s.status,s.obs,s.origem,s.atualizado_por)
         """, [
             p["id"], p.get("ucId"), p.get("tecnicoId"),
             to_date_or_none(p.get("dataPrevista")), to_date_or_none(p.get("dataRealizada")),
-            p.get("status"), json.dumps(p.get("checklist", [])),
-            p.get("obs"), p.get("origem", "manual"), u
+            p.get("status"), p.get("obs"), p.get("origem", "manual"), u
         ])
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.preventiva_checklist WHERE preventiva_id=?", [p["id"]])
+        for i, item in enumerate(p.get("checklist", [])):
+            nome = item if isinstance(item, str) else item.get("item", "")
+            conc = False if isinstance(item, str) else bool(item.get("concluido", False))
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.preventiva_checklist (id,preventiva_id,item,concluido,ordem,atualizado_por)
+                VALUES (?,?,?,?,?,?)
+            """, [f"{p['id']}_c_{i}", p["id"], nome, conc, i, u])
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.preventiva_tecnicos WHERE preventiva_id=?", [p["id"]])
+        for tec in p.get("tecnicos", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.preventiva_tecnicos (id,preventiva_id,nome_tecnico,atualizado_por)
+                VALUES (?,?,?,?)
+            """, [f"{p['id']}_t_{tec}", p["id"], tec, u])
 
 async def _salvar_tecnicos(body, u):
     await arun_exec(f"DELETE FROM {S_CONFORTO}.tecnicos")
@@ -1100,19 +1162,24 @@ async def _salvar_fornecedores(body, u):
 
 async def _salvar_rotinas(body, u):
     await arun_exec(f"DELETE FROM {S_CONFORTO}.rotinas")
+    await arun_exec(f"DELETE FROM {S_CONFORTO}.rotina_dias")
     for r in body.get("rotinas", []):
         await arun_exec(f"""
             INSERT INTO {S_CONFORTO}.rotinas
                 (id,nome,tipo,area_id,responsavel_id,frequencia,
-                 dias_semana,hora_inicio,hora_fim,ativa,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                 hora_inicio,hora_fim,ativa,atualizado_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
         """, [
             r["id"], r.get("nome"), r.get("tipo"), r.get("areaId"),
             r.get("responsavelId"), r.get("frequencia"),
-            json.dumps(r.get("diasSemana", [])),
             r.get("horaInicio", "08:00"), r.get("horaFim", "09:00"),
             r.get("ativa", True), u
         ])
+        for dia in r.get("diasSemana", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.rotina_dias (id,rotina_id,dia_semana,atualizado_por)
+                VALUES (?,?,?,?)
+            """, [f"{r['id']}_{dia}", r["id"], dia, u])
 
 @app.get("/api/conforto")
 
@@ -1137,14 +1204,13 @@ async def save_conforto(request: Request):
             await arun_exec(f"""
                 INSERT INTO {S_CONFORTO}.config
                     (ciclo_filtro_dias,alerta_preventiva_dias,alerta_limpeza_dias,
-                     alerta_manutencao_dias,checklist_preventiva,
+                     alerta_manutencao_dias,
                      frequencias_escritorio,frequencias_banheiro,frequencias_refeitorio,
                      frequencias_area_tecnica,frequencias_corredor,frequencias_almoxarifado)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
             """, [
                 c.get("cicloFiltroDias", 90), c.get("alertaPreventivaDias", 7),
                 c.get("alertaLimpezaDias", 2), c.get("alertaManutencaoDias", 3),
-                json.dumps(c.get("checklistPreventiva", [])),
                 c.get("frequencias", {}).get("escritorio", "Diário"),
                 c.get("frequencias", {}).get("banheiro", "Diário"),
                 c.get("frequencias", {}).get("refeitorio", "Diário"),
@@ -1152,6 +1218,12 @@ async def save_conforto(request: Request):
                 c.get("frequencias", {}).get("corredor", "Semanal"),
                 c.get("frequencias", {}).get("almoxarifado", "Quinzenal"),
             ])
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.config_checklist")
+            for i, item in enumerate(c.get("checklistPreventiva", [])):
+                await arun_exec(f"""
+                    INSERT INTO {S_CONFORTO}.config_checklist (id,item,ordem,atualizado_por)
+                    VALUES (?,?,?,?)
+                """, [f"cfg_{i}", item, i, u])
         cache_invalidate("conforto")
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, _load_conforto)
@@ -1511,27 +1583,38 @@ async def prev_page(uc_id: str, request: Request):
 async def criar_preventiva_qr(request: Request):
     body = await request.json()
     try:
+        pid = body["id"]
         await arun_exec(f"""
             INSERT INTO {S_CONFORTO}.preventivas
-                (id, uc_id, tecnico_id, data_prevista, data_realizada, status,
-                 checklist, obs, origem, atualizado_por,
-                 inicio_em, fim_em, duracao_min, num_pessoas,
-                 tecnicos, foto_url)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                (id, uc_id, tecnico_id, data_prevista, data_realizada,
+                 status, obs, origem, atualizado_por,
+                 inicio_em, fim_em, duracao_min, num_pessoas, foto_url)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, [
-            body["id"], body.get("ucId"), None,
+            pid, body.get("ucId"), None,
             body.get("dataPrevista"), body.get("dataRealizada", body.get("dataPrevista")),
             body.get("status", "Realizada"),
-            json.dumps(body.get("checklist", [])),
-            body.get("obs", ""),
-            "qr", json.dumps(body.get("tecnicos", [])),
+            body.get("obs", ""), "qr", "qr",
             body.get("inicioEm"), body.get("fimEm"),
             body.get("duracaoMin"), body.get("numPessoas"),
-            json.dumps(body.get("tecnicos", [])),
             body.get("foto")
         ])
+        for i, item in enumerate(body.get("checklist", [])):
+            nome = item if isinstance(item, str) else item.get("item", "")
+            conc = False if isinstance(item, str) else bool(item.get("concluido", False))
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.preventiva_checklist (id,preventiva_id,item,concluido,ordem,atualizado_por)
+                VALUES (?,?,?,?,?,?)
+            """, [f"{pid}_c_{i}", pid, nome, conc, i, "qr"])
+        for tec in body.get("tecnicos", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.preventiva_tecnicos (id,preventiva_id,nome_tecnico,atualizado_por)
+                VALUES (?,?,?,?)
+            """, [f"{pid}_t_{tec}", pid, tec, "qr"])
     except Exception as e:
+        import traceback
         print(f"[conforto] erro ao criar preventiva qr: {e}")
+        print(traceback.format_exc())
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("conforto")
     return JSONResponse({"ok": True})
@@ -1540,28 +1623,41 @@ async def criar_preventiva_qr(request: Request):
 async def criar_manutencao_qr(request: Request):
     body = await request.json()
     try:
+        mid = body["id"]
         await arun_exec(f"""
             INSERT INTO {S_CONFORTO}.manutencoes
-                (id, uc_id, tecnico_id, tipo, falha, data_abertura, data_fechamento,
-                 status, custo_estimado, pecas_utilizadas, obs, atualizado_por,
-                 inicio_em, fim_em, duracao_min, num_pessoas, tecnicos, foto_url, pausas)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                (id, uc_id, tecnico_id, tipo, falha, data_abertura,
+                 status, obs, atualizado_por, foto_url)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
         """, [
-            body["id"], body.get("ucId"), None,
+            mid, body.get("ucId"), None,
             body.get("tipo", "Corretiva"),
             body.get("falha", ""),
-            body.get("dataAbertura"), body.get("dataFechamento"),
+            body.get("dataAbertura"),
             body.get("status", "Em Aberto"),
-            0,
-            json.dumps(body.get("pecasSelecionadas", [])),
-            f"[QR] Técnicos: {', '.join(body.get('tecnicos', []))} | {body.get('obs','')}".strip(' |'),
-            "qr",
-            body.get("inicioEm"), body.get("fimEm"),
-            body.get("duracaoMin"), body.get("numPessoas"),
-            json.dumps(body.get("tecnicos", [])),
-            body.get("foto"),
-            json.dumps([])
+            body.get("obs", ""), "qr",
+            body.get("foto")
         ])
+        for tec in body.get("tecnicos", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.manutencao_tecnicos (id,manutencao_id,nome_tecnico,atualizado_por)
+                VALUES (?,?,?,?)
+            """, [f"{mid}_t_{tec}", mid, tec, "qr"])
+        if body.get("inicioEm"):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.manutencao_sessoes
+                    (id,manutencao_id,tipo_sessao,inicio_em,fim_em,duracao_min,motivo_pausa,atualizado_por,criado_em)
+                VALUES (?,?,?,?,?,?,?,?,current_timestamp())
+            """, [f"{mid}_t_0", mid, "trabalho",
+                  body.get("inicioEm"), body.get("fimEm"),
+                  body.get("duracaoMin"), None, "qr"])
+        for peca in body.get("pecasSelecionadas", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.manutencao_pecas (id,manutencao_id,peca_id,nome_peca,quantidade,atualizado_por)
+                VALUES (?,?,?,?,?,?)
+            """, [f"{mid}_p_{peca.get('pecaId','')}", mid,
+                  peca.get("pecaId"), peca.get("nome"),
+                  peca.get("quantidade", 1), "qr"])
         cache_invalidate("conforto")
         asyncio.create_task(asyncio.to_thread(_load_conforto))
         return JSONResponse({"ok": True})
@@ -1580,11 +1676,15 @@ async def atualizar_manutencao(mid: str, request: Request):
         if "status" in body:
             sets.append("status=?"); vals.append(body["status"])
         if "fimEm" in body:
-            sets.append("fim_em=?"); vals.append(body["fimEm"])
-        if "duracaoMin" in body:
-            sets.append("duracao_min=?"); vals.append(body["duracaoMin"])
+            sets.append("data_fechamento=?"); vals.append(body["fimEm"])
         if "pausas" in body:
-            sets.append("pausas=?"); vals.append(json.dumps(body["pausas"]))
+            for pausa in body["pausas"]:
+                sess_id = f"{mid}_p_{pausa.get('motivo','')[:8]}_{int(asyncio.get_event_loop().time())}"
+                await arun_exec(f"""
+                    INSERT INTO {S_CONFORTO}.manutencao_sessoes
+                        (id,manutencao_id,tipo_sessao,inicio_em,fim_em,duracao_min,motivo_pausa,atualizado_por,criado_em)
+                    VALUES (?,?,?,?,?,?,?,?,current_timestamp())
+                """, [sess_id, mid, "pausa", pausa.get("inicio"), pausa.get("fim"), pausa.get("duracaoMin"), pausa.get("motivo"), "qr"])
         if "obs" in body:
             sets.append("obs=?"); vals.append(body["obs"])
         if not sets:
@@ -1616,11 +1716,22 @@ async def get_manutencao(mid: str, request: Request):
             "falha":      m.get("falha") or "",
             "obs":        m.get("obs") or "",
             "status":     m.get("status"),
-            "tecnicos":   (json.loads(m.get("tecnicos")) if m.get("tecnicos") else []),
             "numPessoas": m.get("num_pessoas"),
-            "pausas":     (json.loads(m.get("pausas")) if m.get("pausas") else []),
-            "duracaoMin": m.get("duracao_min") or 0,
-            "inicioEm":   _ts(m.get("inicio_em")) or "",
+            "tecnicos":   [t["nome_tecnico"] for t in (await arun_query(
+                f"SELECT nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id=?", [mid]
+            ) or [])],
+            "sessoes":    [{
+                "tipoSessao":  s["tipo_sessao"],
+                "inicioEm":    _ts(s.get("inicio_em")) or "",
+                "fimEm":       _ts(s.get("fim_em")) or "",
+                "duracaoMin":  s.get("duracao_min"),
+                "motivoPausa": s.get("motivo_pausa") or "",
+            } for s in (await arun_query(
+                f"SELECT * FROM {S_CONFORTO}.manutencao_sessoes WHERE manutencao_id=? ORDER BY inicio_em", [mid]
+            ) or [])],
+            "duracaoMin": ((await arun_query(
+                f"SELECT COALESCE(SUM(duracao_min),0) AS total FROM {S_CONFORTO}.manutencao_sessoes WHERE manutencao_id=? AND tipo_sessao='trabalho'", [mid]
+            ) or [{"total": 0}])[0]["total"]),
         }, default=str)
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -1629,33 +1740,33 @@ async def get_manutencao(mid: str, request: Request):
 async def concluir_manutencao(mid: str, request: Request):
     body = await request.json()
     try:
-        duracao_anterior = body.get("duracaoAnteriorMin", 0) or 0
-        duracao_atual    = body.get("duracaoMin", 0) or 0
-        duracao_total    = duracao_anterior + duracao_atual
-        pausas = body.get("pausasAnteriores", []) or []
-        pausas.append({
-            "motivo": None,
-            "inicio": body.get("inicioEm"),
-            "fim":    body.get("fimEm"),
-            "duracaoMin": duracao_atual
-        })
+        duracao_atual = body.get("duracaoMin", 0) or 0
+        sess_id = f"{mid}_t_{int(asyncio.get_event_loop().time())}"
+        await arun_exec(f"""
+            INSERT INTO {S_CONFORTO}.manutencao_sessoes
+                (id,manutencao_id,tipo_sessao,inicio_em,fim_em,duracao_min,motivo_pausa,atualizado_por,criado_em)
+            VALUES (?,?,?,?,?,?,?,?,current_timestamp())
+        """, [sess_id, mid, "trabalho",
+              body.get("inicioEm"), body.get("fimEm"),
+              duracao_atual, None, "qr"])
+        rows = await arun_query(
+            f"SELECT COALESCE(SUM(duracao_min),0) AS total FROM {S_CONFORTO}.manutencao_sessoes WHERE manutencao_id=? AND tipo_sessao='trabalho'", [mid]
+        )
+        duracao_total = (rows or [{"total": 0}])[0]["total"]
         await arun_exec(f"""
             UPDATE {S_CONFORTO}.manutencoes SET
-                status=?, fim_em=?, duracao_min=?, num_pessoas=?,
-                tecnicos=?, foto_url=?, pausas=?, obs=?, atualizado_por=?
+                status=?, data_fechamento=?, foto_url=?, obs=?, atualizado_por=?
             WHERE id=?
-        """, [
-            "Concluída",
-            body.get("fimEm"),
-            duracao_total,
-            body.get("numPessoas"),
-            json.dumps(body.get("tecnicos", [])),
-            body.get("foto"),
-            json.dumps(pausas),
-            body.get("obs", ""),
-            "qr",
-            mid
-        ])
+        """, ["Concluída", body.get("fimEm"), body.get("foto"), body.get("obs",""), "qr", mid])
+        for tec in body.get("tecnicos", []):
+            existing = await arun_query(
+                f"SELECT id FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id=? AND nome_tecnico=?", [mid, tec]
+            )
+            if not existing:
+                await arun_exec(f"""
+                    INSERT INTO {S_CONFORTO}.manutencao_tecnicos (id,manutencao_id,nome_tecnico,atualizado_por)
+                    VALUES (?,?,?,?)
+                """, [f"{mid}_t_{tec}", mid, tec, "qr"])
         cache_invalidate("conforto")
         asyncio.create_task(asyncio.to_thread(_load_conforto))
         return JSONResponse({"ok": True, "duracaoTotal": duracao_total})
