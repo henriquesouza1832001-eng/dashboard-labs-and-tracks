@@ -1716,7 +1716,9 @@ async def get_manutencao(mid: str, request: Request):
             "falha":      m.get("falha") or "",
             "obs":        m.get("obs") or "",
             "status":     m.get("status"),
-            "numPessoas": m.get("num_pessoas"),
+            "numPessoas": len((await arun_query(
+                f"SELECT id FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id=?", [mid]
+            )) or []) or 1,
             "tecnicos":   [t["nome_tecnico"] for t in (await arun_query(
                 f"SELECT nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id=?", [mid]
             ) or [])],
@@ -1818,20 +1820,30 @@ async def portal_atividades(request: Request):
     try:
         manutencoes = await arun_query(f"""
             SELECT id, uc_id, tipo, falha, status,
-                   CAST(data_abertura AS STRING) AS data_abertura,
-                   tecnicos, duracao_min, num_pessoas, pausas, obs
+                   CAST(data_abertura AS STRING) AS data_abertura, obs
             FROM {S_CONFORTO}.manutencoes
             WHERE status IN ('Em Aberto', 'Em Andamento', 'Aguardando Peça')
             ORDER BY data_abertura DESC
         """)
+        for m in manutencoes:
+            tecs = await arun_query(
+                f"SELECT nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id=?",
+                [m["id"]]
+            )
+            m["tecnicos"] = [t["nome_tecnico"] for t in tecs]
         preventivas = await arun_query(f"""
             SELECT id, uc_id, status,
-                   CAST(data_prevista AS STRING) AS data_prevista,
-                   tecnicos
+                   CAST(data_prevista AS STRING) AS data_prevista
             FROM {S_CONFORTO}.preventivas
             WHERE status IN ('Pendente', 'Em Atraso')
             ORDER BY data_prevista ASC
         """)
+        for p in preventivas:
+            tecs = await arun_query(
+                f"SELECT nome_tecnico FROM {S_CONFORTO}.preventiva_tecnicos WHERE preventiva_id=?",
+                [p["id"]]
+            )
+            p["tecnicos"] = [t["nome_tecnico"] for t in tecs]
         import json as _json
         resp = HTMLResponse(
             content=_json.dumps({
