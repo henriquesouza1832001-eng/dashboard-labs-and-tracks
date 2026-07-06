@@ -897,16 +897,41 @@ async def get_conforto():
 # ─── Conforto ─────────────────────────────────────────────────────────────────
 
 async def _salvar_ucs(body, u):
-    await arun_exec(f"DELETE FROM {S_CONFORTO}.ucs")
+    ids_front = [uc["id"] for uc in body.get("ucs", [])]
+    if ids_front:
+        placeholders = ",".join(["?" for _ in ids_front])
+        await arun_exec(
+            f"DELETE FROM {S_CONFORTO}.ucs WHERE id NOT IN ({placeholders}) AND atualizado_por != 'import'",
+            ids_front
+        )
+    else:
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.ucs WHERE atualizado_por != 'import'")
     for uc in body.get("ucs", []):
         await arun_exec(f"""
-            INSERT INTO {S_CONFORTO}.ucs
+            MERGE INTO {S_CONFORTO}.ucs AS t
+            USING (SELECT ? AS id) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET
+                codigo=?, nome=?, categoria=?, local=?, modelo=?,
+                capacidade_btu=?, tipo=?, data_instalacao=?,
+                ciclo_filtro_dias=?, responsavel_id=?, obs=?,
+                fabricante=?, serie=?, status_op=?,
+                intervalo_prev_dias=?, ultima_limpeza_filtro=?,
+                checklist_proprio=?, atualizado_por=?
+            WHEN NOT MATCHED THEN INSERT
                 (id,codigo,nome,categoria,local,modelo,capacidade_btu,tipo,
                  data_instalacao,ciclo_filtro_dias,responsavel_id,obs,
                  fabricante,serie,status_op,intervalo_prev_dias,
                  ultima_limpeza_filtro,checklist_proprio,atualizado_por)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, [
+            uc["id"],
+            uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
+            uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
+            uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
+            uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
+            uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
+            uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")),
+            json.dumps(uc.get("checklistProprio", [])), u,
             uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
             uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
             uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
