@@ -307,13 +307,22 @@ def _load_conforto():
         "id":             m.get("id"),
         "ucId":           m.get("uc_id"),
         "tecnicoId":      m.get("tecnico_id"),
+        "tipo":           m.get("tipo") or "Manutenção",
         "falha":          m.get("falha") or "",
         "dataAbertura":   str(m.get("data_abertura") or ""),
         "dataFechamento": str(m.get("data_fechamento") or ""),
         "status":         m.get("status"),
-        "custoEstimado":  m.get("custo_estimado") or 0,
+        "custoEstimado":  m.get("custo_estimado", 0),
         "pecasUtilizadas":m.get("pecas_utilizadas") or "",
         "obs":            m.get("obs") or "",
+        "origem":         m.get("origem") or "manual",
+        "inicioEm":       _ts(m.get("inicio_em")) or "",
+        "fimEm":          _ts(m.get("fim_em")) or "",
+        "duracaoMin":     m.get("duracao_min"),
+        "numPessoas":     m.get("num_pessoas"),
+        "tecnicos":       safe_json(m.get("tecnicos")) or [],
+        "fotoUrl":        m.get("foto_url") or "",
+        "pausas":         safe_json(m.get("pausas")) or [],
     })
 
     pecas = load_table("pecas", lambda p: {
@@ -1003,18 +1012,35 @@ async def _salvar_ordens(body, u):
         ])
 
 async def _salvar_manutencoes(body, u):
-    await arun_exec(f"DELETE FROM {S_CONFORTO}.manutencoes")
+    ids_front = [m["id"] for m in body.get("manutencoes", [])]
+    if ids_front:
+        placeholders = ",".join(["?" for _ in ids_front])
+        await arun_exec(
+            f"DELETE FROM {S_CONFORTO}.manutencoes WHERE id NOT IN ({placeholders}) AND (atualizado_por IS NULL OR atualizado_por != 'qr')",
+            ids_front
+        )
+    else:
+        await arun_exec(f"DELETE FROM {S_CONFORTO}.manutencoes WHERE atualizado_por != 'qr'")
     for m in body.get("manutencoes", []):
         await arun_exec(f"""
-            INSERT INTO {S_CONFORTO}.manutencoes
-                (id,uc_id,tecnico_id,falha,data_abertura,data_fechamento,
+            MERGE INTO {S_CONFORTO}.manutencoes AS t
+            USING (SELECT ? AS id) AS s ON t.id = s.id
+            WHEN MATCHED AND t.atualizado_por != 'qr' THEN UPDATE SET
+                uc_id=?, tecnico_id=?, tipo=?, falha=?, data_abertura=?,
+                data_fechamento=?, status=?, custo_estimado=?,
+                pecas_utilizadas=?, obs=?, atualizado_por=?
+            WHEN NOT MATCHED THEN INSERT
+                (id,uc_id,tecnico_id,tipo,falha,data_abertura,data_fechamento,
                  status,custo_estimado,pecas_utilizadas,obs,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
         """, [
-            m["id"], m.get("ucId"), m.get("tecnicoId"), m.get("falha"),
+            m["id"],
+            m.get("ucId"), m.get("tecnicoId"), m.get("tipo","Manutenção"), m.get("falha"),
             to_date_or_none(m.get("dataAbertura")), to_date_or_none(m.get("dataFechamento")),
-            m.get("status"), m.get("custoEstimado", 0),
-            m.get("pecasUtilizadas"), m.get("obs"), u
+            m.get("status"), m.get("custoEstimado", 0), m.get("pecasUtilizadas"), m.get("obs"), u,
+            m["id"], m.get("ucId"), m.get("tecnicoId"), m.get("tipo","Manutenção"), m.get("falha"),
+            to_date_or_none(m.get("dataAbertura")), to_date_or_none(m.get("dataFechamento")),
+            m.get("status"), m.get("custoEstimado", 0), m.get("pecasUtilizadas"), m.get("obs"), u
         ])
 
 async def _salvar_pecas(body, u):
@@ -1487,6 +1513,140 @@ async def criar_preventiva_qr(request: Request):
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("conforto")
     return JSONResponse({"ok": True})
+
+@app.post("/api/conforto/manutencoes-qr")
+async def criar_manutencao_qr(request: Request):
+    body = await request.json()
+    try:
+        await arun_exec(f"""
+            INSERT INTO {S_CONFORTO}.manutencoes
+                (id, uc_id, tecnico_id, tipo, falha, data_abertura, data_fechamento,
+                 status, custo_estimado, pecas_utilizadas, obs, atualizado_por,
+                 inicio_em, fim_em, duracao_min, num_pessoas, tecnicos, foto_url, pausas)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, [
+            body["id"], body.get("ucId"), None,
+            body.get("tipo", "Corretiva"),
+            body.get("falha", ""),
+            body.get("dataAbertura"), body.get("dataFechamento"),
+            body.get("status", "Em Aberto"),
+            0,
+            json.dumps(body.get("pecasSelecionadas", [])),
+            f"[QR] Técnicos: {', '.join(body.get('tecnicos', []))} | {body.get('obs','')}".strip(' |'),
+            "qr",
+            body.get("inicioEm"), body.get("fimEm"),
+            body.get("duracaoMin"), body.get("numPessoas"),
+            json.dumps(body.get("tecnicos", [])),
+            body.get("foto"),
+            json.dumps([])
+        ])
+        cache_invalidate("conforto")
+        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        import traceback
+        print(f"[manutencao_qr] erro: {e}")
+        print(traceback.format_exc())
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.put("/api/conforto/manutencoes/{mid}")
+async def atualizar_manutencao(mid: str, request: Request):
+    body = await request.json()
+    try:
+        sets = []
+        vals = []
+        if "status" in body:
+            sets.append("status=?"); vals.append(body["status"])
+        if "fimEm" in body:
+            sets.append("fim_em=?"); vals.append(body["fimEm"])
+        if "duracaoMin" in body:
+            sets.append("duracao_min=?"); vals.append(body["duracaoMin"])
+        if "pausas" in body:
+            sets.append("pausas=?"); vals.append(json.dumps(body["pausas"]))
+        if "obs" in body:
+            sets.append("obs=?"); vals.append(body["obs"])
+        if not sets:
+            return JSONResponse({"ok": True})
+        vals.append(mid)
+        await arun_exec(
+            f"UPDATE {S_CONFORTO}.manutencoes SET {', '.join(sets)} WHERE id=?",
+            vals
+        )
+        cache_invalidate("conforto")
+        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    
+@app.post("/api/conforto/requisicoes-qr")
+async def criar_requisicao_qr(request: Request):
+    body = await request.json()
+    try:
+        for req in body.get("requisicoes", []):
+            await arun_exec(f"""
+                INSERT INTO {S_CONFORTO}.requisicoes
+                    (id, peca_id, quantidade, destino, solicitante_id,
+                     data_necessidade, status, atualizado_por)
+                VALUES (?,?,?,?,?,?,?,?)
+            """, [
+                req["id"], req.get("pecaId"), req.get("quantidade", 1),
+                req.get("destino", "Manutenção QR"),
+                req.get("solicitante", "qr"),
+                None, "Pendente", "qr"
+            ])
+        cache_invalidate("conforto")
+        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    
+@app.get("/conforto-prev/portal")
+async def portal_page(request: Request):
+    html_path = f"{BASE}/confortoprev/portal.html"
+    dados = get_cached("conforto")
+    pecas = dados.get("pecas", [])
+    html  = inject(html_path, {"pecas": pecas})
+    html.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    html.headers["Pragma"] = "no-cache"
+    return html
+
+@app.post("/api/conforto/portal/auth")
+async def portal_auth(request: Request):
+    body = await request.json()
+    pin = body.get("pin", "").strip()
+    try:
+        rows = await arun_query(
+            f"SELECT nome FROM {S_CONFORTO}.portal_pins WHERE pin=? AND ativo=true LIMIT 1",
+            [pin]
+        )
+        if rows:
+            return JSONResponse({"ok": True, "nome": rows[0]["nome"]})
+        return JSONResponse({"ok": False}, status_code=401)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/conforto/portal/atividades")
+async def portal_atividades(request: Request):
+    try:
+        manutencoes = await arun_query(f"""
+            SELECT id, uc_id, tipo, falha, status, data_abertura,
+                   tecnicos, duracao_min, num_pessoas, pausas, obs
+            FROM {S_CONFORTO}.manutencoes
+            WHERE status IN ('Em Aberto', 'Em Andamento', 'Aguardando Peça')
+            ORDER BY data_abertura DESC
+        """)
+        preventivas = await arun_query(f"""
+            SELECT id, uc_id, status, data_prevista, tecnicos, checklist
+            FROM {S_CONFORTO}.preventivas
+            WHERE status IN ('Pendente', 'Em Atraso')
+            ORDER BY data_prevista ASC
+        """)
+        return JSONResponse({
+            "manutencoes": manutencoes or [],
+            "preventivas": preventivas or []
+        })
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.delete("/api/conforto/preventivas/{pid}")
 async def deletar_preventiva(pid: str, request: Request):

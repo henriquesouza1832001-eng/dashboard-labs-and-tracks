@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Portal da Equipe — Conforto</title>
+  <link rel="stylesheet" href="/conforto-prev/prev.css">
+  <style>
+    /* ── Portal extra styles ── */
+    .pin-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 48px);
+      padding: 32px 20px;
+    }
+    .pin-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px 32px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+    }
+    .pin-icon {
+      width: 56px; height: 56px;
+      background: var(--blue-bg);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .pin-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .pin-sub   { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+    .pin-input {
+      width: 100%;
+      padding: 14px;
+      font-size: 24px;
+      font-family: var(--mono);
+      text-align: center;
+      letter-spacing: 0.3em;
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.15s;
+      margin-bottom: 16px;
+    }
+    .pin-input:focus { border-color: var(--blue); }
+
+    /* ── Portal main ── */
+    .portal-header {
+      background: var(--blue-dark);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .portal-header-info { color: #fff; }
+    .portal-header-info .label { font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em; }
+    .portal-header-info .nome  { font-size: 15px; font-weight: 700; }
+    .btn-sair {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .portal-body { padding: 20px; max-width: 640px; margin: 0 auto; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+    /* Activity card */
+    .ativ-list { display: flex; flex-direction: column; gap: 10px; }
+    .ativ-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .ativ-card:hover { border-color: var(--blue); box-shadow: 0 2px 8px rgba(46,95,163,0.08); }
+    .ativ-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .ativ-tipo-badge {
+      font-size: 10px; font-weight: 700; padding: 3px 8px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
+    }
+    .badge-corretiva  { background: #fdecea; color: var(--red); }
+    .badge-manutencao { background: #e8f5e9; color: #1a7f4b; }
+    .badge-preventiva { background: var(--blue-bg); color: var(--blue); }
+    .badge-status {
+      font-size: 10px; font-weight: 600; padding: 3px 8px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .status-aberto    { background: #fff3e0; color: #e65100; }
+    .status-andamento { background: var(--blue-bg); color: var(--blue); }
+    .status-aguardando{ background: #f3e5f5; color: #6a1b9a; }
+    .ativ-uc   { font-size: 13px; font-weight: 600; color: var(--text); }
+    .ativ-desc { font-size: 12px; color: var(--text2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ativ-meta { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    .ativ-meta span { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
+
+    /* Detalhe modal */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: #fff;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      width: 100%; max-width: 640px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px 40px;
+    }
+    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title  { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .modal-sub    { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
+    .info-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .info-label { font-size: 11px; color: var(--text3); min-width: 90px; }
+    .info-value { font-size: 12px; color: var(--text); font-weight: 500; }
+    .log-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .log-item {
+      background: var(--bg);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+    .log-item .log-time { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+    .action-row { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+    .btn-action {
+      flex: 1; min-width: 120px;
+      padding: 12px;
+      border: none; border-radius: var(--radius);
+      font-family: var(--font); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-action:hover { opacity: 0.85; }
+    .btn-concluir  { background: var(--green); color: #fff; }
+    .btn-registrar { background: var(--blue); color: #fff; }
+    .btn-cancelar  { background: var(--bg); color: var(--text2); border: 1px solid var(--border); }
+
+    /* Pausa modal */
+    .pausa-form { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .pausa-form textarea {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-family: var(--font); font-size: 13px; resize: vertical; min-height: 80px;
+      outline: none;
+    }
+    .pausa-form textarea:focus { border-color: var(--blue); }
+
+    .loading { text-align: center; padding: 40px; color: var(--text3); }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <span class="topbar-title" id="topbar-title">Portal da Equipe</span>
+  </div>
+
+  <!-- TELA PIN -->
+  <div id="tela-pin" class="pin-wrap">
+    <div class="pin-card">
+      <div class="pin-icon">
+        <svg width="24" height="24" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <div class="pin-title">Acesso da Equipe</div>
+      <div class="pin-sub">Digite o PIN para acessar o portal de atividades</div>
+      <input type="password" inputmode="numeric" maxlength="8" id="inp-pin"
+        class="pin-input" placeholder="••••" onkeydown="if(event.key==='Enter') autenticar()">
+      <div id="pin-err" class="form-msg" style="display:none;margin-bottom:12px">PIN inválido. Tente novamente.</div>
+      <button class="btn-submit" style="margin-top:0" onclick="autenticar()">Entrar →</button>
+    </div>
+  </div>
+
+  <!-- PORTAL PRINCIPAL -->
+  <div id="tela-portal" style="display:none">
+    <div class="portal-header">
+      <div class="portal-header-info">
+        <div class="label">Portal</div>
+        <div class="nome" id="portal-nome">Equipe</div>
+      </div>
+      <button class="btn-sair" onclick="sair()">Sair</button>
+    </div>
+
+    <div class="portal-body">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="mudarTab('corretivas')" id="tab-corretivas">⚠️ Corretivas</button>
+        <button class="tab-btn" onclick="mudarTab('manutencoes')" id="tab-manutencoes">🛠️ Manutenções</button>
+        <button class="tab-btn" onclick="mudarTab('preventivas')" id="tab-preventivas">🔧 Preventivas</button>
+      </div>
+
+      <div id="lista-atividades">
+        <div class="loading">Carregando atividades...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DETALHE -->
+  <div class="modal-overlay" id="modal-detalhe">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+        <div>
+          <div class="modal-title" id="det-titulo">—</div>
+          <div class="modal-sub" id="det-sub">—</div>
+        </div>
+        <button onclick="fecharModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);padding:4px">✕</button>
+      </div>
+
+      <div class="info-row"><span class="info-label">UC</span><span class="info-value" id="det-uc">—</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="det-status">—</span></div>
+      <div class="info-row"><span class="info-label">Abertura</span><span class="info-value" id="det-abertura">—</span></div>
+      <div class="info-row"><span class="info-label">Técnicos</span><span class="info-value" id="det-tecnicos">—</span></div>
+      <div class="info-row"><span class="info-label">Duração</span><span class="info-value" id="det-duracao">—</span></div>
+
+      <div style="margin-top:16px">
+        <div class="section-title">Descrição / Falha</div>
+        <div id="det-falha" style="font-size:13px;color:var(--text);background:var(--bg);padding:10px 12px;border-radius:var(--radius)">—</div>
+      </div>
+
+      <div style="margin-top:16px" id="det-pausas-wrap">
+        <div class="section-title">Log de Pausas</div>
+        <div id="det-pausas" class="log-list"></div>
+      </div>
+
+      <!-- Registrar nova pausa -->
+      <div style="margin-top:16px" id="bloco-pausa" style="display:none">
+        <div class="section-title">Registrar Pausa</div>
+        <div class="pausa-form">
+          <textarea id="inp-motivo-pausa" placeholder="Motivo da pausa (ex: aguardando peça, almoço, fim de turno...)"></textarea>
+          <button class="btn-action btn-registrar" onclick="registrarPausa()">Registrar Pausa</button>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-action btn-cancelar" onclick="fecharModal()">Fechar</button>
+        <button class="btn-action btn-concluir" id="btn-concluir-modal" onclick="concluirAtividade()">✓ Concluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DADOS = window.__DADOS__ || {};
+    let tabAtual  = 'corretivas';
+    let atividades = { manutencoes: [], preventivas: [] };
+    let atividadeAtual = null;
+    let nomeEquipe = '';
+
+    // ── Autenticação ──
+    async function autenticar() {
+      const pin = document.getElementById('inp-pin').value.trim();
+      if (!pin) return;
+      const btn = document.querySelector('#tela-pin .btn-submit');
+      btn.disabled = true; btn.textContent = 'Verificando...';
+      try {
+        const res = await fetch('/api/conforto/portal/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        if (!res.ok) {
+          document.getElementById('pin-err').style.display = 'block';
+          btn.disabled = false; btn.textContent = 'Entrar →';
+          return;
+        }
+        const data = await res.json();
+        nomeEquipe = data.nome || 'Equipe';
+        sessionStorage.setItem('portal_auth', nomeEquipe);
+        entrarPortal();
+      } catch(e) {
+        btn.disabled = false; btn.textContent = 'Entrar →';
+      }
+    }
+
+    function entrarPortal() {
+      document.getElementById('tela-pin').style.display    = 'none';
+      document.getElementById('tela-portal').style.display = 'block';
+      document.getElementById('portal-nome').textContent   = nomeEquipe;
+      carregarAtividades();
+    }
+
+    function sair() {
+      sessionStorage.removeItem('portal_auth');
+      document.getElementById('tela-portal').style.display = 'none';
+      document.getElementById('tela-pin').style.display    = 'flex';
+      document.getElementById('inp-pin').value = '';
+    }
+
+    // ── Auto-login se sessão existe ──
+    window.addEventListener('DOMContentLoaded', () => {
+      const auth = sessionStorage.getItem('portal_auth');
+      if (auth) { nomeEquipe = auth; entrarPortal(); }
+      verificarPausaPendente();
+    });
+
+    // ── Carregar atividades ──
+    async function carregarAtividades() {
+      document.getElementById('lista-atividades').innerHTML =
+        '<div class="loading">Carregando...</div>';
+      try {
+        const res = await fetch('/api/conforto/portal/atividades');
+        const data = await res.json();
+        atividades = data;
+        renderLista();
+      } catch(e) {
+        document.getElementById('lista-atividades').innerHTML =
+          '<div class="empty-state">Erro ao carregar atividades.</div>';
+      }
+    }
+
+    // ── Tabs ──
+    function mudarTab(tab) {
+      tabAtual = tab;
+      ['corretivas','manutencoes','preventivas'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      });
+      renderLista();
+    }
+
+    function renderLista() {
+      const wrap = document.getElementById('lista-atividades');
+      let itens = [];
+
+      if (tabAtual === 'corretivas') {
+        itens = atividades.manutencoes.filter(m =>
+          (m.tipo || '').toLowerCase() === 'corretiva');
+      } else if (tabAtual === 'manutencoes') {
+        itens = atividades.manutencoes.filter(m =>
+          (m.tipo || '').toLowerCase() !== 'corretiva');
+      } else {
+        itens = atividades.preventivas || [];
+      }
+
+      if (!itens.length) {
+        wrap.innerHTML = '<div class="empty-state">Nenhuma atividade em aberto.</div>';
+        return;
+      }
+
+      wrap.innerHTML = '<div class="ativ-list">' +
+        itens.map((item, i) => {
+          const isPrev  = tabAtual === 'preventivas';
+          const tipo    = isPrev ? 'Preventiva' : (item.tipo || 'Manutenção');
+          const badgeC  = isPrev ? 'badge-preventiva'
+            : tipo.toLowerCase() === 'corretiva' ? 'badge-corretiva' : 'badge-manutencao';
+          const status  = item.status || '—';
+          const statusC = status === 'Em Aberto' ? 'status-aberto'
+            : status === 'Em Andamento' ? 'status-andamento' : 'status-aguardando';
+          const desc    = isPrev
+            ? `Prevista: ${fmtData(item.data_prevista)}`
+            : (item.falha || item.obs || '—');
+          const tecs    = parseTecs(item.tecnicos);
+          const dur     = item.duracao_min ? `${item.duracao_min} min` : '—';
+
+          return `<div class="ativ-card" onclick="abrirDetalhe(${i})">
+            <div class="ativ-card-top">
+              <span class="ativ-tipo-badge ${badgeC}">${tipo}</span>
+              <span class="badge-status ${statusC}">${status}</span>
+            </div>
+            <div class="ativ-uc">${item.uc_id || '—'}</div>
+            <div class="ativ-desc">${desc}</div>
+            <div class="ativ-meta">
+              ${tecs ? `<span>👷 ${tecs}</span>` : ''}
+              ${dur !== '—' ? `<span>⏱ ${dur}</span>` : ''}
+              ${item.data_abertura ? `<span>📅 ${fmtData(item.data_abertura)}</span>` : ''}
+            </div>
+          </div>`;
+        }).join('') + '</div>';
+      window._itensAtuais = itens;
+    }
+
+    // ── Modal detalhe ──
+    function abrirDetalhe(idx) {
+      const item = window._itensAtuais[idx];
+      atividadeAtual = item;
+      const isPrev = tabAtual === 'preventivas';
+      const tipo   = isPrev ? 'Preventiva' : (item.tipo || 'Manutenção');
+
+      document.getElementById('det-titulo').textContent   = tipo;
+      document.getElementById('det-sub').textContent      = item.uc_id || '—';
+      document.getElementById('det-uc').textContent       = item.uc_id || '—';
+      document.getElementById('det-status').textContent   = item.status || '—';
+      document.getElementById('det-abertura').textContent = fmtData(item.data_abertura || item.data_prevista);
+      document.getElementById('det-tecnicos').textContent = parseTecs(item.tecnicos) || '—';
+      document.getElementById('det-duracao').textContent  = item.duracao_min ? `${item.duracao_min} min` : '—';
+      document.getElementById('det-falha').textContent    = item.falha || item.obs || '—';
+
+      // Pausas
+      const pausas = parsePausas(item.pausas);
+      const pausasEl = document.getElementById('det-pausas');
+      if (pausas.length) {
+        pausasEl.innerHTML = pausas.map(p => `
+          <div class="log-item">
+            <div class="log-time">${fmtTs(p.inicio)} → ${p.fim ? fmtTs(p.fim) : 'em andamento'}</div>
+            <div>${p.motivo || '—'}</div>
+          </div>`).join('');
+      } else {
+        pausasEl.innerHTML = '<div style="font-size:12px;color:var(--text3)">Nenhuma pausa registrada.</div>';
+      }
+      const blocoP = document.getElementById('bloco-pausa');
+      blocoP.style.display = (!isPrev && item.status !== 'Concluída') ? 'block' : 'none';
+      const btnC = document.getElementById('btn-concluir-modal');
+      btnC.style.display = item.status !== 'Concluída' ? 'block' : 'none';
+
+      document.getElementById('modal-detalhe').classList.add('open');
+    }
+
+    function fecharModal() {
+      document.getElementById('modal-detalhe').classList.remove('open');
+      atividadeAtual = null;
+    }
+
+    // ── Concluir ──
+    async function concluirAtividade() {
+      if (!atividadeAtual) return;
+      const btn = document.getElementById('btn-concluir-modal');
+      btn.disabled = true; btn.textContent = 'Salvando...';
+      try {
+        await fetch(`/api/conforto/manutencoes/${atividadeAtual.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'Concluída',
+            fimEm: new Date().toISOString()
+          })
+        });
+        fecharModal();
+        await carregarAtividades();
+      } catch(e) {
+        btn.disabled = false; btn.textContent = '✓ Concluir';
+      }
+    }
+
+    // ── Registrar pausa ──
+    async function registrarPausa() {
+      if (!atividadeAtual) return;
+      const motivo = document.getElementById('inp-motivo-pausa').value.trim();
+      if (!motivo) { alert('Informe o motivo da pausa.'); return; }
+
+      const pausas = parsePausas(atividadeAtual.pausas);
+      pausas.push({ motivo, inicio: new Date().toISOString(), fim: null });
+
+      try {
+        await fetch(`/api/conforto/manutencoes/${atividadeAtual.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pausas, status: 'Em Andamento' })
+        });
+        document.getElementById('inp-motivo-pausa').value = '';
+        fecharModal();
+        await carregarAtividades();
+      } catch(e) {
+        alert('Erro ao registrar pausa.');
+      }
+    }
+    // ── Detecção de pausa por gap (atividade fechada sem concluir) ──
+    function verificarPausaPendente() {
+      const chave = localStorage.getItem('ativ_em_andamento');
+      if (!chave) return;
+      try {
+        const { id, inicioEm, tipo } = JSON.parse(chave);
+        const agora = new Date();
+        const inicio = new Date(inicioEm);
+        const gapMin = Math.round((agora - inicio) / 60000);
+        if (gapMin < 2) return; 
+        const motivo = prompt(
+          `Você tinha uma ${tipo || 'atividade'} em andamento.\n` +
+          `Gap detectado: ${gapMin} minutos.\n\n` +
+          `Motivo da interrupção (deixe vazio para ignorar):`
+        );
+        if (motivo !== null && motivo.trim()) {
+          fetch(`/api/conforto/manutencoes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pausas: [{ motivo: motivo.trim(), inicio: inicioEm, fim: new Date().toISOString() }],
+              status: 'Em Andamento'
+            })
+          });
+        }
+        localStorage.removeItem('ativ_em_andamento');
+      } catch(e) {
+        localStorage.removeItem('ativ_em_andamento');
+      }
+    }
+
+    // ── Helpers ──
+    function fmtData(d) {
+      if (!d) return '—';
+      const s = String(d).split('T')[0];
+      if (!s || !s.includes('-')) return d;
+      const [a,m,dia] = s.split('-');
+      return `${dia}/${m}/${a}`;
+    }
+    function fmtTs(ts) {
+      if (!ts) return '—';
+      const d = new Date(ts);
+      return d.toLocaleString('pt-BR', { day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit' });
+    }
+    function parseTecs(t) {
+      if (!t) return '';
+      try {
+        const arr = typeof t === 'string' ? JSON.parse(t) : t;
+        return Array.isArray(arr) ? arr.join(', ') : String(t);
+      } catch { return String(t); }
+    }
+    function parsePausas(p) {
+      if (!p) return [];
+      try {
+        const arr = typeof p === 'string' ? JSON.parse(p) : p;
+        return Array.isArray(arr) ? arr : [];
+      } catch { return []; }
+    }
+    document.getElementById('modal-detalhe').addEventListener('click', function(e) {
+      if (e.target === this) fecharModal();
+    });
+  </script>
+</body>
+</html>
