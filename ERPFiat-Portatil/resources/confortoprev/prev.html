@@ -602,8 +602,9 @@
       btn.disabled = true; btn.textContent = 'Registrando...';
 
       try {
+        let res;
         if (idAtiv) {
-          await fetch(`/api/conforto/manutencoes/${idAtiv}`, {
+          res = await fetch(`/api/conforto/manutencoes/${idAtiv}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -613,9 +614,10 @@
               obs: `[Paralizado: ${motivoFinal}]`
             })
           });
+          if (!res.ok) throw new Error('PUT falhou: ' + res.status);
         } else {
           const novoId = 'man-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,12);
-          await fetch('/api/conforto/manutencoes-qr', {
+          res = await fetch('/api/conforto/manutencoes-qr', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -636,6 +638,7 @@
           localStorage.setItem('ativ_em_andamento', JSON.stringify({
             id: novoId, inicioEm: inicioEm.toISOString(), tipo: tipoRegistro
           }));
+          if (!res.ok) throw new Error('POST falhou: ' + res.status);
         }
         document.getElementById('sucesso-titulo').textContent = 'Atividade Paralizada';
         document.getElementById('sucesso-sub').textContent =
