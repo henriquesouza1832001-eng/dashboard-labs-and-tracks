@@ -1722,13 +1722,16 @@ async def portal_atividades(request: Request):
             ORDER BY data_prevista ASC
         """)
         import json as _json
-        return HTMLResponse(
+        resp = HTMLResponse(
             content=_json.dumps({
                 "manutencoes": manutencoes or [],
                 "preventivas": preventivas or []
             }, default=str),
             media_type="application/json"
         )
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
