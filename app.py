@@ -1600,6 +1600,71 @@ async def atualizar_manutencao(mid: str, request: Request):
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
     
+@app.get("/api/conforto/manutencoes/{mid}")
+async def get_manutencao(mid: str, request: Request):
+    try:
+        rows = await arun_query(
+            f"SELECT * FROM {S_CONFORTO}.manutencoes WHERE id=? LIMIT 1", [mid]
+        )
+        if not rows:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        m = rows[0]
+        return JSONResponse({
+            "id":         m.get("id"),
+            "ucId":       m.get("uc_id"),
+            "tipo":       m.get("tipo") or "Manutenção",
+            "falha":      m.get("falha") or "",
+            "obs":        m.get("obs") or "",
+            "status":     m.get("status"),
+            "tecnicos":   (json.loads(m.get("tecnicos")) if m.get("tecnicos") else []),
+            "numPessoas": m.get("num_pessoas"),
+            "pausas":     (json.loads(m.get("pausas")) if m.get("pausas") else []),
+            "duracaoMin": m.get("duracao_min") or 0,
+            "inicioEm":   _ts(m.get("inicio_em")) or "",
+        }, default=str)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/conforto/manutencoes/{mid}/concluir")
+async def concluir_manutencao(mid: str, request: Request):
+    body = await request.json()
+    try:
+        duracao_anterior = body.get("duracaoAnteriorMin", 0) or 0
+        duracao_atual    = body.get("duracaoMin", 0) or 0
+        duracao_total    = duracao_anterior + duracao_atual
+        pausas = body.get("pausasAnteriores", []) or []
+        pausas.append({
+            "motivo": None,
+            "inicio": body.get("inicioEm"),
+            "fim":    body.get("fimEm"),
+            "duracaoMin": duracao_atual
+        })
+        await arun_exec(f"""
+            UPDATE {S_CONFORTO}.manutencoes SET
+                status=?, fim_em=?, duracao_min=?, num_pessoas=?,
+                tecnicos=?, foto_url=?, pausas=?, obs=?, atualizado_por=?
+            WHERE id=?
+        """, [
+            "Concluída",
+            body.get("fimEm"),
+            duracao_total,
+            body.get("numPessoas"),
+            json.dumps(body.get("tecnicos", [])),
+            body.get("foto"),
+            json.dumps(pausas),
+            body.get("obs", ""),
+            "qr",
+            mid
+        ])
+        cache_invalidate("conforto")
+        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        return JSONResponse({"ok": True, "duracaoTotal": duracao_total})
+    except Exception as e:
+        import traceback
+        print(f"[concluir_manutencao] erro: {e}")
+        print(traceback.format_exc())
+        return JSONResponse({"error": str(e)}, status_code=500)
+    
 @app.post("/api/conforto/requisicoes-qr")
 async def criar_requisicao_qr(request: Request):
     body = await request.json()

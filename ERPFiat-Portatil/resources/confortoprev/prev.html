@@ -203,6 +203,35 @@
     const checklist = DADOS.checklist || [];
     const ucId      = DADOS.uc_id || '';
     const tecListaBase = DADOS.tecnicos || [];  
+    const urlParams  = new URLSearchParams(window.location.search);
+    const ativIdRetomada = urlParams.get('ativ_id');
+
+    if (ativIdRetomada) {
+      document.getElementById('tela-tipo').style.display = 'none';
+      document.getElementById('tela-tecnicos').style.display = 'block';
+      fetch(`/api/conforto/manutencoes/${ativIdRetomada}`)
+        .then(r => r.json())
+        .then(ativ => {
+          tipoRegistro = (ativ.tipo || 'Manutenção').toLowerCase() === 'corretiva'
+            ? 'corretiva' : 'manutencao';
+          const labels = { corretiva: '⚠️ Corretiva', manutencao: '🛠️ Manutenção' };
+          document.querySelector('#tela-tecnicos .section-title').textContent =
+            `${labels[tipoRegistro]} — Retomada · Confirme os técnicos presentes`;
+          document.getElementById('topbar-title').textContent =
+            `Retomada de ${labels[tipoRegistro]}`;
+          const tecOriginal = Array.isArray(ativ.tecnicos) ? ativ.tecnicos : [];
+          document.querySelectorAll('#lista-tecnicos input[type=checkbox]').forEach(cb => {
+            if (tecOriginal.includes(cb.dataset.nome)) cb.checked = true;
+          });
+          window._ativRetomada = ativ;
+          window._onFormAberto = () => {
+            if (ativ.falha) document.getElementById('inp-falha').value = ativ.falha;
+            const obsEl = document.getElementById('inp-obs');
+            if (obsEl && ativ.obs) obsEl.value = ativ.obs.replace(/^\[Paralizado[^\]]*\]\s*/,'').trim();
+          };
+        })
+        .catch(() => {});
+    }
     const pecasCatalogo = DADOS.pecas || [];
     const pecasSelecionadas = [];  
     const requisicoesPendentes = []; 
@@ -458,28 +487,48 @@
           duracaoMin, numPessoas: tecSelecionados.length, foto: fotoBase64
         };
       } else {
-        url = '/api/conforto/manutencoes-qr';
-        payload = {
-          id: 'man-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,12),
-          ucId, tipo: tipoRegistro === 'corretiva' ? 'Corretiva' : 'Manutenção',
-          tecnicos: tecSelecionados,
-          falha: tipoRegistro === 'corretiva'
-            ? (document.getElementById('inp-falha').value.trim()) : '',
-          pecasSelecionadas: tipoRegistro === 'manutencao' ? pecasSelecionadas : [],
-          requisicoes: tipoRegistro === 'manutencao'
-            ? requisicoesPendentes.map(r => ({
-                id: 'req-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,10),
-                nome: r.nome, quantidade: r.quantidade,
-                destino: `UC ${ucId}`, solicitante: tecSelecionados[0] || 'qr'
-              }))
-            : [],
-          status: tipoRegistro === 'corretiva'
-            ? document.getElementById('inp-status-corretiva').value : 'Concluída',
-          dataAbertura: data, dataFechamento: fimEm.toISOString(),
-          obs, foto: fotoBase64,
-          inicioEm: inicioEm.toISOString(), fimEm: fimEm.toISOString(),
-          duracaoMin, numPessoas: tecSelecionados.length
-        };
+        const isRetomada = !!window._ativRetomada;
+        if (isRetomada) {
+          url = `/api/conforto/manutencoes/${window._ativRetomada.id}/concluir`;
+          payload = {
+            id:                  window._ativRetomada.id,
+            ucId,
+            tipo:                window._ativRetomada.tipo,
+            tecnicos:            tecSelecionados,
+            falha:               window._ativRetomada.falha || '',
+            obs,
+            foto:                fotoBase64,
+            inicioEm:            inicioEm.toISOString(),
+            fimEm:               fimEm.toISOString(),
+            duracaoMin,
+            numPessoas:          tecSelecionados.length,
+            duracaoAnteriorMin:  window._ativRetomada.duracaoMin || 0,
+            pausasAnteriores:    window._ativRetomada.pausas || []
+          };
+        } else {
+          url = '/api/conforto/manutencoes-qr';
+          payload = {
+            id: 'man-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,12),
+            ucId, tipo: tipoRegistro === 'corretiva' ? 'Corretiva' : 'Manutenção',
+            tecnicos: tecSelecionados,
+            falha: tipoRegistro === 'corretiva'
+              ? (document.getElementById('inp-falha').value.trim()) : '',
+            pecasSelecionadas: tipoRegistro === 'manutencao' ? pecasSelecionadas : [],
+            requisicoes: tipoRegistro === 'manutencao'
+              ? requisicoesPendentes.map(r => ({
+                  id: 'req-qr-' + crypto.randomUUID().replace(/-/g,'').slice(0,10),
+                  nome: r.nome, quantidade: r.quantidade,
+                  destino: `UC ${ucId}`, solicitante: tecSelecionados[0] || 'qr'
+                }))
+              : [],
+            status: tipoRegistro === 'corretiva'
+              ? document.getElementById('inp-status-corretiva').value : 'Concluída',
+            dataAbertura: data, dataFechamento: fimEm.toISOString(),
+            obs, foto: fotoBase64,
+            inicioEm: inicioEm.toISOString(), fimEm: fimEm.toISOString(),
+            duracaoMin, numPessoas: tecSelecionados.length
+          };
+        }
       }
 
       const btn = document.getElementById('btn-enviar');

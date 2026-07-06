@@ -281,7 +281,7 @@
 
       <div class="action-row">
         <button class="btn-action btn-cancelar" onclick="fecharModal()">Fechar</button>
-        <button class="btn-action btn-concluir" id="btn-concluir-modal" onclick="concluirAtividade()">✓ Concluir</button>
+        <button class="btn-action btn-registrar" id="btn-retomar-modal" onclick="retomarAtividade()">▶ Retomar</button>
       </div>
     </div>
   </div>
@@ -448,8 +448,8 @@
       }
       const blocoP = document.getElementById('bloco-pausa');
       blocoP.style.display = (!isPrev && item.status !== 'Concluída') ? 'block' : 'none';
-      const btnC = document.getElementById('btn-concluir-modal');
-      btnC.style.display = item.status !== 'Concluída' ? 'block' : 'none';
+      const btnR = document.getElementById('btn-retomar-modal');
+      if (btnR) btnR.style.display = item.status !== 'Concluída' ? 'block' : 'none';
 
       document.getElementById('modal-detalhe').classList.add('open');
     }
@@ -460,24 +460,18 @@
     }
 
     // ── Concluir ──
-    async function concluirAtividade() {
+    function retomarAtividade() {
       if (!atividadeAtual) return;
-      const btn = document.getElementById('btn-concluir-modal');
-      btn.disabled = true; btn.textContent = 'Salvando...';
-      try {
-        await fetch(`/api/conforto/manutencoes/${atividadeAtual.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'Concluída',
-            fimEm: new Date().toISOString()
-          })
-        });
-        fecharModal();
-        await carregarAtividades();
-      } catch(e) {
-        btn.disabled = false; btn.textContent = '✓ Concluir';
-      }
+      fetch(`/api/conforto/manutencoes/${atividadeAtual.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Em Andamento' })
+      });
+      window.open(
+        `/conforto-prev/${atividadeAtual.uc_id}?ativ_id=${atividadeAtual.id}`,
+        '_blank'
+      );
+      fecharModal();
     }
 
     // ── Registrar pausa ──
