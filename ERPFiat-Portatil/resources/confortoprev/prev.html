@@ -413,6 +413,7 @@
       if (tipoRegistro === 'manutencao') renderCatalogoPecas();
       document.getElementById('resumo-tecnicos').textContent =
         `👷 ${tecSelecionados.join(', ')}`;
+      if (window._onFormAberto) setTimeout(window._onFormAberto, 50);
     }
 
     function abrirTelaFoto() {

@@ -462,13 +462,18 @@
     // ── Concluir ──
     function retomarAtividade() {
       if (!atividadeAtual) return;
+      const ucId = atividadeAtual.uc_id;
+      if (!ucId || ucId === 'portal' || ucId === '') {
+        alert('UC não identificada nesta atividade. Corrija o uc_id no banco antes de retomar.');
+        return;
+      }
       fetch(`/api/conforto/manutencoes/${atividadeAtual.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Em Andamento' })
       });
       window.open(
-        `/conforto-prev/${atividadeAtual.uc_id}?ativ_id=${atividadeAtual.id}`,
+        `/conforto-prev/${ucId}?ativ_id=${atividadeAtual.id}`,
         '_blank'
       );
       fecharModal();
