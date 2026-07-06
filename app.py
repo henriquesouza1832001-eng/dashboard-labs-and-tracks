@@ -1433,6 +1433,16 @@ async def prev_css():
 async def prev_js():
     return FileResponse(f"{BASE}/confortoprev/prev.js", media_type="application/javascript")
 
+@app.get("/conforto-prev/portal")
+async def portal_page(request: Request):
+    html_path = f"{BASE}/confortoprev/portal.html"
+    dados = get_cached("conforto")
+    pecas = dados.get("pecas", [])
+    html  = inject(html_path, {"pecas": pecas})
+    html.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    html.headers["Pragma"] = "no-cache"
+    return html
+
 @app.get("/conforto-prev/{uc_id}")
 async def prev_page(uc_id: str, request: Request):
     try:
@@ -1599,16 +1609,6 @@ async def criar_requisicao_qr(request: Request):
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
-    
-@app.get("/conforto-prev/portal")
-async def portal_page(request: Request):
-    html_path = f"{BASE}/confortoprev/portal.html"
-    dados = get_cached("conforto")
-    pecas = dados.get("pecas", [])
-    html  = inject(html_path, {"pecas": pecas})
-    html.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-    html.headers["Pragma"] = "no-cache"
-    return html
 
 @app.post("/api/conforto/portal/auth")
 async def portal_auth(request: Request):

@@ -1,5 +1,5 @@
 'use strict';
-const CACHE_NAME = 'controler-v1.0.48';
+const CACHE_NAME = 'controler-v1.0.49';
 const SHELL = [
   '/',
   '/hub/hub.html', '/hub/hub.css', '/hub/hub.js',
