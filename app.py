@@ -1423,7 +1423,19 @@ async def manifest():
 
 @app.get("/favicon.ico")
 async def favicon():
-    return FileResponse(f"{BASE}/icons/icon-192.png", media_type="image/png")
+    path = f"{BASE}/icons/icon-192.png"
+    if os.path.exists(path):
+        return FileResponse(path, media_type="image/png")
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
+@app.get("/icons/icon-192.png")
+async def icon192():
+    path = f"{BASE}/icons/icon-192.png"
+    if os.path.exists(path):
+        return FileResponse(path, media_type="image/png")
+    from fastapi.responses import Response
+    return Response(status_code=204)
 
 @app.get("/conforto-prev/prev.css")
 async def prev_css():
@@ -1636,7 +1648,7 @@ async def portal_atividades(request: Request):
             ORDER BY data_abertura DESC
         """)
         preventivas = await arun_query(f"""
-            SELECT id, uc_id, status, data_prevista, tecnicos, checklist
+            SELECT id, uc_id, status, data_prevista, tecnicos
             FROM {S_CONFORTO}.preventivas
             WHERE status IN ('Pendente', 'Em Atraso')
             ORDER BY data_prevista ASC

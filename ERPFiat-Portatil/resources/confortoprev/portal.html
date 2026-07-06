@@ -347,7 +347,10 @@
       try {
         const res = await fetch('/api/conforto/portal/atividades');
         const data = await res.json();
-        atividades = data;
+        atividades = {
+          manutencoes: data.manutencoes || [],
+          preventivas: data.preventivas || []
+        };
         renderLista();
       } catch(e) {
         document.getElementById('lista-atividades').innerHTML =
