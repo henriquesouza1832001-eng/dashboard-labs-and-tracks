@@ -51,7 +51,8 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
       mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')");
-    document.getElementById('mfoot-obras').textContent='';
+    const pctGasto = budgTotal>0?Math.round(real/budgTotal*100):0;
+    document.getElementById('mfoot-obras').textContent = fmtRK(real)+' faturado de '+fmtRK(budgTotal)+' ('+pctGasto+'%)';
     setTimeout(()=>desenharMicroBullet('mcv-obras', budgTotal, real),80);
   }
   if(dCod){
@@ -86,9 +87,10 @@ mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
       `<div class="mod-obras-total-fixo">${totalUcs} <span>UCs</span></div>`+
       mkMicro(realizadas,'Preventivas realizadas','c-verde',"abrirModuloComDrill('conforto','cf-total')")+
       mkMicro(pendentes,'Pendentes',pendentes>0?'c-laranja':'c-cinza',"abrirModuloComDrill('conforto','cf-conf')")+
-      mkMicro(vencendo,'Vencendo em 14d',vencendo>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('conforto','cf-temp')")+
+      mkMicro(vencendo,`Vencendo em 14d (${totalUcs>0?Math.round(vencendo/totalUcs*100):0}%)`,vencendo>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('conforto','cf-temp')")+
       mkMicro(prevs.length,'Total preventivas','c-azul',"abrirModuloComDrill('conforto','cf-areas')");
-    document.getElementById('mfoot-conforto').textContent=totalUcs+' UCs · '+realizadas+' preventivas realizadas';
+    const manutAberto = (dCnf.manutencoes||[]).filter(m=>['Em Aberto','Em Andamento','Aguardando Peça'].includes(m.status)).length;
+    document.getElementById('mfoot-conforto').textContent = totalUcs+' UCs · '+realizadas+' realizadas'+(manutAberto>0?' · '+manutAberto+' manutenções em aberto':'');
     const coresTipo=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7'];
     setTimeout(()=>desenharMicroBarras('mcv-conforto',topTipos.length?topTipos.map((x,i)=>({label:x[0],val:x[1],cor:coresTipo[i%5]})):[{label:'Sem UCs',val:1,cor:'#d0d8e8'}]),80);
   }
@@ -122,7 +124,10 @@ if(dCh){
       mkMicro(andamento,'Em andamento',andamento>0?'c-laranja':'c-cinza',"abrirModuloComDrill('chamados','ch-sem')")+
       mkMicro(concluidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-resol')")+
       mkMicro(criticos,'Críticos',criticos>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('chamados','ch-total')");
-    document.getElementById('mfoot-chamados').textContent=pctRes+'% resolvidos · '+criticos+' críticos';
+    const tempoMedioMs = cham.filter(c=>c.dataFechamento&&c.dataAbertura).reduce((s,c)=>s+(new Date(c.dataFechamento)-new Date(c.dataAbertura)),0);
+    const qtdFechados = cham.filter(c=>c.dataFechamento&&c.dataAbertura).length;
+    const tmedDias = qtdFechados>0?Math.round(tempoMedioMs/qtdFechados/86400000):null;
+    document.getElementById('mfoot-chamados').textContent = pctRes+'% resolvidos' + (tmedDias!==null?' · TMR: '+tmedDias+'d':'') + (criticos>0?' · ⚠ '+criticos+' críticos':'');
     setTimeout(()=>{
       const cv=document.getElementById('mcv-chamados');
       if(!cv)return;
@@ -174,18 +179,14 @@ function desenharMicroBullet(id, orcado, gasto){
   const disponivel=Math.max(orcado-gasto,0);
   pai.innerHTML=`
     <div style="width:100%;display:flex;flex-direction:column;gap:6px;padding:4px 0">
-      <div style="font-size:10px;color:var(--text-dim);text-align:right;font-family:var(--mono)">A Faturar: ${fmtRK(orcado)}</div>
+      <div style="font-size:10px;color:var(--text-dim);text-align:right;font-family:var(--mono)">Budget: ${fmtRK(orcado)}</div>
       <div style="position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:7px;transition:width 0.4s"></div>
         <div style="position:absolute;right:0;top:-3px;bottom:-3px;width:2px;background:#8a9abf;border-radius:2px"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
-        <span style="color:${cor};font-weight:600">Faturado: ${fmtRK(gasto)}</span>
-        <span style="color:var(--text-dim)">Uso: ${pctTxt}</span>
-      </div>
       <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Faturado: ${fmtRK(gasto)}</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>A Faturar: ${fmtRK(orcado)}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>Saldo: ${fmtRK(disponivel)}</span>
       </div>
     </div>`;
 }
@@ -207,9 +208,6 @@ function desenharMicroBullet(id, orcado, gasto){
     if(!wrap)return;
     const d = await API.hub.dados();
     const ativs = d.atividades || [];
-    if(!raw){wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Sem atividades carregadas</div>';return;}
-    const data=JSON.parse(raw);
-    const ativsLocal=Array.isArray(data)?data:(data.atividades||[]);
     if(!ativs.length){wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Nenhuma atividade encontrada</div>';return;}
     const hoje=new Date().toISOString().slice(0,10);
     const amanha=new Date(Date.now()+86400000).toISOString().slice(0,10);
@@ -758,7 +756,7 @@ function _obOvBase(d,tipo){
       <td>${badgeSt(o.status)}</td>
       <td>${pb(af,'#58a6ff')}</td>
       <td>${pb(pf,pf>85?'#f85149':pf>60?'#d29922':'#3fb950')}</td>
-      <td style="font-family:var(--mono);font-size:10px;color:${A_Faturar<0?'var(--red)':'var(--green)'}">${fmtRK(A_Faturar)}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:${b-r<0?'var(--red)':'var(--green)'}">${fmtRK(b-r)}</td>
       <td style="font-family:var(--mono);font-size:10px;color:${corP}">${prazo===null?'—':prazo<0?'Atrasado':prazo+'d'}</td>
       <td style="color:var(--blue-light);font-size:11px">›</td>
     </tr>`;
