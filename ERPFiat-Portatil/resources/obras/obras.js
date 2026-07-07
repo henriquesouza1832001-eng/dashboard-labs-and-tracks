@@ -1,4 +1,3 @@
-
 'use strict';
 let state = {
   obras: [], budget: [], lancamentos: [], revisoes: [],
@@ -579,15 +578,54 @@ async function excluirObra(idx){
   try{ await API.obras.excluirObra(o.cod); }
   catch(e){ console.error('Erro ao excluir obra:', e); }
 }
+let subItensTemp = [];
+
+function renderItensSubtarefa() {
+  const list = $('sub-itens-list');
+  const total = subItensTemp.length;
+  const concl = subItensTemp.filter(it=>it.concluido).length;
+  const pct = total ? Math.round(concl/total*100) : 0;
+  $('sub-af-val').textContent = `(${pct}%)`;
+  list.innerHTML = total ? subItensTemp.map((it,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px">
+      <input type="checkbox" ${it.concluido?'checked':''} onchange="toggleItemSubtarefa(${i})" style="width:16px;height:16px;accent-color:var(--blue-light);cursor:pointer">
+      <span style="flex:1;font-size:13px;${it.concluido?'text-decoration:line-through;color:var(--text-muted)':''}">${it.texto}</span>
+      <button type="button" onclick="excluirItemSubtarefa(${i})" style="border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--text-muted)">nenhum item cadastrado — adicione abaixo</div>';
+  // status automático a partir dos itens (exceto se travado manualmente em Bloqueada)
+  if($('sub-status').value !== 'Bloqueada' && total) {
+    $('sub-status').value = concl===total ? 'Concluída' : (concl>0 ? 'Em Andamento' : 'Pendente');
+  }
+  if(concl===total && total && !$('sub-dt-fim-real').value) {
+    $('sub-dt-fim-real').value = hoje();
+  }
+}
+function toggleItemSubtarefa(i){ subItensTemp[i].concluido = !subItensTemp[i].concluido; renderItensSubtarefa(); }
+function excluirItemSubtarefa(i){ subItensTemp.splice(i,1); renderItensSubtarefa(); }
+function adicionarItemSubtarefa(){
+  const inp = $('sub-item-novo');
+  const texto = inp.value.trim();
+  if(!texto) return;
+  subItensTemp.push({texto, concluido:false});
+  inp.value='';
+  renderItensSubtarefa();
+  inp.focus();
+}
+$('btn-add-item')?.addEventListener('click', adicionarItemSubtarefa);
+$('sub-item-novo')?.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'){ ev.preventDefault(); adicionarItemSubtarefa(); } });
+window.toggleItemSubtarefa=toggleItemSubtarefa;
+window.excluirItemSubtarefa=excluirItemSubtarefa;
+
 function adicionarSubtarefa(cod, etapaIdx) {
   state.editIdx._etapaAtiva = etapaIdx;
   state.editIdx._subAtiva = -1;
   $('modal-subtarefa-title').textContent = 'Nova Sub-tarefa';
   ['sub-nome','sub-obs'].forEach(id=>$(id).value='');
   ['sub-dt-inicio','sub-dt-fim','sub-dt-inicio-real','sub-dt-fim-real'].forEach(id=>$(id).value='');
-  $('sub-resp').value=''; $('sub-peso').value=1; $('sub-af').value=0;
-  $('sub-af-val').textContent='0%'; $('sub-orcamento').value=0;
+  $('sub-resp').value=''; $('sub-peso').value=1; $('sub-orcamento').value=0;
   $('sub-status').value='Pendente';
+  subItensTemp = [];
+  renderItensSubtarefa();
   popularSelects();
   abrirModal('modal-subtarefa');
 }
@@ -605,11 +643,11 @@ function editarSubtarefa(cod, etapaIdx, subIdx) {
   $('sub-dt-fim-real').value    = s?.dtFimReal||'';
   $('sub-resp').value           = s?.responsavel||'';
   $('sub-peso').value           = s?.peso||1;
-  $('sub-af').value             = s?.avancoFisico||0;
-  $('sub-af-val').textContent   = (s?.avancoFisico||0)+'%';
   $('sub-orcamento').value      = s?.orcamento||0;
   $('sub-status').value         = s?.status||'Pendente';
   $('sub-obs').value            = s?.obs||'';
+  subItensTemp = JSON.parse(JSON.stringify(s?.itens||[]));
+  renderItensSubtarefa();
   popularSelects();
   abrirModal('modal-subtarefa');
 }
@@ -633,6 +671,9 @@ document.getElementById('btn-salvar-subtarefa')?.addEventListener('click', ()=>{
   if(!nome) { alert('Nome obrigatório.'); return; }
   if(!o?.etapas?.[ei]) return;
   if(!o.etapas[ei].subtarefas) o.etapas[ei].subtarefas=[];
+  const total = subItensTemp.length;
+  const concl = subItensTemp.filter(it=>it.concluido).length;
+  const avancoFisico = total ? Math.round(concl/total*100) : 0;
   const obj = {
     id:           si>=0 ? (o.etapas[ei].subtarefas[si].id||null) : null,
     nome,
@@ -642,10 +683,11 @@ document.getElementById('btn-salvar-subtarefa')?.addEventListener('click', ()=>{
     dtFimReal:    $('sub-dt-fim-real').value||null,
     responsavel:  $('sub-resp').value,
     peso:         parseFloat($('sub-peso').value)||1,
-    avancoFisico: parseInt($('sub-af').value)||0,
+    avancoFisico,
     orcamento:    parseFloat($('sub-orcamento').value)||0,
     status:       $('sub-status').value,
     obs:          $('sub-obs').value.trim(),
+    itens:        subItensTemp,
   };
   if(si>=0) o.etapas[ei].subtarefas[si]=obj;
   else o.etapas[ei].subtarefas.push(obj);
@@ -789,6 +831,7 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
     const o=state.obras.find(x=>x.cod===state.obraAtiva);
     if(!o)return;
     if(!o.etapas)o.etapas=[];
+    const idx=state.editIdx.etapa;
     const obj={
       id: idx>=0 ? (o.etapas[idx].id || null) : null,
       nome,
@@ -803,7 +846,6 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
       obs:          $('etapa-obs').value.trim(),
       subtarefas:   idx>=0 ? (o.etapas[idx].subtarefas||[]) : []
     };
-    const idx=state.editIdx.etapa;
     if(idx>=0)o.etapas[idx]=obj; else o.etapas.push(obj);
     fecharModal('modal-etapa');agendarSalvamento();renderCronograma(state.obraAtiva);
   });

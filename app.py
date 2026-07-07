@@ -181,6 +181,10 @@ def _load_obras():
         s["dtFim"]        = str(s.get("dt_fim") or "")
         s["dtInicioReal"] = str(s.get("dt_inicio_real") or "")
         s["dtFimReal"]    = str(s.get("dt_fim_real") or "")
+        try:
+            s["itens"] = json.loads(s.get("itens") or "[]")
+        except Exception:
+            s["itens"] = []
         sub_map.setdefault(s["etapa_id"], []).append(s)
     etapas_map = {}
     for e in etapas_todas:
@@ -789,17 +793,31 @@ async def save_obras(request: Request):
                       e.get("orcamento",0), i, e.get("obs"), u])
                 for j, s in enumerate(e.get("subtarefas", [])):
                     sid = s.get("id") or f"{eid}_s_{j}"
+                    itens = s.get("itens", []) or []
+                    total_itens = len(itens)
+                    concl_itens = sum(1 for it in itens if it.get("concluido"))
+                    af_calc = round(concl_itens/total_itens*100) if total_itens else s.get("avancoFisico", 0)
+                    status_calc = s.get("status", "Pendente")
+                    dt_fim_real = s.get("dtFimReal")
+                    if status_calc != "Bloqueada":
+                        if total_itens and concl_itens == total_itens:
+                            status_calc = "Concluída"
+                            dt_fim_real = dt_fim_real or str(datetime.date.today())
+                        elif total_itens and concl_itens > 0:
+                            status_calc = "Em Andamento"
+                        elif total_itens:
+                            status_calc = "Pendente"
                     await arun_exec(f"""
                         INSERT INTO {S_OBRAS}.etapa_subtarefas
                             (id,etapa_id,obra_cod,nome,responsavel,dt_inicio,dt_fim,
                              dt_inicio_real,dt_fim_real,orcamento,peso,avanco_fisico,
-                             status,obs,ordem,atualizado_por,atualizado_em)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,current_timestamp())
+                             status,itens,obs,ordem,atualizado_por,atualizado_em)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,current_timestamp())
                     """, [sid, eid, o["cod"], s.get("nome"), s.get("responsavel"),
                           to_date_or_none(s.get("dtInicio")), to_date_or_none(s.get("dtFim")),
-                          to_date_or_none(s.get("dtInicioReal")), to_date_or_none(s.get("dtFimReal")),
-                          s.get("orcamento",0), s.get("peso",1), s.get("avancoFisico",0),
-                          s.get("status","Pendente"), s.get("obs"), j, u])
+                          to_date_or_none(s.get("dtInicioReal")), to_date_or_none(dt_fim_real),
+                          s.get("orcamento",0), s.get("peso",1), af_calc,
+                          status_calc, json.dumps(itens), s.get("obs"), j, u])
 
         async def salvar_lanc(l):
             await arun_exec(f"""

@@ -531,12 +531,14 @@
           </select>
         </div>
       </div>
-      <div class="form-row">
-        <div class="field" style="flex-direction:column">
-          <label>Avanço Físico: <span id="sub-af-val">0%</span></label>
-          <input type="range" id="sub-af" min="0" max="100" value="0"
-            style="flex:1;accent-color:var(--blue-light)"
-            oninput="document.getElementById('sub-af-val').textContent=this.value+'%'">
+      <div class="form-row full">
+        <div class="field full">
+          <label>Itens de Conclusão <span id="sub-af-val" style="color:var(--text-muted);font-weight:400">(0%)</span></label>
+          <div id="sub-itens-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="sub-item-novo" placeholder="Descreva o item e pressione Enter" style="flex:1">
+            <button type="button" class="btn btn-secondary" id="btn-add-item" style="padding:6px 14px">+ Item</button>
+          </div>
         </div>
       </div>
       <div class="form-row full">
@@ -556,4 +558,3 @@
 <script src="/obras/obras.js"></script>
 </body>
 </html>
-
