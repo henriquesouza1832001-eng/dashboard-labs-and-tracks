@@ -236,13 +236,14 @@ function desenharMicroBullet(id, orcado, gasto){
       const obs=a.descricao||a.obs||a.observacao||'';
       return`<div class="kpi-act-item" onclick="document.getElementById('${id}').style.display=document.getElementById('${id}').style.display==='none'?'block':'none'" style="cursor:pointer">
         <div class="kpi-act-chk pend"></div>
-        <div class="kpi-act-txt" title="${a.titulo||a.nome||''}">${(a.titulo||a.nome||'Sem título').slice(0,28)}</div>
+        <div class="kpi-act-txt" title="${a.titulo||a.nome||''}">${a.titulo||a.nome||'Sem título'}</div>
         ${pilTxt?`<div class="kpi-pil ${pilClass}">${pilTxt}</div>`:''}
       </div>
       <div id="${id}" style="display:none;padding:6px 10px 8px 22px;font-size:10px;color:var(--text-muted);border-left:2px solid var(--border);margin:2px 0 6px;line-height:1.6">
         ${resp?`<div><b>Responsável:</b> ${resp}</div>`:''}
         ${a.prazo?`<div><b>Prazo:</b> ${a.prazo.split('-').reverse().join('/')}</div>`:''}
         ${obs?`<div style="margin-top:4px">${obs}</div>`:''}
+        ${a.comentarios&&a.comentarios.length?`<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">${a.comentarios.slice(-3).map(c=>`<div style="margin-bottom:4px"><span style="color:var(--text-dim)">${c.autor||''}:</span> ${c.texto||''}</div>`).join('')}</div>`:''}
       </div>`;
     }).join('');
   }catch(e){
