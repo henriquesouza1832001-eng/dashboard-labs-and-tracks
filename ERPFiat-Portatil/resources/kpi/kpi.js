@@ -231,10 +231,18 @@ function desenharMicroBullet(id, orcado, gasto){
       else if(venceAmanha){pilClass='kpi-pm';pilTxt='AMANHÃ';}
       else if(semana_){pilClass='kpi-pm';pilTxt='SEM.';}
       else if(prazo){pilClass='kpi-pl';pilTxt=prazo.slice(8)+'/'+prazo.slice(5,7);}
-      return`<div class="kpi-act-item">
+      const id='act-'+Math.random().toString(36).slice(2);
+      const resp=a.responsavel||a.assignee||'';
+      const obs=a.descricao||a.obs||a.observacao||'';
+      return`<div class="kpi-act-item" onclick="document.getElementById('${id}').style.display=document.getElementById('${id}').style.display==='none'?'block':'none'" style="cursor:pointer">
         <div class="kpi-act-chk pend"></div>
         <div class="kpi-act-txt" title="${a.titulo||a.nome||''}">${(a.titulo||a.nome||'Sem título').slice(0,28)}</div>
         ${pilTxt?`<div class="kpi-pil ${pilClass}">${pilTxt}</div>`:''}
+      </div>
+      <div id="${id}" style="display:none;padding:6px 10px 8px 22px;font-size:10px;color:var(--text-muted);border-left:2px solid var(--border);margin:2px 0 6px;line-height:1.6">
+        ${resp?`<div><b>Responsável:</b> ${resp}</div>`:''}
+        ${a.prazo?`<div><b>Prazo:</b> ${a.prazo.split('-').reverse().join('/')}</div>`:''}
+        ${obs?`<div style="margin-top:4px">${obs}</div>`:''}
       </div>`;
     }).join('');
   }catch(e){
