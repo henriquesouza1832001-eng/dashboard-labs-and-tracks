@@ -197,8 +197,14 @@ function desenharMicroBullet(id, orcado, gasto){
   try{
     const wrap=$('kpi-acts');
     if(!wrap)return;
-    const d = await API.hub.dados();
-    const ativs = d.atividades || [];
+    let ativs = [];
+    try{
+      const d = await API.atividades.listar();
+      const ativs = d.atividades || [];
+    }catch(e){
+      const raw = sessionStorage.getItem('_kpi_atividades') || localStorage.getItem('hub-atividades');
+      if(raw){ try{ const p=JSON.parse(raw); ativs=Array.isArray(p)?p:(p.atividades||p.tarefas||[]); }catch{} }
+    }
     const emAndamento = ativs.filter(a=>a.status==='doing'||a.status==='Em Andamento'||a.status==='em_andamento');
     if(!emAndamento.length){
       wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Nenhuma atividade em andamento</div>';

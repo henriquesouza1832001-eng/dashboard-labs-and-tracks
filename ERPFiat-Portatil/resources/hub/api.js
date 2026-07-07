@@ -63,6 +63,11 @@ const API = {
       ler:    ()  => req('/hub/config',  {},                       600000),
       salvar: (d) => req('/hub/config',  { method: 'POST', body: JSON.stringify(d) }),
     },
+    
+  },
+  
+  atividades: {
+    listar: () => req('/atividades', {}, 60000),
   },
   invalidar: (endpoint) => {
   delete _mem[endpoint];
