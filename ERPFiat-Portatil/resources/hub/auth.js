@@ -1,11 +1,11 @@
 'use strict';
 (function () {
-  const token = sessionStorage.getItem('ctrl-token');
+  const token = localStorage.getItem('ctrl-token');
   if (!token) { window.location.href = '/login'; return; }
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload.exp && Date.now() / 1000 > payload.exp) {
-      sessionStorage.removeItem('ctrl-token');
+      localStorage.removeItem('ctrl-token');
       window.location.href = '/login';
       return;
     }
@@ -16,7 +16,7 @@
       avatar: (payload.nome || payload.email).slice(0, 2).toUpperCase()
     };
   } catch {
-    sessionStorage.removeItem('ctrl-token');
+    localStorage.removeItem('ctrl-token');
     window.location.href = '/login';
   }
 })();

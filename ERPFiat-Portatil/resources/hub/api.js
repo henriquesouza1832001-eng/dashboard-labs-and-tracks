@@ -9,7 +9,7 @@ async function req(endpoint, opts = {}, ttl = 0, _retry = false) {
   }
   const res = await fetch('/api' + endpoint, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'X-Ctrl-Token': sessionStorage.getItem('ctrl-token') || '', ...(opts.headers || {}) },
+    headers: { 'Content-Type': 'application/json', 'X-Ctrl-Token': localStorage.getItem('ctrl-token') || sessionStorage.getItem('ctrl-token') || '', ...(opts.headers || {}) },
     ...opts
   });
   if (res.status === 302 || res.status === 303 || res.redirected) {
