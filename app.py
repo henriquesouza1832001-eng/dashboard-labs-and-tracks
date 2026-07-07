@@ -177,10 +177,11 @@ def _load_obras():
     subtarefas_todas = run_query(f"SELECT * FROM {S_OBRAS}.etapa_subtarefas ORDER BY ordem ASC")
     sub_map = {}
     for s in subtarefas_todas:
-        s["dtInicio"]     = str(s.get("dt_inicio") or "")
-        s["dtFim"]        = str(s.get("dt_fim") or "")
-        s["dtInicioReal"] = str(s.get("dt_inicio_real") or "")
-        s["dtFimReal"]    = str(s.get("dt_fim_real") or "")
+        s["dtInicio"]     = str(s.pop("dt_inicio", None) or "")
+        s["dtFim"]        = str(s.pop("dt_fim", None) or "")
+        s["dtInicioReal"] = str(s.pop("dt_inicio_real", None) or "")
+        s["dtFimReal"]    = str(s.pop("dt_fim_real", None) or "")
+        s["atualizado_em"] = _ts(s.get("atualizado_em"))
         try:
             s["itens"] = json.loads(s.get("itens") or "[]")
         except Exception:
@@ -188,11 +189,13 @@ def _load_obras():
         sub_map.setdefault(s["etapa_id"], []).append(s)
     etapas_map = {}
     for e in etapas_todas:
-        e["dtInicio"]     = str(e.get("dt_inicio") or "")
-        e["dtFim"]        = str(e.get("dt_fim") or "")
-        e["dtInicioReal"] = str(e.get("dt_inicio_real") or "")
-        e["dtFimReal"]    = str(e.get("dt_fim_real") or "")
+        e["dtInicio"]     = str(e.pop("dt_inicio", None) or "")
+        e["dtFim"]        = str(e.pop("dt_fim", None) or "")
+        e["dtInicioReal"] = str(e.pop("dt_inicio_real", None) or "")
+        e["dtFimReal"]    = str(e.pop("dt_fim_real", None) or "")
         e["orcamento"]    = e.get("orcamento") or 0
+        if "atualizado_em" in e:
+            e["atualizado_em"] = _ts(e.get("atualizado_em"))
         e["subtarefas"]   = sub_map.get(e["id"], [])
         etapas_map.setdefault(e["obra_cod"], []).append(e)
     for o in obras:
