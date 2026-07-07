@@ -200,7 +200,7 @@ function desenharMicroBullet(id, orcado, gasto){
     let ativs = [];
     try{
       const d = await API.atividades.listar();
-      const ativs = d.atividades || [];
+      ativs = d.atividades || [];
     }catch(e){
       const raw = sessionStorage.getItem('_kpi_atividades') || localStorage.getItem('hub-atividades');
       if(raw){ try{ const p=JSON.parse(raw); ativs=Array.isArray(p)?p:(p.atividades||p.tarefas||[]); }catch{} }
