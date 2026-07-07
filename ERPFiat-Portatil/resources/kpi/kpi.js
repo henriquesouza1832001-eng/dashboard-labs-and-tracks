@@ -195,46 +195,39 @@ function desenharMicroBullet(id, orcado, gasto){
 })();
 (async function loadSidebar(){
   try{
-    const cfg = await API.hub.config.ler();
-    const id=cfg.identidade||{};
-    const n=$('kpi-inst-nome'),s=$('kpi-inst-sub'),b=$('kpi-inst-badge');
-    if(n)n.textContent=id.instNome||id.brand||'—';
-    if(s)s.textContent=id.instSub||'—';
-    if(b)b.textContent=id.instBadge||'—';
-  }catch(e){}
-  try{
     const wrap=$('kpi-acts');
     if(!wrap)return;
     const d = await API.hub.dados();
     const ativs = d.atividades || [];
-    if(!ativs.length){wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Nenhuma atividade encontrada</div>';return;}
+    const emAndamento = ativs.filter(a=>a.status==='doing'||a.status==='Em Andamento'||a.status==='em_andamento');
+    if(!emAndamento.length){
+      wrap.innerHTML='<div style="font-size:10px;color:var(--text-dim);padding:8px 0">Nenhuma atividade em andamento</div>';
+      return;
+    }
     const hoje=new Date().toISOString().slice(0,10);
     const amanha=new Date(Date.now()+86400000).toISOString().slice(0,10);
     const semana=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
-    const sorted=ativs.slice().sort((a,b)=>{
+    const sorted=emAndamento.slice().sort((a,b)=>{
       const pa=a.prazo||'9999-99-99';
       const pb=b.prazo||'9999-99-99';
       return pa.localeCompare(pb);
     });
-    wrap.innerHTML=sorted.slice(0,12).map(a=>{
-      const done=a.status==='done';
+    wrap.innerHTML=sorted.map(a=>{
       const prazo=a.prazo||'';
-      const vencida=prazo&&prazo<hoje&&!done;
-      const venceHoje=prazo===hoje&&!done;
-      const venceAmanha=prazo===amanha&&!done;
-      const semana_=prazo&&prazo<=semana&&prazo>amanha&&!done;
+      const vencida=prazo&&prazo<hoje;
+      const venceHoje=prazo===hoje;
+      const venceAmanha=prazo===amanha;
+      const semana_=prazo&&prazo<=semana&&prazo>amanha;
       let pilClass='kpi-pl';
       let pilTxt='';
-      if(done){pilClass='kpi-pl';pilTxt='OK';}
-      else if(vencida){pilClass='kpi-ph';pilTxt='ATRAS.';}
+      if(vencida){pilClass='kpi-ph';pilTxt='ATRAS.';}
       else if(venceHoje){pilClass='kpi-ph';pilTxt='HOJE';}
       else if(venceAmanha){pilClass='kpi-pm';pilTxt='AMANHÃ';}
       else if(semana_){pilClass='kpi-pm';pilTxt='SEM.';}
       else if(prazo){pilClass='kpi-pl';pilTxt=prazo.slice(8)+'/'+prazo.slice(5,7);}
-      const chkClass=done?'done':vencida||venceHoje?'pend':'';
       return`<div class="kpi-act-item">
-        <div class="kpi-act-chk ${chkClass}"></div>
-        <div class="kpi-act-txt ${done?'done':''}" title="${a.titulo||a.nome||''}">${(a.titulo||a.nome||'Sem título').slice(0,28)}</div>
+        <div class="kpi-act-chk pend"></div>
+        <div class="kpi-act-txt" title="${a.titulo||a.nome||''}">${(a.titulo||a.nome||'Sem título').slice(0,28)}</div>
         ${pilTxt?`<div class="kpi-pil ${pilClass}">${pilTxt}</div>`:''}
       </div>`;
     }).join('');
