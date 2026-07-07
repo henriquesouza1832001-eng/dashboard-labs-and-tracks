@@ -40,7 +40,13 @@ function avancFisico(obraCod){
   const o = state.obras.find(x=>x.cod===obraCod);
   if(!o || !o.etapas || !o.etapas.length) return 0;
   const total = o.etapas.reduce((s,e)=>s+(e.peso||1),0);
-  const exec = o.etapas.reduce((s,e)=>s+((e.peso||1)*(e.avancoFisico||0)/100),0);
+  const exec = o.etapas.reduce((s,e)=>{
+    const subs = e.subtarefas||[];
+    const af = subs.length
+      ? subs.reduce((ss,st)=>ss+(st.peso||1)*(st.avancoFisico||0)/100,0) / (subs.reduce((ss,st)=>ss+(st.peso||1),0)||1) * 100
+      : (e.avancoFisico||0);
+    return s + (e.peso||1)*af/100;
+  },0);
   return total>0?(exec/total)*100:0;
 }
 function badgeStatus(s){ const map={'Em Estudo':'badge-muted','Em Andamento':'badge-orange','Planejado':'badge-blue','Concluído':'badge-green','Suspenso':'badge-red'}; return `<span class="badge ${map[s]||'badge-muted'}">${s}</span>`; }
@@ -328,27 +334,56 @@ function renderCronograma(cod){
         </div>
       </div>`;
   }
-  $('crono-tbody').innerHTML = etapas.length ? etapas.map((e,i)=>{
-    const resp=state.central.pessoas.find(p=>p.id===e.responsavel);
-    return `<tr>
-      <td>${e.nome}</td>
-      <td style="font-family:var(--mono);font-size:11px">${fmtD(e.dtInicio)}</td>
-      <td style="font-family:var(--mono);font-size:11px">${fmtD(e.dtFim)}</td>
-      <td>${resp?resp.nome:'—'}</td>
-      <td style="font-family:var(--mono);font-size:11px;text-align:center">${e.peso||1}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="0" max="100" value="${e.avancoFisico||0}" 
-            style="flex:1;accent-color:var(--blue-light)"
-            oninput="atualizarAvancoEtapa('${cod}',${i},this.value);this.nextElementSibling.textContent=this.value+'%'">
-          <span style="font-family:var(--mono);font-size:11px;min-width:36px">${e.avancoFisico||0}%</span>
-        </div>
-      </td>
-      <td><div class="row-actions">
-        <button class="action-btn" onclick="editarEtapa('${cod}',${i})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="action-btn danger" onclick="excluirEtapa('${cod}',${i})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-      </div></td>
-    </tr>`;
+  $('crono-tbody').innerHTML = etapas.length ? etapas.flatMap((e,i)=>{
+    const subs = e.subtarefas||[];
+    const etapaRow = `
+      <tr style="background:var(--surface)">
+        <td style="font-weight:600;padding-left:8px">
+          ${e.nome}
+          <button onclick="adicionarSubtarefa('${cod}',${i})" style="margin-left:8px;font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);cursor:pointer;color:var(--text-muted)">+ Sub</button>
+        </td>
+        <td style="font-family:var(--mono);font-size:11px">${fmtD(e.dtInicio)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${fmtD(e.dtFim)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${e.responsavel||'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px;text-align:center">${e.peso||1}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="range" min="0" max="100" value="${e.avancoFisico||0}"
+              style="flex:1;accent-color:var(--blue-light)"
+              oninput="atualizarAvancoEtapa('${cod}',${i},this.value);this.nextElementSibling.textContent=this.value+'%'">
+            <span style="font-family:var(--mono);font-size:11px;min-width:36px">${e.avancoFisico||0}%</span>
+          </div>
+        </td>
+        <td>
+          <div class="row-actions">
+            <button class="action-btn" onclick="editarEtapa('${cod}',${i})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="action-btn danger" onclick="excluirEtapa('${cod}',${i})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          </div>
+        </td>
+      </tr>`;
+    const subRows = subs.map((s,j)=>`
+      <tr style="background:var(--bg)">
+        <td style="padding-left:28px;font-size:12px;color:var(--text-muted)">↳ ${s.nome}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${fmtD(s.dtInicio)}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${fmtD(s.dtFim)}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${s.responsavel||'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px;text-align:center;color:var(--text-muted)">${s.peso||1}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:6px;background:var(--border);border-radius:3px">
+              <div style="width:${s.avancoFisico||0}%;height:100%;background:var(--blue-mid);border-radius:3px"></div>
+            </div>
+            <span style="font-family:var(--mono);font-size:11px;min-width:36px">${s.avancoFisico||0}%</span>
+          </div>
+        </td>
+        <td>
+          <div class="row-actions">
+            <button class="action-btn" onclick="editarSubtarefa('${cod}',${i},${j})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="action-btn danger" onclick="excluirSubtarefa('${cod}',${i},${j})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          </div>
+        </td>
+      </tr>`).join('');
+    return [etapaRow, subRows];
   }).join('') : '<tr class="empty-row"><td colspan="7">nenhuma etapa cadastrada</td></tr>';
 }
 function atualizarAvancoEtapa(cod, idx, val){
@@ -372,7 +407,9 @@ function editarEtapa(cod, idx){
   $('etapa-peso').value = e?.peso||1;
   $('etapa-af').value = e?.avancoFisico||0;
   $('etapa-obs').value = e?.obs||'';
-  if($('etapa-dt-real')) $('etapa-dt-real').value = e?.dtReal||'';
+  if($('etapa-dt-inicio-real')) $('etapa-dt-inicio-real').value = e?.dtInicioReal||'';
+  if($('etapa-dt-fim-real'))    $('etapa-dt-fim-real').value    = e?.dtFimReal||'';
+  if($('etapa-orcamento'))      $('etapa-orcamento').value      = e?.orcamento||0;
   abrirModal('modal-etapa');
 }
 function excluirEtapa(cod, idx){
@@ -542,6 +579,86 @@ async function excluirObra(idx){
   try{ await API.obras.excluirObra(o.cod); }
   catch(e){ console.error('Erro ao excluir obra:', e); }
 }
+function adicionarSubtarefa(cod, etapaIdx) {
+  state.editIdx._etapaAtiva = etapaIdx;
+  state.editIdx._subAtiva = -1;
+  $('modal-subtarefa-title').textContent = 'Nova Sub-tarefa';
+  ['sub-nome','sub-obs'].forEach(id=>$(id).value='');
+  ['sub-dt-inicio','sub-dt-fim','sub-dt-inicio-real','sub-dt-fim-real'].forEach(id=>$(id).value='');
+  $('sub-resp').value=''; $('sub-peso').value=1; $('sub-af').value=0;
+  $('sub-af-val').textContent='0%'; $('sub-orcamento').value=0;
+  $('sub-status').value='Pendente';
+  popularSelects();
+  abrirModal('modal-subtarefa');
+}
+
+function editarSubtarefa(cod, etapaIdx, subIdx) {
+  const o = state.obras.find(x=>x.cod===cod);
+  const s = o?.etapas?.[etapaIdx]?.subtarefas?.[subIdx];
+  state.editIdx._etapaAtiva = etapaIdx;
+  state.editIdx._subAtiva   = subIdx;
+  $('modal-subtarefa-title').textContent = 'Editar Sub-tarefa';
+  $('sub-nome').value           = s?.nome||'';
+  $('sub-dt-inicio').value      = s?.dtInicio||'';
+  $('sub-dt-fim').value         = s?.dtFim||'';
+  $('sub-dt-inicio-real').value = s?.dtInicioReal||'';
+  $('sub-dt-fim-real').value    = s?.dtFimReal||'';
+  $('sub-resp').value           = s?.responsavel||'';
+  $('sub-peso').value           = s?.peso||1;
+  $('sub-af').value             = s?.avancoFisico||0;
+  $('sub-af-val').textContent   = (s?.avancoFisico||0)+'%';
+  $('sub-orcamento').value      = s?.orcamento||0;
+  $('sub-status').value         = s?.status||'Pendente';
+  $('sub-obs').value            = s?.obs||'';
+  popularSelects();
+  abrirModal('modal-subtarefa');
+}
+
+function excluirSubtarefa(cod, etapaIdx, subIdx) {
+  if(!confirm('Excluir esta sub-tarefa?')) return;
+  const o = state.obras.find(x=>x.cod===cod);
+  if(o?.etapas?.[etapaIdx]?.subtarefas) {
+    o.etapas[etapaIdx].subtarefas.splice(subIdx,1);
+    agendarSalvamento();
+    renderCronograma(cod);
+  }
+}
+
+document.getElementById('btn-salvar-subtarefa')?.addEventListener('click', ()=>{
+  const cod = state.obraAtiva;
+  const o   = state.obras.find(x=>x.cod===cod);
+  const ei  = state.editIdx._etapaAtiva;
+  const si  = state.editIdx._subAtiva;
+  const nome = $('sub-nome').value.trim();
+  if(!nome) { alert('Nome obrigatório.'); return; }
+  if(!o?.etapas?.[ei]) return;
+  if(!o.etapas[ei].subtarefas) o.etapas[ei].subtarefas=[];
+  const obj = {
+    id:           si>=0 ? (o.etapas[ei].subtarefas[si].id||null) : null,
+    nome,
+    dtInicio:     $('sub-dt-inicio').value||null,
+    dtFim:        $('sub-dt-fim').value||null,
+    dtInicioReal: $('sub-dt-inicio-real').value||null,
+    dtFimReal:    $('sub-dt-fim-real').value||null,
+    responsavel:  $('sub-resp').value,
+    peso:         parseFloat($('sub-peso').value)||1,
+    avancoFisico: parseInt($('sub-af').value)||0,
+    orcamento:    parseFloat($('sub-orcamento').value)||0,
+    status:       $('sub-status').value,
+    obs:          $('sub-obs').value.trim(),
+  };
+  if(si>=0) o.etapas[ei].subtarefas[si]=obj;
+  else o.etapas[ei].subtarefas.push(obj);
+  fecharModal('modal-subtarefa');
+  agendarSalvamento();
+  renderCronograma(cod);
+});
+['modal-subtarefa-close','modal-subtarefa-cancel'].forEach(id=>
+  $(id)?.addEventListener('click',()=>fecharModal('modal-subtarefa')));
+
+window.adicionarSubtarefa=adicionarSubtarefa;
+window.editarSubtarefa=editarSubtarefa;
+window.excluirSubtarefa=excluirSubtarefa;
 function editarLanc(idx){ const l=state.lancamentos[idx]; state.editIdx.lanc=idx; $('modal-lanc-title').textContent='Editar Lançamento'; $('lanc-obra').value=l.obraCod; $('lanc-cresp').value=l.cresp; $('lanc-cat').value=l.categoria; $('lanc-cat').dispatchEvent(new Event('change')); setTimeout(()=>{$('lanc-subcat').value=l.subcategoria||'';},50); $('lanc-desc').value=l.descricao; $('lanc-unid').value=l.unid||''; $('lanc-qtd').value=l.qtd; $('lanc-preco').value=l.precoUnit; $('lanc-nf').value=l.nfDoc||''; $('lanc-data').value=l.dtLanc||''; $('lanc-forn').value=l.fornecedor||''; $('lanc-obs').value=l.obs||''; $('lanc-err').textContent=''; abrirModal('modal-lanc'); }
 async function excluirLanc(idx){
   if(!confirm('Excluir este lançamento?'))return;
@@ -672,7 +789,20 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
     const o=state.obras.find(x=>x.cod===state.obraAtiva);
     if(!o)return;
     if(!o.etapas)o.etapas=[];
-    const obj={nome,dtInicio:$('etapa-dt-inicio').value,dtFim:$('etapa-dt-fim').value,dtReal:$('etapa-dt-real').value||null,responsavel:$('etapa-resp').value,peso:parseFloat($('etapa-peso').value)||1,avancoFisico:parseInt($('etapa-af').value)||0,obs:$('etapa-obs').value.trim()};
+    const obj={
+      id: idx>=0 ? (o.etapas[idx].id || null) : null,
+      nome,
+      dtInicio:     $('etapa-dt-inicio').value,
+      dtFim:        $('etapa-dt-fim').value,
+      dtInicioReal: $('etapa-dt-inicio-real')?.value || null,
+      dtFimReal:    $('etapa-dt-fim-real')?.value || null,
+      orcamento:    parseFloat($('etapa-orcamento')?.value||0)||0,
+      responsavel:  $('etapa-resp').value,
+      peso:         parseFloat($('etapa-peso').value)||1,
+      avancoFisico: parseInt($('etapa-af').value)||0,
+      obs:          $('etapa-obs').value.trim(),
+      subtarefas:   idx>=0 ? (o.etapas[idx].subtarefas||[]) : []
+    };
     const idx=state.editIdx.etapa;
     if(idx>=0)o.etapas[idx]=obj; else o.etapas.push(obj);
     fecharModal('modal-etapa');agendarSalvamento();renderCronograma(state.obraAtiva);

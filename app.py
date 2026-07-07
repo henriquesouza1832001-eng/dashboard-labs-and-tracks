@@ -173,9 +173,23 @@ def _load_chamados():
 
 def _load_obras():
     obras = run_query(f"SELECT * FROM {S_OBRAS}.obras")
-    etapas_todas = run_query(f"SELECT * FROM {S_OBRAS}.etapas")
+    etapas_todas   = run_query(f"SELECT * FROM {S_OBRAS}.etapas ORDER BY ordem ASC")
+    subtarefas_todas = run_query(f"SELECT * FROM {S_OBRAS}.etapa_subtarefas ORDER BY ordem ASC")
+    sub_map = {}
+    for s in subtarefas_todas:
+        s["dtInicio"]     = str(s.get("dt_inicio") or "")
+        s["dtFim"]        = str(s.get("dt_fim") or "")
+        s["dtInicioReal"] = str(s.get("dt_inicio_real") or "")
+        s["dtFimReal"]    = str(s.get("dt_fim_real") or "")
+        sub_map.setdefault(s["etapa_id"], []).append(s)
     etapas_map = {}
     for e in etapas_todas:
+        e["dtInicio"]     = str(e.get("dt_inicio") or "")
+        e["dtFim"]        = str(e.get("dt_fim") or "")
+        e["dtInicioReal"] = str(e.get("dt_inicio_real") or "")
+        e["dtFimReal"]    = str(e.get("dt_fim_real") or "")
+        e["orcamento"]    = e.get("orcamento") or 0
+        e["subtarefas"]   = sub_map.get(e["id"], [])
         etapas_map.setdefault(e["obra_cod"], []).append(e)
     for o in obras:
         o["etapas"]        = etapas_map.get(o["cod"], [])
@@ -760,13 +774,32 @@ async def save_obras(request: Request):
                 o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"), o.get("obs"), u
             ])
             await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [o["cod"]])
-            for e in o.get("etapas", []):
+            await arun_exec(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE obra_cod=?", [o["cod"]])
+            for i, e in enumerate(o.get("etapas", [])):
+                eid = e.get("id") or f"{o['cod']}_e_{i}"
                 await arun_exec(f"""
                     INSERT INTO {S_OBRAS}.etapas
-                        (obra_cod,nome,dt_inicio,dt_fim,responsavel,peso,avanco_fisico,obs)
-                    VALUES (?,?,?,?,?,?,?,?)
-                """, [o["cod"], e.get("nome"), e.get("dtInicio"), e.get("dtFim"),
-                      e.get("responsavel"), e.get("peso",1), e.get("avancoFisico",0), e.get("obs")])
+                        (id,obra_cod,nome,dt_inicio,dt_fim,dt_inicio_real,dt_fim_real,
+                         responsavel,peso,avanco_fisico,orcamento,ordem,obs,atualizado_por)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, [eid, o["cod"], e.get("nome"),
+                      to_date_or_none(e.get("dtInicio")), to_date_or_none(e.get("dtFim")),
+                      to_date_or_none(e.get("dtInicioReal")), to_date_or_none(e.get("dtFimReal")),
+                      e.get("responsavel"), e.get("peso",1), e.get("avancoFisico",0),
+                      e.get("orcamento",0), i, e.get("obs"), u])
+                for j, s in enumerate(e.get("subtarefas", [])):
+                    sid = s.get("id") or f"{eid}_s_{j}"
+                    await arun_exec(f"""
+                        INSERT INTO {S_OBRAS}.etapa_subtarefas
+                            (id,etapa_id,obra_cod,nome,responsavel,dt_inicio,dt_fim,
+                             dt_inicio_real,dt_fim_real,orcamento,peso,avanco_fisico,
+                             status,obs,ordem,atualizado_por,atualizado_em)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,current_timestamp())
+                    """, [sid, eid, o["cod"], s.get("nome"), s.get("responsavel"),
+                          to_date_or_none(s.get("dtInicio")), to_date_or_none(s.get("dtFim")),
+                          to_date_or_none(s.get("dtInicioReal")), to_date_or_none(s.get("dtFimReal")),
+                          s.get("orcamento",0), s.get("peso",1), s.get("avancoFisico",0),
+                          s.get("status","Pendente"), s.get("obs"), j, u])
 
         async def salvar_lanc(l):
             await arun_exec(f"""
@@ -822,6 +855,18 @@ async def save_obras(request: Request):
     await loop.run_in_executor(None, _load_obras)
     return JSONResponse({"ok": True})
 
+@app.delete("/api/obras/{cod}/etapas/{etapa_id}")
+async def deletar_etapa(cod: str, etapa_id: str):
+    try:
+        await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=? AND id=?", [cod, etapa_id])
+        await arun_exec(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE etapa_id=?", [etapa_id])
+        await arun_exec(f"DELETE FROM {S_OBRAS}.etapas_avancos WHERE etapa_id=?", [etapa_id])
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _load_obras)
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 @app.delete("/api/obras/{cod}")
 async def delete_obra(cod: str):
     try:
@@ -861,11 +906,15 @@ async def registrar_avanco(cod: str, etapa_id: str, request: Request):
     aid = str(datetime.datetime.utcnow().timestamp()).replace(".","")
     ts = datetime.datetime.utcnow().isoformat()
     try:
+        subtarefa_id    = body.get("subtarefaId")
+        avanco_fin      = float(body.get("avancoFinanceiro", 0))
+        obs_avanco      = body.get("obs", "")
         await arun_exec(f"""
             INSERT INTO {S_OBRAS}.etapas_avancos
-                (id, etapa_id, obra_cod, avanco_fisico, registrado_em, registrado_por)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, [aid, etapa_id, cod, avanco, ts, u])
+                (id, etapa_id, obra_cod, subtarefa_id, avanco_fisico,
+                 avanco_financeiro, obs, registrado_em, registrado_por)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, [aid, etapa_id, cod, subtarefa_id, avanco, avanco_fin, obs_avanco, ts, u])
         await arun_exec(f"""
             MERGE INTO {S_OBRAS}.etapas AS t
             USING (SELECT '{cod}' AS obra_cod, '{body.get("nomeEtapa","")}' AS nome_etapa) AS s

@@ -464,6 +464,9 @@
       <div class="form-row">
         <div class="field"><label>Início Previsto</label><input type="date" id="etapa-dt-inicio"></div>
         <div class="field"><label>Fim Previsto</label><input type="date" id="etapa-dt-fim"></div>
+        <div class="field"><label>Início Real</label><input type="date" id="etapa-dt-inicio-real"></div>
+        <div class="field"><label>Fim Real</label><input type="date" id="etapa-dt-fim-real"></div>
+        <div class="field"><label>Orçamento (R$)</label><input type="number" id="etapa-orcamento" min="0" step="0.01" placeholder="0,00"></div>
         <div class="field"><label>Data Real de Conclusão</label><input type="date" id="etapa-dt-real"></div>
       </div>
       <div class="form-row">
@@ -493,6 +496,57 @@
       <div class="field-err" id="cat-err"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" id="modal-cat-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-cat">Salvar</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-subtarefa">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-subtarefa-title">Nova Sub-tarefa</span>
+      <button class="modal-close" id="modal-subtarefa-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="field full"><label>Nome *</label><input type="text" id="sub-nome"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Início Previsto</label><input type="date" id="sub-dt-inicio"></div>
+        <div class="field"><label>Fim Previsto</label><input type="date" id="sub-dt-fim"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Início Real</label><input type="date" id="sub-dt-inicio-real"></div>
+        <div class="field"><label>Fim Real</label><input type="date" id="sub-dt-fim-real"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Responsável</label><select id="sub-resp"><option value="">—</option></select></div>
+        <div class="field"><label>Peso</label><input type="number" id="sub-peso" min="1" max="100" value="1"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Orçamento (R$)</label><input type="number" id="sub-orcamento" min="0" step="0.01" placeholder="0,00"></div>
+        <div class="field"><label>Status</label>
+          <select id="sub-status">
+            <option value="Pendente">Pendente</option>
+            <option value="Em Andamento">Em Andamento</option>
+            <option value="Concluída">Concluída</option>
+            <option value="Bloqueada">Bloqueada</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field" style="flex-direction:column">
+          <label>Avanço Físico: <span id="sub-af-val">0%</span></label>
+          <input type="range" id="sub-af" min="0" max="100" value="0"
+            style="flex:1;accent-color:var(--blue-light)"
+            oninput="document.getElementById('sub-af-val').textContent=this.value+'%'">
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="field"><label>Observação</label><textarea id="sub-obs" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-subtarefa-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-subtarefa">Salvar</button>
+    </div>
   </div>
 </div>
 <script src="/hub/pwa.js"></script>
