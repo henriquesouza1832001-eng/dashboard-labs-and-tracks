@@ -186,7 +186,7 @@ function desenharMicroBullet(id, orcado, gasto){
       </div>
       <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Faturado: ${fmtRK(gasto)}</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>Saldo: ${fmtRK(disponivel)}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>A Faturar: ${fmtRK(disponivel)}</span>
       </div>
     </div>`;
 }
