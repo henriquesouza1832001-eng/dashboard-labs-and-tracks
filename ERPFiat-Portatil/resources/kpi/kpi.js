@@ -182,7 +182,6 @@ function desenharMicroBullet(id, orcado, gasto){
       <div style="font-size:10px;color:var(--text-dim);text-align:right;font-family:var(--mono)">Budget: ${fmtRK(orcado)}</div>
       <div style="position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:7px;transition:width 0.4s"></div>
-        <div style="position:absolute;right:0;top:-3px;bottom:-3px;width:2px;background:#8a9abf;border-radius:2px"></div>
       </div>
       <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Faturado: ${fmtRK(gasto)}</span>
