@@ -174,18 +174,18 @@ function desenharMicroBullet(id, orcado, gasto){
   const disponivel=Math.max(orcado-gasto,0);
   pai.innerHTML=`
     <div style="width:100%;display:flex;flex-direction:column;gap:6px;padding:4px 0">
-      <div style="font-size:10px;color:var(--text-dim);text-align:right;font-family:var(--mono)">Budget: ${fmtRK(orcado)}</div>
+      <div style="font-size:10px;color:var(--text-dim);text-align:right;font-family:var(--mono)">A Faturar: ${fmtRK(orcado)}</div>
       <div style="position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:7px;transition:width 0.4s"></div>
         <div style="position:absolute;right:0;top:-3px;bottom:-3px;width:2px;background:#8a9abf;border-radius:2px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono)">
-        <span style="color:${cor};font-weight:600">Gasto: ${fmtRK(gasto)}</span>
+        <span style="color:${cor};font-weight:600">Faturado: ${fmtRK(gasto)}</span>
         <span style="color:var(--text-dim)">Uso: ${pctTxt}</span>
       </div>
       <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Realizado: ${fmtRK(gasto)}</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>Previsto: ${fmtRK(orcado)}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Faturado: ${fmtRK(gasto)}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>A Faturar: ${fmtRK(orcado)}</span>
       </div>
     </div>`;
 }
@@ -467,13 +467,13 @@ function desenharGauge(id,pct,cor){
 function desenharOrçado(id,obras){
   const cv=resolveW(id);if(!cv)return;
   const W=cv.width,H=cv.height,ctx=cv.getContext('2d');ctx.clearRect(0,0,W,H);
-  const items=obras.map(o=>({nome:tnome(o.nome),Orçado:OrçadoObra(o.cod)})).sort((a,b)=>b.Orçado-a.Orçado);
+  const items=obras.map(o=>({nome:tnome(o.nome),A_Faturar:OrçadoObra(o.cod)})).sort((a,b)=>b.A_Faturar-a.A_Faturar);
   if(!items.length)return;
-  const max=Math.max(...items.map(x=>Math.abs(x.Orçado)))||1;
+  const max=Math.max(...items.map(x=>Math.abs(x.A_Faturar)))||1;
   const n=items.length,rowH=H/n,barH=Math.min(rowH*.55,16),lW=68,aW=W-lW-50;
   ctx.font='9px IBM Plex Mono,monospace';
   items.forEach((item,i)=>{
-    const v=item.Orçado,bw=(Math.abs(v)/max)*aW,y=i*rowH+(rowH-barH)/2;
+    const v=item.A_Faturar,bw=(Math.abs(v)/max)*aW,y=i*rowH+(rowH-barH)/2;
     const cor=v>=0?'#3fb950':'#f85149';
     ctx.fillStyle='#e8edf5';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(lW,y,aW,barH,2);else ctx.rect(lW,y,aW,barH);ctx.fill();
     ctx.fillStyle=cor;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(lW,y,bw,barH,2);else ctx.rect(lW,y,bw,barH);ctx.fill();
@@ -527,20 +527,20 @@ function buildObrasCards(d){
   const corPct=pct>=100?'c-vermelho':pct>=80?'c-laranja':'c-azul';
 
   return`<div class="obras-cards-grid" id="obras-grid">
-    ${mkCard('total','TOTAL OBRAS',obras.length,'c-azul','#58a6ff',fmtRK(budgTotal)+' budget total',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Disponível</span><span class="ob-mini-val ${disponivel<=0?'c-vermelho':'c-verde'}">${fmtRK(disponivel)}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">% Realizado</span><span class="ob-mini-val ${corPct}">${pct}%</span></div>`)}
+    ${mkCard('total','TOTAL OBRAS',obras.length,'c-azul','#58a6ff',fmtRK(budgTotal)+' total a faturar',
+      `<div class="ob-mini-stat"><span class=\"ob-mini-lbl\">A Faturar</span><span class="ob-mini-val ${disponivel<=0?'c-vermelho':'c-verde'}">${fmtRK(disponivel)}</span></div>
+       <div class="ob-mini-stat"><span class=\"ob-mini-lbl\">% Faturado</span><span class="ob-mini-val ${corPct}">${pct}%</span></div>`)}
     ${mkCard('andamento','EM ANDAMENTO',emAnd.length,'c-laranja','#e3711a',fmt(avFis,1)+'% avanço médio',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Budget</span><span class="ob-mini-val c-azul">${fmtRK(emAnd.reduce((s,o)=>s+budgObra(o.cod),0))}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">Realizado</span><span class="ob-mini-val c-laranja">${fmtRK(emAnd.reduce((s,o)=>s+realObra(o.cod),0))}</span></div>`)}
+      `<div class="ob-mini-stat"><span class=\"ob-mini-lbl\">A Faturar</span><span class="ob-mini-val c-azul">${fmtRK(emAnd.reduce((s,o)=>s+budgObra(o.cod),0))}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Faturado</span><span class="ob-mini-val c-laranja">${fmtRK(emAnd.reduce((s,o)=>s+realObra(o.cod),0))}</span></div>`)}
     ${mkCard('concluidas','CONCLUÍDAS',conc.length,'c-verde','#3fb950',obras.length>0?fmt(conc.length/obras.length*100,0)+'% do total':'—',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Gasto total</span><span class="ob-mini-val c-laranja">${fmtRK(conc.reduce((s,o)=>s+realObra(o.cod),0))}</span></div>
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Total Faturado</span><span class="ob-mini-val c-laranja">${fmtRK(conc.reduce((s,o)=>s+realObra(o.cod),0))}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Avg. avanço</span><span class="ob-mini-val c-verde">100%</span></div>`)}
-    ${mkCard('planejadas','PLANEJADAS',plan.length,'c-azul','#a371f7',fmtRK(planB)+' previsto',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Budget prev.</span><span class="ob-mini-val c-azul">${fmtRK(planB)}</span></div>
+    ${mkCard('planejadas','PLANEJADAS',plan.length,'c-azul','#a371f7',fmtRK(planB)+' a faturar',
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">A Faturar</span><span class="ob-mini-val c-azul">${fmtRK(planB)}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Prazo médio</span><span class="ob-mini-val c-azul">${prazoMedio(plan)}</span></div>`)}
     ${mkCard('estudo','EM ESTUDO',estudo.length,'c-cinza','#8a9abf',fmtRK(estudoB)+' estimado',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Budget est.</span><span class="ob-mini-val c-cinza">${fmtRK(estudoB)}</span></div>
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">A Faturar</span><span class="ob-mini-val c-cinza">${fmtRK(estudoB)}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Prazo médio</span><span class="ob-mini-val c-cinza">${prazoMedio(estudo)}</span></div>`)}
   </div>`;
 }
@@ -583,7 +583,7 @@ function drawMiniCard(tipo,d){
     const budgTotal=budget.filter(b=>true).reduce((s,b)=>s+(b.budgetAprov||0),0);
     const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
     const disponivel=Math.max(budgTotal-real,0);
-    labels=['Realizado','Disponível'];
+    labels=['Faturado','A Faturar'];
     vals=[Math.round(real)||0,Math.round(disponivel)||0];
     cores=['#2E5FA3','#e8edf5'];
   } else if(tipo==='andamento'){
@@ -728,7 +728,7 @@ function buildOverlayEstudo(d){
   return header+`
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
-      <div class="ob-ov-ctit">Budget estimado por obra</div>
+      <div class="ob-ov-ctit">A Faturar por obra</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
     </div>
   </div>`;
@@ -740,7 +740,7 @@ function _obOvBase(d,tipo){
   const lista=filtros[tipo]||[];
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
-  const Orçado=totalB-totalR;
+  const A_Faturar=totalB-totalR;
   const avgFis=lista.length?lista.reduce((s,o)=>s+calcAvFis(o),0)/lista.length:0;
   const pb=(v,c)=>`<div class="ob-mini-prog"><div class="ob-mbar"><div class="ob-mfill" style="width:${Math.min(v,100)}%;background:${c}"></div></div><span style="font-size:9px;font-family:var(--mono);color:var(--text-muted);min-width:30px">${fmt(v,1)}%</span></div>`;
   const badgeSt=s=>{const m={'Em Andamento':'badge-and','Concluído':'badge-conc','Planejado':'badge-plan','Suspenso':'badge-susp','Em Estudo':'badge-muted'};return`<span class="badge-sm ${m[s]||'badge-plan'}">${s}</span>`;};
@@ -758,7 +758,7 @@ function _obOvBase(d,tipo){
       <td>${badgeSt(o.status)}</td>
       <td>${pb(af,'#58a6ff')}</td>
       <td>${pb(pf,pf>85?'#f85149':pf>60?'#d29922':'#3fb950')}</td>
-      <td style="font-family:var(--mono);font-size:10px;color:${b-r<0?'var(--red)':'var(--green)'}">${fmtRK(b-r)}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:${A_Faturar<0?'var(--red)':'var(--green)'}">${fmtRK(A_Faturar)}</td>
       <td style="font-family:var(--mono);font-size:10px;color:${corP}">${prazo===null?'—':prazo<0?'Atrasado':prazo+'d'}</td>
       <td style="color:var(--blue-light);font-size:11px">›</td>
     </tr>`;
@@ -781,15 +781,15 @@ function _obOvBase(d,tipo){
     <div class="ob-ov-header-btns"><button class="ob-ov-close" onclick="voltarParaSubCards()">← voltar</button></div>
   </div>
   <div class="ob-ov-kpis">
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget Total</div><div class="ob-ov-kpi-val c-azul">${fmtRK(totalB)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Gasto</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(totalR)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Orçado</div><div class="ob-ov-kpi-val ${Orçado<0?'c-vermelho':'c-verde'}">${fmtRK(Orçado)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Total A Faturar</div><div class="ob-ov-kpi-val c-azul">${fmtRK(totalB)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(totalR)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio - Obras em andamento</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
   </div>
   <div class="ob-ov-tbox" style="margin-bottom:16px">
     <div class="ob-ov-ctit" style="margin-bottom:8px">Detalhamento das ${lista.length} obra(s)</div>
     <table class="ob-ov-table">
-      <thead><tr><th>Obra</th><th>Status</th><th>% Físico</th><th>% Financeiro</th><th>Orçado</th><th>Prazo</th><th></th></tr></thead>
+      <thead><tr><th>Obra</th><th>Status</th><th>% Físico</th><th>% Financeiro</th><th>A Faturar</th><th>Prazo</th><th></th></tr></thead>
       <tbody>${linhas||'<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:16px">Nenhuma obra</td></tr>'}</tbody>
     </table>
     <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;flex-wrap:wrap">${_pagHtml}</div>
@@ -799,7 +799,7 @@ function _obOvBase(d,tipo){
     window._obOvPag=p;
     voltarParaLista();
   };
-  return{header,lista,totalB,totalR,Orçado};
+  return{header,lista,totalB,totalR,A_Faturar};
 }
 function buildOverlayTotal(d){
   const {header}=_obOvBase(d,'total');
@@ -807,7 +807,7 @@ function buildOverlayTotal(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
-      <div class="ob-ov-ctit">Gastos por Categoria</div>
+      <div class="ob-ov-ctit">Faturado por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -822,7 +822,7 @@ function buildOverlayAndamento(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
-      <div class="ob-ov-ctit">Gastos por Categoria</div>
+      <div class="ob-ov-ctit">Faturado por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
     </div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
@@ -837,7 +837,7 @@ function buildOverlayConcluidas(d){
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
-      <div class="ob-ov-ctit">Gastos por Categoria</div>
+      <div class="ob-ov-ctit">Faturado por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
     </div>
   </div>`;
@@ -892,11 +892,11 @@ function desenharBulletBudget(cv,budget,gasto){
 
   ctx.font='600 10px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
   ctx.fillStyle='#4a5880';
-  ctx.fillText(`Budget: ${fmtRK(budget)}`,Math.min(Math.max(xBudget,46),W-46),barY-16);
+  ctx.fillText(`A Faturar: ${fmtRK(budget)}`,Math.min(Math.max(xBudget,46),W-46),barY-16);
 
   ctx.font='700 12px JetBrains Mono,monospace';
   ctx.textAlign='left';ctx.fillStyle=excedeu?'#f85149':'#2E5FA3';
-  ctx.fillText(`Gasto: ${fmtRK(gasto)}`,m.l,barY+barH+24);
+  ctx.fillText(`Faturado: ${fmtRK(gasto)}`,m.l,barY+barH+24);
 
   ctx.font='600 11px JetBrains Mono,monospace';
   ctx.textAlign='left';
@@ -962,31 +962,31 @@ function drawOverlayCharts(tipo,d){
     const cor=estourou?'#f85149':pct>=0.8?'#e3711a':'#2E5FA3';
     const disponivel=Math.max(totalB-totalR,0);
     bulletWrap.innerHTML=`
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">Previsto × Realizado</div>
-      <div style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--mono);margin-bottom:6px">Previsto: <b style="color:var(--text)">${fmtRK(totalB)}</b></div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">A Faturar × Faturado</div>
+      <div style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--mono);margin-bottom:6px">A Faturar: <b style="color:var(--text)">${fmtRK(totalB)}</b></div>
       <div style="position:relative;height:18px;background:#e8edf5;border-radius:9px;overflow:hidden;margin-bottom:10px">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:9px"></div>
         <div style="position:absolute;right:0;top:-4px;bottom:-4px;width:2px;background:#8a9abf;border-radius:2px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;margin-bottom:14px">
-        <span style="color:${cor};font-weight:700">Realizado: ${fmtRK(totalR)}</span>
+        <span style="color:${cor};font-weight:700">Faturado: ${fmtRK(totalR)}</span>
         <span style="color:var(--text-muted)">${pctTxt}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span><span style="color:var(--text-muted)">Realizado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b></div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${estourou?'#f8514955':'#1a7f4b'};flex-shrink:0"></span><span style="color:var(--text-muted)">${estourou?'Excedente':'Disponível'}</span><b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'#1a7f4b'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span><span style="color:var(--text-muted)">Faturado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${estourou?'#f8514955':'#1a7f4b'};flex-shrink:0"></span><span style="color:var(--text-muted)">${estourou?'Excedente':'A Faturar'}</span><b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'#1a7f4b'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b></div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">Uso do budget</span><b style="margin-left:auto;font-family:var(--mono);color:${cor}">${pctTxt}</b></div>
       </div>`;
   }
 
-  // Gastos por categoria
+  // Faturado por categoria
   const catM={};lista.forEach(o=>{lanc.filter(l=>l.obraCod===o.cod).forEach(l=>{const c=l.categoria||'Outros';catM[c]=(catM[c]||0)+l.qtd*l.precoUnit;});});
   const top=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const cvb=document.getElementById('cv-ov-barras');
   if(cvb){
     const wrap=cvb.parentElement;
     const cores=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7','#58a6ff','#f85149','#8b949e'];
-    wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Gastos por Categoria</div>`+(top.length?barrasHTML(top.map((x,i)=>({label:x[0],val:x[1],cor:cores[i%8]})),{labelW:100}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem lançamentos</div>');
+    wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Faturado por Categoria</div>`+(top.length?barrasHTML(top.map((x,i)=>({label:x[0],val:x[1],cor:cores[i%8]})),{labelW:100}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem lançamentos</div>');
   }
 }
 function abrirDetalheObra(cod){
@@ -1036,9 +1036,9 @@ function abrirDetalheObra(cod){
   </div>
 
   <div class="ob-ov-kpis" style="margin-bottom:12px">
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Realizado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(r)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Orçado</div><div class="ob-ov-kpi-val ${b-r<0?'c-vermelho':'c-verde'}">${fmtRK(b-r)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(r)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${b-r<0?'c-vermelho':'c-verde'}">${fmtRK(b-r)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Eficiência</div><div class="ob-ov-kpi-val ${ef>5?'c-verde':ef<-5?'c-vermelho':'c-amarelo'}">${ef>=0?'+':''}${fmt(ef,1)}%</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Status</div><div class="ob-ov-kpi-val" style="font-size:13px">${badgeSt(o.status)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Prazo</div><div class="ob-ov-kpi-val" style="font-size:14px;color:${corP}">${prazoTxt}</div></div>
@@ -1048,7 +1048,7 @@ function abrirDetalheObra(cod){
 
   <div class="ob-ov-charts" style="margin-bottom:12px">
     <div class="ob-ov-cbox">
-      <div class="ob-ov-ctit">Gastos mensais</div>
+      <div class="ob-ov-ctit">Faturamento Mensal</div>
       <canvas id="cv-det-spark" width="300" height="140" style="width:100%;height:140px;display:block"></canvas>
     </div>
     <div class="ob-ov-cbox" style="flex:1">
@@ -1559,9 +1559,9 @@ function abrirDetalheObra(cod){
   </div>
 
   <div class="ob-ov-kpis" style="grid-template-columns:repeat(8,1fr);margin-bottom:14px">
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Realizado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(r)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Orçado</div><div class="ob-ov-kpi-val ${b-r<0?'c-vermelho':'c-verde'}">${fmtRK(b-r)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(r)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${b-r<0?'c-vermelho':'c-verde'}">${fmtRK(b-r)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Eficiência</div><div class="ob-ov-kpi-val ${ef>5?'c-verde':ef<-5?'c-vermelho':'c-amarelo'}">${ef>=0?'+':''}${fmt(ef,1)}%</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Status</div><div class="ob-ov-kpi-val" style="font-size:13px;margin-top:2px">${badgeSt(o.status)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Prazo</div><div class="ob-ov-kpi-val" style="font-size:14px;color:${corP}">${prazoTxt}</div></div>
@@ -1571,7 +1571,7 @@ function abrirDetalheObra(cod){
 
   <div style="display:grid;grid-template-columns:1fr 260px;gap:10px;margin-bottom:14px">
   <div class="ob-ov-cbox">
-    <div class="ob-ov-ctit">Gastos mensais</div>
+    <div class="ob-ov-ctit">Faturamento Mensal</div>
     <canvas id="cv-det-spark" height="200" style="width:100%;height:200px;display:block"></canvas>
   </div>
   <div class="ob-ov-cbox">
@@ -1707,9 +1707,9 @@ function filtrarObraNoOverlay(cod){
   if(titulo)titulo.textContent=`${o.nome} — Análise`;
   const kpisEl=overlay.querySelector('.ob-ov-kpis');
   if(kpisEl)kpisEl.innerHTML=`
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Realizado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(r)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Orçado</div><div class="ob-ov-kpi-val ${b-r<0?'c-vermelho':'c-verde'}">${fmtRK(b-r)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(r)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${b-r<0?'c-vermelho':'c-verde'}">${fmtRK(b-r)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico</div><div class="ob-ov-kpi-val ${af>70?'c-verde':af>40?'c-amarelo':'c-laranja'}">${fmt(af,1)}%</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">% Financeiro</div><div class="ob-ov-kpi-val c-azul">${fmt(pf,1)}%</div></div>
   `;
@@ -1720,7 +1720,7 @@ function filtrarObraNoOverlay(cod){
   `;
   requestAnimationFrame(()=>{
     const cv2=document.getElementById('cv-ov-pizza2');
-    if(cv2)desenharMicroDonut('cv-ov-pizza2',['Gasto','Orçado'],[r||0,saldo||0],['#e3711a','#d0d8e8']);
+    if(cv2)desenharMicroDonut('cv-ov-pizza2',['Faturado','A Faturar'],[r||0,saldo||0],['#e3711a','#d0d8e8']);
     const cvb=document.getElementById('cv-ov-barras');
     if(cvb&&topCat.length)desenharBarrasH('cv-ov-barras',topCat.map(x=>x[0]),topCat.map(x=>x[1]),['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7']);
     const cv1=document.getElementById('cv-ov-pizza1');
@@ -1765,7 +1765,7 @@ function renderCapex(container,d){
   const lanc=d.lancamentos||[];
   const budgTotal=budget.reduce((s,b)=>s+(b.budgetAprov||0),0);
   const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-  const Orçado=budgTotal-real;
+  const A_Faturar=budgTotal-real;
   const pct=budgTotal>0?Math.round(real/budgTotal*100):0;
   const emAnd=obras.filter(o=>o.status==='Em Andamento');
   const conc=obras.filter(o=>o.status==='Concluído');
@@ -1778,10 +1778,10 @@ const OrçadoCx=cod=>budgCx(cod)-realCx(cod);
   container.innerHTML=`<div class="obras-section"><div class="secao-titulo">CAPEX</div><div class="obras-cards-grid" id="capex-grid">
     ${mkCard('cx-budget','BUDGET TOTAL',fmtRK(budgTotal),'c-azul','#2E5FA3',pct+'% realizado',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">Realizado</span><span class="ob-mini-val c-laranja">${fmtRK(real)}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">Orçado</span><span class="ob-mini-val ${Orçado<0?'c-vermelho':'c-verde'}">${fmtRK(Orçado)}</span></div>`)}
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">A Faturar</span><span class="ob-mini-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</span></div>`)}
     ${mkCard('cx-andamento','EM ANDAMENTO',emAnd.length,'c-laranja','#e3711a',fmtRK(emAnd.reduce((s,o)=>s+budgObra(o.cod),0))+' budget',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">Realizado</span><span class="ob-mini-val c-laranja">${fmtRK(emAnd.reduce((s,o)=>s+realObra(o.cod),0))}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">Orçado</span><span class="ob-mini-val c-verde">${fmtRK(emAnd.reduce((s,o)=>s+OrçadoObra(o.cod),0))}</span></div>`)}
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">A Faturar</span><span class="ob-mini-val c-verde">${fmtRK(emAnd.reduce((s,o)=>s+OrçadoObra(o.cod),0))}</span></div>`)}
     ${mkCard('cx-conc','CONCLUÍDAS',conc.length,'c-verde','#3fb950',fmtRK(conc.reduce((s,o)=>s+realObra(o.cod),0))+' gasto',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">% do total</span><span class="ob-mini-val c-verde">${obras.length>0?Math.round(conc.length/obras.length*100):0}%</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Obras</span><span class="ob-mini-val c-verde">${conc.length}</span></div>`)}
