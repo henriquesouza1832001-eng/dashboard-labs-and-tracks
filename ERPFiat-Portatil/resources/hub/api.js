@@ -44,7 +44,9 @@ const API = {
     salvar:        (d)     => req('/obras', { method: 'POST', body: JSON.stringify(d) }),
     excluirObra:   (cod)   => req('/obras/' + cod, { method: 'DELETE' }),
     excluirBudget: (id)    => req('/obras/budget/' + id, { method: 'DELETE' }),
-    excluirLanc:   (id)    => req('/obras/lancamento/' + id, { method: 'DELETE' }),
+    excluirLanc:      (id)              => req('/obras/lancamento/' + id, { method: 'DELETE' }),
+    registrarAvanco:  (cod, etapaId, d) => req('/obras/' + cod + '/etapas/' + etapaId + '/avanco', { method: 'POST', body: JSON.stringify(d) }),
+    avancos:          (cod)             => req('/obras/' + cod + '/avancos', {}, 30000),
 },
   codin: {
     listar: ()    => req('/codin',    {},                          60000),

@@ -186,7 +186,10 @@ def _load_obras():
     lancs = run_query(f"SELECT * FROM {S_OBRAS}.lancamentos ORDER BY dtLanc DESC")
     for l in lancs:
         l["atualizado_em"] = _ts(l.get("atualizado_em"))
-    payload = {"versao": "2.0", "obras": obras, "budget": budget, "lancamentos": lancs, "revisoes": []}
+    avancos = run_query(f"SELECT * FROM {S_OBRAS}.etapas_avancos ORDER BY registrado_em ASC")
+    for a in avancos:
+        a["registrado_em"] = _ts(a.get("registrado_em"))
+    payload = {"versao": "2.0", "obras": obras, "budget": budget, "lancamentos": lancs, "avancos": avancos, "revisoes": []}
     cache_set("obras", payload)
     return payload
 
@@ -473,6 +476,15 @@ def _background_refresh(intervalo=300):
 @app.on_event("startup")
 async def prefetch():
     loop = asyncio.get_event_loop()
+    try:
+        await arun_exec(f"""
+            CREATE TABLE IF NOT EXISTS {S_OBRAS}.etapas_avancos (
+                id STRING, etapa_id STRING, obra_cod STRING,
+                avanco_fisico DOUBLE, registrado_em TIMESTAMP, registrado_por STRING
+            )
+        """)
+    except Exception as e:
+        print(f"[startup] etapas_avancos: {e}")
     print("[startup] aquecendo cache...")
     for nome, fn in LOADERS.items():
         try:
@@ -839,6 +851,45 @@ async def delete_lancamento(lid: str):
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
     return JSONResponse({"ok": True})
+
+
+@app.post("/api/obras/{cod}/etapas/{etapa_id}/avanco")
+async def registrar_avanco(cod: str, etapa_id: str, request: Request):
+    u = getattr(request.state, "usuario", "sistema")
+    body = await request.json()
+    avanco = float(body.get("avancoFisico", 0))
+    aid = str(datetime.datetime.utcnow().timestamp()).replace(".","")
+    ts = datetime.datetime.utcnow().isoformat()
+    try:
+        await arun_exec(f"""
+            INSERT INTO {S_OBRAS}.etapas_avancos
+                (id, etapa_id, obra_cod, avanco_fisico, registrado_em, registrado_por)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, [aid, etapa_id, cod, avanco, ts, u])
+        await arun_exec(f"""
+            MERGE INTO {S_OBRAS}.etapas AS t
+            USING (SELECT '{cod}' AS obra_cod, '{body.get("nomeEtapa","")}' AS nome_etapa) AS s
+            ON t.obra_cod = s.obra_cod AND t.nome = s.nome_etapa
+            WHEN MATCHED THEN UPDATE SET avanco_fisico = {avanco}
+        """)
+    except Exception as e:
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    cache_invalidate("obras")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_obras)
+    return JSONResponse({"ok": True})
+
+@app.get("/api/obras/{cod}/avancos")
+async def get_avancos_obra(cod: str):
+    try:
+        rows = await arun_query(f"""
+            SELECT * FROM {S_OBRAS}.etapas_avancos WHERE obra_cod=? ORDER BY registrado_em ASC
+        """, [cod])
+        for r in rows:
+            r["registrado_em"] = _ts(r.get("registrado_em"))
+        return JSONResponse({"avancos": rows})
+    except Exception as e:
+        return JSONResponse({"avancos": []})
 
 # ─── CODIN ────────────────────────────────────────────────────────────────────
 @app.get("/api/codin")

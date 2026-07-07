@@ -372,6 +372,7 @@ function editarEtapa(cod, idx){
   $('etapa-peso').value = e?.peso||1;
   $('etapa-af').value = e?.avancoFisico||0;
   $('etapa-obs').value = e?.obs||'';
+  $('etapa-dt-real').value = e?.dtReal||'';
   abrirModal('modal-etapa');
 }
 function excluirEtapa(cod, idx){
@@ -660,7 +661,7 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
     $('modal-etapa-title').textContent='Nova Etapa';
     ['etapa-nome','etapa-obs'].forEach(id=>$(id).value='');
     $('etapa-dt-inicio').value='';$('etapa-dt-fim').value='';
-    $('etapa-resp').value='';$('etapa-peso').value=1;$('etapa-af').value=0;
+    $('etapa-resp').value='';$('etapa-peso').value=1;$('etapa-af').value=0;$('etapa-dt-real').value='';
     $('etapa-err').textContent='';
     abrirModal('modal-etapa');
   });
@@ -671,7 +672,7 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
     const o=state.obras.find(x=>x.cod===state.obraAtiva);
     if(!o)return;
     if(!o.etapas)o.etapas=[];
-    const obj={nome,dtInicio:$('etapa-dt-inicio').value,dtFim:$('etapa-dt-fim').value,responsavel:$('etapa-resp').value,peso:parseFloat($('etapa-peso').value)||1,avancoFisico:parseInt($('etapa-af').value)||0,obs:$('etapa-obs').value.trim()};
+    const obj={nome,dtInicio:$('etapa-dt-inicio').value,dtFim:$('etapa-dt-fim').value,dtReal:$('etapa-dt-real').value||null,responsavel:$('etapa-resp').value,peso:parseFloat($('etapa-peso').value)||1,avancoFisico:parseInt($('etapa-af').value)||0,obs:$('etapa-obs').value.trim()};
     const idx=state.editIdx.etapa;
     if(idx>=0)o.etapas[idx]=obj; else o.etapas.push(obj);
     fecharModal('modal-etapa');agendarSalvamento();renderCronograma(state.obraAtiva);

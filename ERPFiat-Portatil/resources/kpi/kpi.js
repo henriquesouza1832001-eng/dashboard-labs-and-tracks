@@ -941,12 +941,104 @@ function desenharMicroBarras(id, items){
     </div>`;
   }).join('');
 }
+function desenharCurvaS(canvasId, obra, lancs, budgetTotal) {
+  const cv = document.getElementById(canvasId);
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const m = {l:48, r:16, t:16, b:40};
+  const cw = W - m.l - m.r, ch = H - m.t - m.b;
+  ctx.clearRect(0, 0, W, H);
+  const etapas = (obra.etapas || []).filter(e => e.dtInicio && e.dtFim);
+  if (!etapas.length && !lancs.length) {
+    ctx.fillStyle = 'var(--text-dim, #8b949e)';
+    ctx.font = '12px var(--font, sans-serif)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nenhuma etapa cadastrada', W/2, H/2);
+    return;
+  }
+  const toMs = d => new Date(d).getTime();
+  const allDates = [
+    ...etapas.flatMap(e => [e.dtInicio, e.dtFim, e.dtReal].filter(Boolean)),
+    ...lancs.map(l => l.dtLanc).filter(Boolean)
+  ].map(toMs);
+  const msMin = Math.min(...allDates);
+  const msMax = Math.max(...allDates);
+  const span = msMax - msMin || 1;
+  const meses = [];
+  let cur = new Date(msMin); cur.setDate(1);
+  const fim = new Date(msMax); fim.setDate(1);
+  while(cur <= fim) {
+    meses.push(cur.toISOString().slice(0,7));
+    cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+  }
+  if(!meses.length) return;
+  const pesoTotal = etapas.reduce((s,e) => s + (e.peso||1), 0) || 1;
+  const planejado = meses.map(mes => {
+    const mesMs = new Date(mes+'-28').getTime();
+    let acum = 0;
+    etapas.forEach(e => {
+      const s = toMs(e.dtInicio), f = toMs(e.dtFim);
+      if(mesMs < s) return;
+      const prog = Math.min((mesMs - s) / (f - s), 1);
+      acum += prog * (e.peso||1) / pesoTotal * 100;
+    });
+    return Math.min(acum, 100);
+  });
+  const realMap = {};
+  lancs.forEach(l => {
+    const m = (l.dtLanc||'').slice(0,7);
+    if(m) realMap[m] = (realMap[m]||0) + l.qtd * l.precoUnit;
+  });
+  let acumR = 0;
+  const realizado = meses.map(mes => {
+    acumR += (realMap[mes]||0);
+    return budgetTotal > 0 ? Math.min(acumR/budgetTotal*100, 100) : 0;
+  });
+  const maxY = 100;
+  const xPos = i => m.l + (i / (meses.length-1||1)) * cw;
+  const yPos = v => m.t + ch - (v / maxY) * ch;
+  ctx.strokeStyle = 'rgba(139,148,158,0.12)';
+  ctx.lineWidth = 1;
+  [0,25,50,75,100].forEach(v => {
+    const y = yPos(v);
+    ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l+cw, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(139,148,158,0.6)';
+    ctx.font = '9px var(--font,sans-serif)';
+    ctx.textAlign = 'right';
+    ctx.fillText(v+'%', m.l-4, y+3);
+  });
+  const step = Math.max(1, Math.floor(meses.length/6));
+  ctx.fillStyle = 'rgba(139,148,158,0.8)';
+  ctx.font = '9px var(--font,sans-serif)';
+  ctx.textAlign = 'center';
+  meses.forEach((mes,i) => {
+    if(i % step !== 0 && i !== meses.length-1) return;
+    const [a,mo] = mes.split('-');
+    ctx.fillText(`${mo}/${a.slice(2)}`, xPos(i), H-m.b+14);
+  });
+  ctx.beginPath();
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  planejado.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.strokeStyle = '#e3711a';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  realizado.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  ctx.stroke();
+  const ultR = realizado[realizado.length-1];
+  ctx.beginPath();
+  ctx.arc(xPos(realizado.length-1), yPos(ultR), 4, 0, Math.PI*2);
+  ctx.fillStyle = '#e3711a';
+  ctx.fill();
+}
 function drawOverlayCharts(tipo,d){
   const obras=d.obras||[];const lanc=d.lancamentos||[];
   const filtros={total:obras,andamento:obras.filter(o=>o.status==='Em Andamento'),concluidas:obras.filter(o=>o.status==='Concluído'),planejadas:obras.filter(o=>o.status==='Planejado'),estudo:obras.filter(o=>o.status==='Em Estudo')};
   const lista=filtros[tipo]||[];
-
-  // Avanço físico / financeiro
   const av1=document.getElementById('cv-ov-pizza1');
   if(av1){
     const wrap=av1.parentElement;
@@ -1052,9 +1144,13 @@ function abrirDetalheObra(cod){
   </div>
 
   <div class="ob-ov-charts" style="margin-bottom:12px">
-    <div class="ob-ov-cbox">
-      <div class="ob-ov-ctit">Faturamento Mensal</div>
-      <canvas id="cv-det-spark" width="300" height="140" style="width:100%;height:140px;display:block"></canvas>
+    <div class="ob-ov-cbox" style="flex:2">
+      <div class="ob-ov-ctit">Planejado × Realizado</div>
+      <canvas id="cv-det-curvas" width="500" height="180" style="width:100%;height:180px;display:block"></canvas>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--text-muted)">
+        <span><span style="display:inline-block;width:12px;height:3px;background:#58a6ff;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Planejado</span>
+        <span><span style="display:inline-block;width:12px;height:3px;background:#e3711a;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Realizado</span>
+      </div>
     </div>
     <div class="ob-ov-cbox" style="flex:1">
       <div class="ob-ov-ctit">Por categoria</div>
@@ -1096,7 +1192,12 @@ function abrirDetalheObra(cod){
   requestAnimationFrame(()=>{
     if(mKeys.length>=2){
       const cvspark=document.getElementById('cv-det-spark');
-      if(cvspark){const pw=cvspark.parentElement.clientWidth||300;cvspark.width=pw;desenharSparkComValores('cv-det-spark',mKeys.map(k=>k.slice(5)),mKeys.map(k=>mensal[k]),'#58a6ff');}
+      const cvcurvas = document.getElementById('cv-det-curvas');
+      if(cvcurvas){
+        const pw = cvcurvas.parentElement.clientWidth || 500;
+        cvcurvas.width = pw;
+        desenharCurvaS('cv-det-curvas', o, lancsObra, budgObra);
+      }
     }
     if(topCat.length){
       const cvcat=document.getElementById('cv-det-cat');
