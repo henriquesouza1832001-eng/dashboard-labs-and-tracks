@@ -294,7 +294,7 @@ function alternarModulo(id){
   const mainScroll=document.querySelector('.main-scroll');
   const painel=document.createElement('div');
   painel.id='painel-expandido-global';
-painel.style.cssText='padding:16px 20px 20px';
+painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:column;min-height:0';
   const nomes={obras:'Obras',capex:'CAPEX',chamados:'Chamados',codin:'CODIN',conforto:'Conforto',ergonomia:'Ergonomia',acesso:'Controle de Acesso'};
   const header=document.createElement('div');
   header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0';
