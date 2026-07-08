@@ -217,6 +217,7 @@
           <button class="tab-btn active" data-tab="tab-uc-list">Unidades (UCs)</button>
           <button class="tab-btn" data-tab="tab-uc-prev">Preventivas</button>
           <button class="tab-btn" data-tab="tab-uc-man">Manutenções</button>
+          <button class="tab-btn" data-tab="tab-uc-man-abertas">Abertas <span class="badge badge-red" id="badge-man-abertas" style="margin-left:4px">0</span></button>
         </div>
         <div class="tab-pane active" id="tab-uc-list">
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
@@ -240,6 +241,14 @@
             <table>
               <thead><tr><th>MAN#</th><th>UC</th><th>FALHA</th><th>TÉCNICO</th><th>ABERTURA</th><th>FECHAMENTO</th><th>PEÇAS USADAS</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
               <tbody id="man-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-uc-man-abertas">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>MAN#</th><th>UC</th><th>TIPO</th><th>FALHA</th><th>TÉCNICO(S)</th><th>ABERTURA</th><th>DIAS ABERTA</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+              <tbody id="man-abertas-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -540,7 +549,19 @@
     <div class="modal-footer"><button class="btn btn-secondary" id="modal-manutencao-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-man">Salvar</button></div>
   </div>
 </div>
-
+<!-- MODAL FECHAR MANUTENÇÃO -->
+<div class="modal-overlay" id="modal-fechar-man">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Fechar Manutenção</span><button class="modal-close" id="modal-fechar-man-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="field-hint" id="fechar-man-resumo" style="margin-bottom:8px"></div>
+      <div class="form-row"><div class="field"><label>Data de Fechamento *</label><input type="date" id="fechar-man-data"></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><textarea id="fechar-man-obs" rows="3" placeholder="O que foi feito, peças usadas, pendências..."></textarea></div></div>
+      <div class="field-err" id="fechar-man-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-fechar-man-cancel">Cancelar</button><button class="btn btn-primary" id="btn-confirmar-fechar-man">Confirmar Fechamento</button></div>
+  </div>
+</div>
 <!-- MODAL PEÇA -->
 <div class="modal-overlay" id="modal-peca">
   <div class="modal">

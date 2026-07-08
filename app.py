@@ -1220,26 +1220,14 @@ async def _salvar_manutencoes(body, u):
     else:
         await arun_exec(f"DELETE FROM {S_CONFORTO}.manutencoes WHERE atualizado_por != 'qr'")
     for m in body.get("manutencoes", []):
-        await arun_exec(f"""
-            MERGE INTO {S_CONFORTO}.manutencoes AS t
-            USING (SELECT ? AS id) AS s ON t.id = s.id
-            WHEN MATCHED AND t.atualizado_por != 'qr' THEN UPDATE SET
-                uc_id=?, tecnico_id=?, tipo=?, falha=?, data_abertura=?,
-                data_fechamento=?, status=?, custo_estimado=?,
-                pecas_utilizadas=?, obs=?, atualizado_por=?
-            WHEN NOT MATCHED THEN INSERT
-                (id,uc_id,tecnico_id,tipo,falha,data_abertura,data_fechamento,
-                 status,custo_estimado,pecas_utilizadas,obs,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-        """, [
-            m["id"],
-            m.get("ucId"), m.get("tecnicoId"), m.get("tipo","Manutenção"), m.get("falha"),
-            to_date_or_none(m.get("dataAbertura")), to_date_or_none(m.get("dataFechamento")),
-            m.get("status"), m.get("custoEstimado", 0), m.get("pecasUtilizadas"), m.get("obs"), u,
-            m["id"], m.get("ucId"), m.get("tecnicoId"), m.get("tipo","Manutenção"), m.get("falha"),
-            to_date_or_none(m.get("dataAbertura")), to_date_or_none(m.get("dataFechamento")),
-            m.get("status"), m.get("custoEstimado", 0), m.get("pecasUtilizadas"), m.get("obs"), u
-        ])
+        pecas_ids = m.get("pecasUtilizadas") or []
+        if isinstance(pecas_ids, list) and pecas_ids:
+            await arun_exec(f"DELETE FROM {S_CONFORTO}.manutencao_pecas WHERE manutencao_id=?", [m["id"]])
+            for peca_id in pecas_ids:
+                await arun_exec(f"""
+                    INSERT INTO {S_CONFORTO}.manutencao_pecas (id, manutencao_id, peca_id, atualizado_por)
+                    VALUES (?,?,?,?)
+                """, [f"{m['id']}_{peca_id}", m["id"], peca_id, u])
 
 async def _salvar_pecas(body, u):
     await arun_exec(f"DELETE FROM {S_CONFORTO}.pecas")
@@ -1247,12 +1235,12 @@ async def _salvar_pecas(body, u):
         await arun_exec(f"""
             INSERT INTO {S_CONFORTO}.pecas
                 (id,codigo,descricao,categoria,fabricante,referencia,
-                 unidade,estq_atual,estq_minimo,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
+                 unidade,estq_atual,estq_minimo,custo_unitario,atualizado_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
         """, [
             p["id"], p.get("codigo"), p.get("descricao"), p.get("categoria"),
             p.get("fabricante"), p.get("referencia"), p.get("unidade"),
-            p.get("estqAtual", 0), p.get("estqMinimo", 0), u
+            p.get("estqAtual", 0), p.get("estqMinimo", 0), p.get("custoUnitario", 0), u
         ])
 
 async def _salvar_requisicoes(body, u):
@@ -1317,22 +1305,20 @@ async def _salvar_rotinas(body, u):
                 VALUES (?,?,?,?)
             """, [f"{r['id']}_{dia}", r["id"], dia, u])
 
-@app.get("/api/conforto")
-
 @app.post("/api/conforto")
 async def save_conforto(request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
-        await _salvar_ucs(body, u)
-        await _salvar_preventivas(body, u)
         await _salvar_tecnicos(body, u)
-        await _salvar_ordens(body, u)
-        await _salvar_manutencoes(body, u)
-        await _salvar_pecas(body, u)
-        await _salvar_requisicoes(body, u)
         await _salvar_areas(body, u)
         await _salvar_fornecedores(body, u)
+        await _salvar_pecas(body, u)
+        await _salvar_ucs(body, u)
+        await _salvar_preventivas(body, u)
+        await _salvar_ordens(body, u)
+        await _salvar_manutencoes(body, u)
+        await _salvar_requisicoes(body, u)
         await _salvar_rotinas(body, u)
         if "config" in body:
             c = body["config"]
@@ -1693,6 +1679,14 @@ async def prev_page(uc_id: str, request: Request):
         uc = None
         if ucs_rows:
             u = ucs_rows[0]
+            checklist_proprio_rows = await arun_query(
+                f"SELECT item FROM {S_CONFORTO}.uc_checklist WHERE uc_id=? ORDER BY ordem", [uc_id]
+            )
+            checklist_proprio = [r["item"] for r in checklist_proprio_rows] if checklist_proprio_rows else []
+            checklist_proprio_rows = await arun_query(
+                f"SELECT item FROM {S_CONFORTO}.uc_checklist WHERE uc_id=? ORDER BY ordem", [uc_id]
+            )
+            checklist_proprio = [r["item"] for r in checklist_proprio_rows] if checklist_proprio_rows else []
             uc = {
                 "id":              u.get("id"),
                 "codigo":          u.get("codigo"),
@@ -1706,11 +1700,7 @@ async def prev_page(uc_id: str, request: Request):
                 "cicloFiltroDias": u.get("ciclo_filtro_dias"),
                 "responsavelId":   u.get("responsavel_id"),
                 "obs":             u.get("obs") or "",
-                "checklistProprio": (
-                    json.loads(u["checklist_proprio"])
-                    if u.get("checklist_proprio") and isinstance(u.get("checklist_proprio"), str)
-                    else (u.get("checklist_proprio") or [])
-                ),
+                "checklistProprio": checklist_proprio,
             }
         config_rows = await arun_query(f"SELECT checklist_preventiva FROM {S_CONFORTO}.config LIMIT 1")
         checklist_global = []
@@ -1737,6 +1727,18 @@ async def prev_page(uc_id: str, request: Request):
     html.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     html.headers["Pragma"] = "no-cache"
     return html
+
+@app.get("/api/conforto/manutencoes/{mid}/custo-pecas")
+async def custo_pecas_manutencao(mid: str):
+    rows = await arun_query(f"""
+        SELECT mp.peca_id, mp.qtd, p.custo_unitario, p.descricao,
+               (mp.qtd * COALESCE(p.custo_unitario, 0)) AS custo_total
+        FROM {S_CONFORTO}.manutencao_pecas mp
+        JOIN {S_CONFORTO}.pecas p ON p.id = mp.peca_id
+        WHERE mp.manutencao_id = ?
+    """, [mid])
+    total = sum(r["custo_total"] for r in rows) if rows else 0
+    return JSONResponse({"itens": rows, "custoTotal": total})
 
 @app.post("/api/conforto/preventivas")
 async def criar_preventiva_qr(request: Request):

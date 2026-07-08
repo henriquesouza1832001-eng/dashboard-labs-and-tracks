@@ -210,8 +210,12 @@
       document.getElementById('tela-tipo').style.display = 'none';
       document.getElementById('tela-tecnicos').style.display = 'block';
       fetch(`/api/conforto/manutencoes/${ativIdRetomada}`)
-        .then(r => r.json())
+        .then(r => {
+          if (!r.ok) throw new Error('status ' + r.status);
+          return r.json();
+        })
         .then(ativ => {
+          if (!ativ || !ativ.id) throw new Error('atividade vazia');
           tipoRegistro = (ativ.tipo || 'Manutenção').toLowerCase() === 'corretiva'
             ? 'corretiva' : 'manutencao';
           const labels = { corretiva: '⚠️ Corretiva', manutencao: '🛠️ Manutenção' };
@@ -230,7 +234,15 @@
             if (obsEl && ativ.obs) obsEl.value = ativ.obs.replace(/^\[Paralizado[^\]]*\]\s*/,'').trim();
           };
         })
-        .catch(() => {});
+        .catch(() => {
+          document.getElementById('topbar-title').textContent = 'Registro de Atividade';
+          const err = document.getElementById('tec-err');
+          err.innerHTML = '⚠️ Não foi possível carregar os dados da atividade em andamento. ' +
+            'Você pode continuar como um <strong>novo registro</strong>, mas confirme com seu supervisor ' +
+            'se a atividade anterior já não foi concluída, para evitar duplicidade.';
+          err.style.display = 'block';
+          window._ativRetomada = null;
+        });
     }
     const pecasCatalogo = DADOS.pecas || [];
     const pecasSelecionadas = [];  
@@ -417,8 +429,14 @@
     }
 
     function abrirTelaFoto() {
-      const data = document.getElementById('inp-data').value;
-      if (!data) { mostrarErro('Informe a data da preventiva.'); return; }
+      if (tipoRegistro === 'preventiva') {
+        const data = document.getElementById('inp-data').value;
+        if (!data) { mostrarErro('Informe a data da preventiva.'); return; }
+      }
+      if (tipoRegistro === 'corretiva') {
+        const falha = document.getElementById('inp-falha').value.trim();
+        if (!falha) { mostrarErro('Descreva o problema identificado antes de continuar.'); return; }
+      }
       document.getElementById('form-msg').style.display = 'none';
       document.getElementById('tela-form').style.display = 'none';
       document.getElementById('tela-foto').style.display = 'block';
@@ -566,7 +584,10 @@
         btn.disabled    = false;
         btn.textContent = 'Confirmar e Enviar ✓';
         const err = document.getElementById('foto-err');
-        err.textContent = 'Falha ao enviar. Verifique a conexão e tente novamente.';
+        const semRede = !navigator.onLine || e.message === 'Failed to fetch';
+        err.textContent = semRede
+          ? 'Sem conexão com a internet. Verifique o sinal e tente novamente — seus dados não foram perdidos.'
+          : 'O servidor rejeitou o envio. Tire um print desta tela e avise o suporte antes de tentar novamente.';
         err.style.display = 'block';
       }
     }
@@ -585,7 +606,7 @@
 
     async function paralisarAtividade() {
       const motivo = document.querySelector('input[name="motivo-pausa"]:checked')?.value;
-      if (!motivo) { alert('Selecione o motivo da paralização.'); return; }
+      if (!motivo) { mostrarErro('Selecione o motivo da paralização.'); return; }
       const detalhe = document.getElementById('inp-pausa-detalhe').value.trim();
       const motivoFinal = motivo === 'Outro' && detalhe ? `Outro: ${detalhe}` : motivo;
       const fimParcial = new Date();
@@ -670,6 +691,15 @@
         alert('Erro ao registrar. Tente novamente.');
       }
     }
+    window.addEventListener('beforeunload', (e) => {
+  const emAndamento = document.getElementById('tela-tecnicos').style.display === 'block'
+    || document.getElementById('tela-form').style.display === 'block'
+    || document.getElementById('tela-foto').style.display === 'block';
+  if (emAndamento) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
   </script>
 </body>
 </html>

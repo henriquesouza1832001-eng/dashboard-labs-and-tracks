@@ -95,7 +95,12 @@ function carregarDeJSON(txt) {
     return true;
   } catch (e) { return false; }
 }
+let _salvandoConforto = false;
+let _salvarPendenteConforto = false;
+
 async function salvarDados() {
+  if (_salvandoConforto) { _salvarPendenteConforto = true; return; }
+  _salvandoConforto = true;
   setSaveStatus('saving', 'Salvando...');
   try {
     await API.conforto.salvar({
@@ -116,6 +121,12 @@ async function salvarDados() {
   } catch (e) {
     setSaveStatus('error', 'Erro ao salvar');
     console.error('[conforto] salvarDados:', e);
+  } finally {
+    _salvandoConforto = false;
+    if (_salvarPendenteConforto) {
+      _salvarPendenteConforto = false;
+      agendarSalvamento();
+    }
   }
 }
 
@@ -427,6 +438,7 @@ function renderAC() {
   renderUCGrid();
   renderPreventivas();
   renderManutencoes();
+  renderManutencoesAbertas();
 }
 
 function renderUCGrid() {
@@ -500,7 +512,7 @@ function renderManutencoes() {
         <td>${nomeTec(m.tecnicoId)}</td>
         <td>${fmtD(m.dataAbertura)}</td>
         <td>${fmtD(m.dataFechamento)}</td>
-        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(m.pecasUtilizadas)}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(m.pecas||[]).map(p=>`${p.nome} ×${p.quantidade}`).join(', ')}">${(m.pecas||[]).map(p=>`${p.nome} ×${p.quantidade}`).join(', ') || '—'}</td>
         <td>${badgeStatusMan(m.status)}</td>
         <td><div class="row-actions">
           <button class="action-btn" onclick="editarManutencao(${idx})">${SVG_EDIT}</button>
@@ -509,7 +521,35 @@ function renderManutencoes() {
       </tr>`).join('')
     : '<tr class="empty-row"><td colspan="9">Nenhuma manutenção registrada</td></tr>';
 }
-
+function renderManutencoesAbertas() {
+  const tbody = $('man-abertas-tbody');
+  if (!tbody) return;
+  const abertas = state.manutencoes.filter(m => m.status !== 'Concluída');
+  const badge = $('badge-man-abertas');
+  if (badge) badge.textContent = abertas.length;
+  tbody.innerHTML = abertas.length
+    ? abertas.map((m) => {
+        const idxReal = state.manutencoes.indexOf(m);
+        const dias = m.dataAbertura ? Math.floor((Date.now() - new Date(m.dataAbertura).getTime()) / 86400000) : null;
+        const diasTxt = dias === null ? '—' : dias === 0 ? 'hoje' : `${dias}d`;
+        const diasCor = dias !== null && dias > 7 ? 'color:var(--red);font-weight:600' : '';
+        return `<tr>
+          <td><span class="badge badge-muted">${m.id}</span></td>
+          <td>${nomeUC(m.ucId)}</td>
+          <td>${fmt(m.tipo)}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${fmt(m.falha)}">${fmt(m.falha)}</td>
+          <td>${(m.tecnicos && m.tecnicos.length ? m.tecnicos.join(', ') : nomeTec(m.tecnicoId))}</td>
+          <td>${fmtD(m.dataAbertura)}</td>
+          <td style="${diasCor}">${diasTxt}</td>
+          <td>${badgeStatusMan(m.status)}</td>
+          <td><div class="row-actions">
+            <button class="action-btn" onclick="abrirModalFecharManutencao(${idxReal})" title="Fechar manutenção">${SVG_CHECK || '✓'}</button>
+            <button class="action-btn" onclick="editarManutencao(${idxReal})" title="Editar completo">${SVG_EDIT}</button>
+          </div></td>
+        </tr>`;
+      }).join('')
+    : '<tr class="empty-row"><td colspan="9">Nenhuma manutenção aberta 🎉</td></tr>';
+}
 // ── RENDER PEÇAS ──
 function renderPecas() {
   const tbody = $('pecas-tbody');
@@ -1226,6 +1266,16 @@ function salvarManutencao() {
 
 function editarManutencao(idx) { abrirModalManutencao(idx); }
 function excluirManutencao(idx) { if (confirm('Excluir esta manutenção?')) { state.manutencoes.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
+function abrirModalFecharManutencao(idx) {
+  const m = state.manutencoes[idx];
+  if (!m) return;
+  state._fecharManIdx = idx;
+  $('fechar-man-resumo').textContent = `${m.id} — ${nomeUC(m.ucId)} · ${fmt(m.falha) || m.tipo || 'Manutenção'}`;
+  $('fechar-man-data').value = new Date().toISOString().slice(0, 10);
+  $('fechar-man-obs').value = m.obs || '';
+  $('fechar-man-err').textContent = '';
+  abrirModal('modal-fechar-man');
+}
 
 // ── MODAIS — PEÇA ──
 function abrirModalPeca(idx = -1) {
@@ -1540,6 +1590,22 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-salvar-uc')?.addEventListener('click', salvarUC);
   $('btn-salvar-prev')?.addEventListener('click', salvarPreventiva);
   $('btn-salvar-man')?.addEventListener('click', salvarManutencao);
+  $('btn-confirmar-fechar-man').addEventListener('click', () => {
+  const idx = state._fecharManIdx;
+  if (idx == null || !state.manutencoes[idx]) return;
+  const data = $('fechar-man-data').value;
+  if (!data) { $('fechar-man-err').textContent = 'Informe a data de fechamento.'; return; }
+  const m = state.manutencoes[idx];
+  m.dataFechamento = data;
+  m.obs = $('fechar-man-obs').value.trim();
+  m.status = 'Concluída';
+  fecharModal('modal-fechar-man');
+  agendarSalvamento();
+  renderTudo();
+});
+['modal-fechar-man-close', 'modal-fechar-man-cancel'].forEach(id =>
+  $(id)?.addEventListener('click', () => fecharModal('modal-fechar-man'))
+);
   $('btn-salvar-peca')?.addEventListener('click', salvarPeca);
   $('btn-salvar-req')?.addEventListener('click', salvarRequisicao);
   $('btn-salvar-area')?.addEventListener('click', salvarArea);
