@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
 from databricks import sql
 import os, json, asyncio, hashlib, jwt, datetime, threading, time
 def to_date_or_none(v):
@@ -109,6 +109,15 @@ def _ts(v):
 
 def get_usuario(request: Request):
     return request.headers.get("X-Forwarded-User", "dev@local")
+
+def usuario_autenticado(request: Request):
+    token = request.cookies.get("ctrl-token") or request.headers.get("X-Ctrl-Token", "")
+    if not token:
+        return None
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except Exception:
+        return None
 
 def verificar_admin(request: Request):
     token = request.headers.get("X-Ctrl-Token", "")
@@ -567,7 +576,13 @@ async def login(request: Request):
             "nome": r["nome"], "email": r["email"], "role": r["role"],
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=12)
         }, JWT_SECRET, algorithm="HS256")
-        return JSONResponse({"token": token})
+        resp = JSONResponse({"token": token})
+        resp.set_cookie(
+            key="ctrl-token", value=token,
+            httponly=True, secure=True, samesite="lax",
+            max_age=12 * 3600, path="/"
+        )
+        return resp
     except Exception as e:
         print(f"[login] erro: {e}")
         return JSONResponse({"erro": "erro interno"}, status_code=500)
@@ -1537,31 +1552,45 @@ async def get_kpi():
 
 # ─── Páginas HTML ─────────────────────────────────────────────────────────────
 @app.get("/")
-async def root():
-    return inject(f"{BASE}/hub/hub.html", {})
+async def root(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
+    return RedirectResponse(url="/kpi")
 
 @app.get("/hub")
-async def hub():
+async def hub(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return inject(f"{BASE}/hub/hub.html", {})
 
 @app.get("/chamados")
-async def chamados_page():
+async def chamados_page(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return inject(f"{BASE}/chamados/chamados.html", get_cached("chamados"))
 
 @app.get("/obras")
-async def obras_page():
+async def obras_page(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return FileResponse(f"{BASE}/obras/obras.html")
 
 @app.get("/codin")
-async def codin_page():
+async def codin_page(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return inject(f"{BASE}/codins/codin.html", get_cached("codin"))
 
 @app.get("/conforto")
-async def conforto_page():
+async def conforto_page(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return inject(f"{BASE}/conforto/conforto.html", get_cached("conforto"))
 
 @app.get("/atividades")
-async def atividades_page():
+async def atividades_page(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return inject(f"{BASE}/atividades/atividades.html", get_cached("atividades"))
 
 @app.get("/qr/qr.css")
@@ -1585,7 +1614,9 @@ async def servicedesk_page():
     return inject(f"{BASE}/servicedesk/servicedesk.html", get_cached("chamados"))
 
 @app.get("/kpi")
-async def kpi_page():
+async def kpi_page(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return inject(f"{BASE}/kpi/kpi.html", {
         "chamados":   get_cached("chamados"),
         "obras":      get_cached("obras"),
@@ -1594,11 +1625,18 @@ async def kpi_page():
     })
 
 @app.get("/admin")
-async def admin_page():
+async def admin_page(request: Request):
+    user = usuario_autenticado(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    if user.get("role") != "admin":
+        return RedirectResponse(url="/kpi")
     return FileResponse(f"{BASE}/admin/admin.html")
 
 @app.get("/login")
-async def login_page():
+async def login_page(request: Request):
+    if usuario_autenticado(request):
+        return RedirectResponse(url="/kpi")
     return FileResponse(f"{BASE}/login/login.html")
 
 @app.get("/app.webmanifest")

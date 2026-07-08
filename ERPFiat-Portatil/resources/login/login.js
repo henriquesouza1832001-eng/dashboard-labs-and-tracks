@@ -17,7 +17,7 @@ btn.addEventListener('click', async () => {
     const d = await res.json();
     if (!res.ok || !d.token) { err.textContent = d.erro || 'credenciais inválidas'; return; }
     localStorage.setItem('ctrl-token', d.token);
-    window.location.href = '../kpi/kpi.html';
+    window.location.href = '/kpi';
   } catch {
     err.textContent = 'erro de conexão';
   } finally {
