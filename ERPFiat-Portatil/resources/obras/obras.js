@@ -615,7 +615,6 @@ async function excluirObra(idx){
   try{ await API.obras.excluirObra(o.cod); }
   catch(e){ console.error('Erro ao excluir obra:', e); }
 }
-let subItensTemp = [];
 
 function renderItensSubtarefa() {
   const list = $('sub-itens-list');
