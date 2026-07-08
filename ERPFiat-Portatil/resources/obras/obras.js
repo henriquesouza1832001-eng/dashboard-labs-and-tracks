@@ -558,8 +558,46 @@ function renderChartDonut(){
   const legend=crespData.map((c,i)=>`<rect x="230" y="${16+i*22}" width="10" height="10" fill="${colors[i%colors.length]}" rx="2"/><text x="246" y="${26+i*22}" fill="#e6edf3" font-size="11" font-family="IBM Plex Sans">${c.id}</text><text x="390" y="${26+i*22}" text-anchor="end" fill="#8b949e" font-size="10" font-family="IBM Plex Mono">${(c.val/total*100).toFixed(1)}%</text>`).join('');
   el.innerHTML=svgChart('svg-donut',420,220,`${slices}<circle cx="${CX}" cy="${CY}" r="${r-2}" fill="#161b22"/><text x="${CX}" y="${CY-6}" text-anchor="middle" fill="#58a6ff" font-size="11" font-family="IBM Plex Mono">TOTAL</text><text x="${CX}" y="${CY+10}" text-anchor="middle" fill="#e6edf3" font-size="10" font-family="IBM Plex Mono">R$${(total/1000).toFixed(0)}k</text>${legend}`);
 }
-function abrirModal(id){ $(id).classList.add('open'); }
+function abrirModal(id){
+  const modal = $(id)?.querySelector('.modal');
+  if(modal){ modal.style.position=''; modal.style.left=''; modal.style.top=''; modal.style.margin=''; }
+  $(id).classList.add('open');
+}
 function fecharModal(id){ $(id).classList.remove('open'); }
+function tornarModalArrastavel(overlayId){
+  const overlay = document.getElementById(overlayId);
+  if(!overlay) return;
+  const modal = overlay.querySelector('.modal');
+  const header = overlay.querySelector('.modal-header');
+  if(!modal || !header) return;
+  let offsetX = 0, offsetY = 0, dragging = false;
+  header.addEventListener('mousedown', (e) => {
+    if(e.target.closest('.modal-close')) return;
+    dragging = true;
+    modal.classList.add('dragging');
+    const rect = modal.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    modal.style.position = 'fixed';
+    modal.style.left = rect.left + 'px';
+    modal.style.top = rect.top + 'px';
+    modal.style.margin = '0';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if(!dragging) return;
+    let x = e.clientX - offsetX;
+    let y = e.clientY - offsetY;
+    x = Math.max(0, Math.min(x, window.innerWidth - modal.offsetWidth));
+    y = Math.max(0, Math.min(y, window.innerHeight - modal.offsetHeight));
+    modal.style.left = x + 'px';
+    modal.style.top = y + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    dragging = false;
+    modal.classList.remove('dragging');
+  });
+}
 
 function editarObra(idx){ const o=state.obras[idx]; state.editIdx.obra=idx; $('modal-obra-title').textContent='Editar Obra'; $('ob-cod').value=o.cod; $('ob-status').value=o.status; $('ob-nome').value=o.nome; $('ob-tipo').value=o.tipo||''; $('ob-local').value=o.local||''; $('ob-resp').value=o.responsavel||''; $('ob-cresp').value=o.cresp||''; $('ob-dt-ini-prev').value=o.dtInicioPrev||''; $('ob-dt-fim-prev').value=o.dtFimPrev||''; $('ob-dt-ini-real').value=o.dtInicioReal||''; $('ob-dt-fim-real').value=o.dtFimReal||''; $('ob-obs').value=o.obs||''; $('ob-err').textContent=''; abrirModal('modal-obra'); }
 async function excluirObra(idx){
@@ -898,6 +936,5 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
     popularSelects();
   });
   ['modal-cat-close','modal-cat-cancel'].forEach(id=>$(id)?.addEventListener('click',()=>fecharModal('modal-cat')));
-
-  document.querySelectorAll('.modal-overlay').forEach(ov=>{ ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}); });
 });
+['modal-obra','modal-lanc','modal-budget','modal-rev','modal-cresp','modal-etapa','modal-cat','modal-subtarefa'].forEach(tornarModalArrastavel);
