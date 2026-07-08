@@ -1488,7 +1488,7 @@ function abrirDrillChamados(tipo){
   const conteudo=document.querySelector('#painel-expandido-global > div:last-child');
   if(!conteudo||!window._chamData)return;
   _chamDrillAtivo=tipo;
-  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden';
+  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden';
   const overlay=document.createElement('div');
   overlay.className='ob-overlay';
   overlay.id='ch-overlay';
@@ -1928,7 +1928,7 @@ function abrirDrillConforto(tipo,d){
   overlay.id='cnf-overlay';
   overlay.innerHTML=buildDrillConforto(tipo,d);
   conteudo.innerHTML='';
-  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden';
+  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden';
   conteudo.appendChild(overlay);
   setTimeout(()=>drawDrillConfortoCharts(tipo,d),80);
 }
