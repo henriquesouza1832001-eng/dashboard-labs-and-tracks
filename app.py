@@ -1130,46 +1130,63 @@ async def _salvar_ucs(body, u):
         )
     else:
         await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.ucs WHERE atualizado_por != 'import'")
-    for uc in body.get("ucs", []):
+    ucs = body.get("ucs", [])
+    if ucs:
+        selects = []
+        params = []
+        for uc in ucs:
+            selects.append("SELECT ? AS id, ? AS codigo, ? AS nome, ? AS categoria, ? AS local, ? AS modelo, "
+                           "? AS capacidade_btu, ? AS tipo, ? AS data_instalacao, ? AS ciclo_filtro_dias, "
+                           "? AS responsavel_id, ? AS obs, ? AS fabricante, ? AS serie, ? AS status_op, "
+                           "? AS intervalo_prev_dias, ? AS ultima_limpeza_filtro, ? AS atualizado_por")
+            params += [
+                uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
+                uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
+                uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
+                uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
+                uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
+                uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")), u
+            ]
+        origem = " UNION ALL ".join(selects)
         await arun_exec_retry(f"""
             MERGE INTO {S_CONFORTO}.ucs AS t
-            USING (SELECT ? AS id) AS s ON t.id = s.id
+            USING ({origem}) AS s ON t.id = s.id
             WHEN MATCHED THEN UPDATE SET
-                codigo=?, nome=?, categoria=?, local=?, modelo=?,
-                capacidade_btu=?, tipo=?, data_instalacao=?,
-                ciclo_filtro_dias=?, responsavel_id=?, obs=?,
-                fabricante=?, serie=?, status_op=?,
-                intervalo_prev_dias=?, ultima_limpeza_filtro=?,
-                atualizado_por=?
+                codigo=s.codigo, nome=s.nome, categoria=s.categoria, local=s.local, modelo=s.modelo,
+                capacidade_btu=s.capacidade_btu, tipo=s.tipo, data_instalacao=s.data_instalacao,
+                ciclo_filtro_dias=s.ciclo_filtro_dias, responsavel_id=s.responsavel_id, obs=s.obs,
+                fabricante=s.fabricante, serie=s.serie, status_op=s.status_op,
+                intervalo_prev_dias=s.intervalo_prev_dias, ultima_limpeza_filtro=s.ultima_limpeza_filtro,
+                atualizado_por=s.atualizado_por
             WHEN NOT MATCHED THEN INSERT
                 (id,codigo,nome,categoria,local,modelo,capacidade_btu,tipo,
                  data_instalacao,ciclo_filtro_dias,responsavel_id,obs,
                  fabricante,serie,status_op,intervalo_prev_dias,
                  ultima_limpeza_filtro,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, [
-            uc["id"],
-            uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
-            uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
-            uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
-            uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
-            uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
-            uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")),
-            u,
-            uc["id"], uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
-            uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
-            uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
-            uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
-            uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
-            uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")),
-            u
-        ])
-        await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.uc_checklist WHERE uc_id=?", [uc["id"]])
-        for i, item in enumerate(uc.get("checklistProprio", [])):
+            VALUES (s.id,s.codigo,s.nome,s.categoria,s.local,s.modelo,s.capacidade_btu,s.tipo,
+                    s.data_instalacao,s.ciclo_filtro_dias,s.responsavel_id,s.obs,
+                    s.fabricante,s.serie,s.status_op,s.intervalo_prev_dias,
+                    s.ultima_limpeza_filtro,s.atualizado_por)
+        """, params)
+
+        ids_com_checklist = [uc["id"] for uc in ucs if uc.get("checklistProprio")]
+        if ids_com_checklist:
+            placeholders_ck = ",".join(["?" for _ in ids_com_checklist])
+            await arun_exec_retry(
+                f"DELETE FROM {S_CONFORTO}.uc_checklist WHERE uc_id IN ({placeholders_ck})",
+                ids_com_checklist
+            )
+        checklist_rows = []
+        checklist_params = []
+        for uc in ucs:
+            for i, item in enumerate(uc.get("checklistProprio", [])):
+                checklist_rows.append("(?,?,?,?,?)")
+                checklist_params += [f"{uc['id']}_c_{i}", uc["id"], item, i, u]
+        if checklist_rows:
             await arun_exec_retry(f"""
                 INSERT INTO {S_CONFORTO}.uc_checklist (id,uc_id,item,ordem,atualizado_por)
-                VALUES (?,?,?,?,?)
-            """, [f"{uc['id']}_c_{i}", uc["id"], item, i, u])
+                VALUES {",".join(checklist_rows)}
+            """, checklist_params)
 
 async def _salvar_preventivas(body, u):
     ids_front = [p["id"] for p in body.get("preventivas", [])]
@@ -1181,13 +1198,26 @@ async def _salvar_preventivas(body, u):
         )
     else:
         await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.preventivas WHERE origem != 'qr'")
-    for p in body.get("preventivas", []):
+
+    preventivas = body.get("preventivas", [])
+    if preventivas:
+        selects = []
+        params = []
+        for p in preventivas:
+            selects.append(
+                "SELECT ? AS id, ? AS uc_id, ? AS tecnico_id, "
+                "? AS data_prevista, ? AS data_realizada, ? AS status, "
+                "? AS obs, ? AS origem, ? AS atualizado_por"
+            )
+            params += [
+                p["id"], p.get("ucId"), p.get("tecnicoId"),
+                to_date_or_none(p.get("dataPrevista")), to_date_or_none(p.get("dataRealizada")),
+                p.get("status"), p.get("obs"), p.get("origem", "manual"), u
+            ]
+        origem = " UNION ALL ".join(selects)
         await arun_exec_retry(f"""
             MERGE INTO {S_CONFORTO}.preventivas AS t
-            USING (SELECT ? AS id, ? AS uc_id, ? AS tecnico_id,
-                ? AS data_prevista, ? AS data_realizada, ? AS status,
-                ? AS obs, ? AS origem, ? AS atualizado_por
-            ) AS s ON t.id = s.id
+            USING ({origem}) AS s ON t.id = s.id
             WHEN MATCHED THEN UPDATE SET
                 uc_id=s.uc_id, tecnico_id=s.tecnico_id,
                 data_prevista=s.data_prevista, data_realizada=s.data_realizada,
@@ -1198,52 +1228,86 @@ async def _salvar_preventivas(body, u):
                  status,obs,origem,atualizado_por)
             VALUES (s.id,s.uc_id,s.tecnico_id,s.data_prevista,s.data_realizada,
                  s.status,s.obs,s.origem,s.atualizado_por)
-        """, [
-            p["id"], p.get("ucId"), p.get("tecnicoId"),
-            to_date_or_none(p.get("dataPrevista")), to_date_or_none(p.get("dataRealizada")),
-            p.get("status"), p.get("obs"), p.get("origem", "manual"), u
-        ])
-        await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.preventiva_checklist WHERE preventiva_id=?", [p["id"]])
+        """, params)
+
+    # checklist em lote
+    ids_com_checklist = [p["id"] for p in preventivas if p.get("checklist") is not None]
+    if ids_com_checklist:
+        ph = ",".join(["?" for _ in ids_com_checklist])
+        await arun_exec_retry(
+            f"DELETE FROM {S_CONFORTO}.preventiva_checklist WHERE preventiva_id IN ({ph})",
+            ids_com_checklist
+        )
+    cl_rows = []
+    cl_params = []
+    for p in preventivas:
         for i, item in enumerate(p.get("checklist", [])):
             nome = item if isinstance(item, str) else item.get("item", "")
             conc = False if isinstance(item, str) else bool(item.get("concluido", False))
-            await arun_exec(f"""
-                INSERT INTO {S_CONFORTO}.preventiva_checklist (id,preventiva_id,item,concluido,ordem,atualizado_por)
-                VALUES (?,?,?,?,?,?)
-            """, [f"{p['id']}_c_{i}", p["id"], nome, conc, i, u])
-        await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.preventiva_tecnicos WHERE preventiva_id=?", [p["id"]])
+            cl_rows.append("(?,?,?,?,?,?)")
+            cl_params += [f"{p['id']}_c_{i}", p["id"], nome, conc, i, u]
+    if cl_rows:
+        await arun_exec_retry(f"""
+            INSERT INTO {S_CONFORTO}.preventiva_checklist (id,preventiva_id,item,concluido,ordem,atualizado_por)
+            VALUES {",".join(cl_rows)}
+        """, cl_params)
+
+    # tecnicos em lote
+    ids_com_tec = [p["id"] for p in preventivas if p.get("tecnicos") is not None]
+    if ids_com_tec:
+        ph = ",".join(["?" for _ in ids_com_tec])
+        await arun_exec_retry(
+            f"DELETE FROM {S_CONFORTO}.preventiva_tecnicos WHERE preventiva_id IN ({ph})",
+            ids_com_tec
+        )
+    tec_rows = []
+    tec_params = []
+    for p in preventivas:
         for tec in p.get("tecnicos", []):
-            await arun_exec_retry(f"""
-                INSERT INTO {S_CONFORTO}.preventiva_tecnicos (id,preventiva_id,nome_tecnico,atualizado_por)
-                VALUES (?,?,?,?)
-            """, [f"{p['id']}_t_{tec}", p["id"], tec, u])
+            tec_rows.append("(?,?,?,?)")
+            tec_params += [f"{p['id']}_t_{tec}", p["id"], tec, u]
+    if tec_rows:
+        await arun_exec_retry(f"""
+            INSERT INTO {S_CONFORTO}.preventiva_tecnicos (id,preventiva_id,nome_tecnico,atualizado_por)
+            VALUES {",".join(tec_rows)}
+        """, tec_params)
 
 async def _salvar_tecnicos(body, u):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.tecnicos")
-    for t in body.get("tecnicos", []):
+    tecnicos = body.get("tecnicos", [])
+    if tecnicos:
+        rows = []
+        params = []
+        for t in tecnicos:
+            rows.append("(?,?,?,?,?,?)")
+            params += [t["id"], t.get("nome"), t.get("matricula"),
+                       t.get("especialidade"), t.get("turno"), u]
         await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.tecnicos
                 (id,nome,matricula,especialidade,turno,atualizado_por)
-            VALUES (?,?,?,?,?,?)
-        """, [
-            t["id"], t.get("nome"), t.get("matricula"),
-            t.get("especialidade"), t.get("turno"), u
-        ])
+            VALUES {",".join(rows)}
+        """, params)
 
 async def _salvar_ordens(body, u):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.ordens")
-    for o in body.get("ordens", []):
+    ordens = body.get("ordens", [])
+    if ordens:
+        rows = []
+        params = []
+        for o in ordens:
+            rows.append("(?,?,?,?,?,?,?,?,?,?,?,?)")
+            params += [
+                o["id"], o.get("tipo"), o.get("areaId"), o.get("responsavelId"),
+                to_date_or_none(o.get("dataPrevista")), to_date_or_none(o.get("datarealizada")),
+                o.get("status"), o.get("horainicio", "08:00"), o.get("horafim", "09:00"),
+                o.get("obs"), o.get("origemrotina"), u
+            ]
         await arun_exec_retry(f"""
-            INSERT INTO {S_CONFORTO}.ordens
+            insert into {S_CONFORTO}.ordens
                 (id,tipo,area_id,responsavel_id,data_prevista,data_realizada,
                  status,hora_inicio,hora_fim,obs,origem_rotina,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-        """, [
-            o["id"], o.get("tipo"), o.get("areaId"), o.get("responsavelId"),
-            to_date_or_none(o.get("dataPrevista")), to_date_or_none(o.get("dataRealizada")),
-            o.get("status"), o.get("horaInicio", "08:00"), o.get("horaFim", "09:00"),
-            o.get("obs"), o.get("origemRotina"), u
-        ])
+            VALUES {",".join(rows)}
+        """, params)
 
 async def _salvar_manutencoes(body, u):
     ids_front = [m["id"] for m in body.get("manutencoes", [])]
@@ -1255,96 +1319,175 @@ async def _salvar_manutencoes(body, u):
         )
     else:
         await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.manutencoes WHERE atualizado_por != 'qr'")
-    for m in body.get("manutencoes", []):
+
+    manutencoes = body.get("manutencoes", [])
+
+    # MERGE em lote para manutencoes
+    if manutencoes:
+        selects = []
+        params = []
+        for m in manutencoes:
+            selects.append(
+                "SELECT ? AS id, ? AS uc_id, ? AS tipo, ? AS falha, ? AS status, "
+                "? AS obs, ? AS atualizado_por"
+            )
+            params += [
+                m["id"], m.get("ucId"), m.get("tipo"), m.get("falha"),
+                m.get("status"), m.get("obs"), u
+            ]
+        origem = " UNION ALL ".join(selects)
+        await arun_exec_retry(f"""
+            MERGE INTO {S_CONFORTO}.manutencoes AS t
+            USING ({origem}) AS s ON t.id = s.id
+            WHEN MATCHED AND (t.atualizado_por IS NULL OR t.atualizado_por != 'qr') THEN UPDATE SET
+                uc_id=s.uc_id, tipo=s.tipo, falha=s.falha,
+                status=s.status, obs=s.obs, atualizado_por=s.atualizado_por
+            WHEN NOT MATCHED THEN INSERT
+                (id,uc_id,tipo,falha,status,obs,atualizado_por)
+            VALUES (s.id,s.uc_id,s.tipo,s.falha,s.status,s.obs,s.atualizado_por)
+        """, params)
+
+    # pecas em lote: DELETE apenas onde atualizado_por != 'qr', INSERT em lote
+    ids_com_pecas = [m["id"] for m in manutencoes
+                     if isinstance(m.get("pecas") or m.get("pecasUtilizadas") or m.get("pecasSelecionadas"), list)]
+    if ids_com_pecas:
+        ph = ",".join(["?" for _ in ids_com_pecas])
+        await arun_exec_retry(
+            f"DELETE FROM {S_CONFORTO}.manutencao_pecas WHERE manutencao_id IN ({ph}) AND atualizado_por != 'qr'",
+            ids_com_pecas
+        )
+    peca_rows = []
+    peca_params = []
+    for m in manutencoes:
         pecas_usadas = m.get("pecas") or m.get("pecasUtilizadas") or m.get("pecasSelecionadas") or []
-        if isinstance(pecas_usadas, list):
-            await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.manutencao_pecas WHERE manutencao_id=? AND atualizado_por != 'qr'", [m["id"]])
-            for pu in pecas_usadas:
-                if not isinstance(pu, dict):
-                    continue
-                peca_id = pu.get("pecaId")
-                if not peca_id:
-                    continue
-                await arun_exec_retry(f"""
-                    INSERT INTO {S_CONFORTO}.manutencao_pecas (id, manutencao_id, peca_id, nome_peca, quantidade, atualizado_por)
-                    VALUES (?,?,?,?,?,?)
-                """, [f"{m['id']}_p_{peca_id}", m["id"], peca_id, pu.get("nome"), pu.get("quantidade", 1), u])
+        if not isinstance(pecas_usadas, list):
+            continue
+        for pu in pecas_usadas:
+            if not isinstance(pu, dict):
+                continue
+            peca_id = pu.get("pecaId")
+            if not peca_id:
+                continue
+            peca_rows.append("(?,?,?,?,?,?)")
+            peca_params += [f"{m['id']}_p_{peca_id}", m["id"], peca_id, pu.get("nome"), pu.get("quantidade", 1), u]
+    if peca_rows:
+        await arun_exec_retry(f"""
+            INSERT INTO {S_CONFORTO}.manutencao_pecas (id,manutencao_id,peca_id,nome_peca,quantidade,atualizado_por)
+            VALUES {",".join(peca_rows)}
+        """, peca_params)
 
 async def _salvar_pecas(body, u):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.pecas")
-    for p in body.get("pecas", []):
+    pecas = body.get("pecas", [])
+    if pecas:
+        rows = []
+        params = []
+        for p in pecas:
+            rows.append("(?,?,?,?,?,?,?,?,?,?,?)")
+            params += [
+                p["id"], p.get("codigo"), p.get("descricao"), p.get("categoria"),
+                p.get("fabricante"), p.get("referencia"), p.get("unidade"),
+                p.get("estqAtual", 0), p.get("estqMinimo", 0), p.get("custoUnitario", 0), u
+            ]
         await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.pecas
                 (id,codigo,descricao,categoria,fabricante,referencia,
                  unidade,estq_atual,estq_minimo,custo_unitario,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
-        """, [
-            p["id"], p.get("codigo"), p.get("descricao"), p.get("categoria"),
-            p.get("fabricante"), p.get("referencia"), p.get("unidade"),
-            p.get("estqAtual", 0), p.get("estqMinimo", 0), p.get("custoUnitario", 0), u
-        ])
+            VALUES {",".join(rows)}
+        """, params)
 
 async def _salvar_requisicoes(body, u):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.requisicoes")
-    for r in body.get("requisicoes", []):
+    requisicoes = body.get("requisicoes", [])
+    if requisicoes:
+        rows = []
+        params = []
+        for r in requisicoes:
+            rows.append("(?,?,?,?,?,?,?,?)")
+            params += [
+                r["id"], r.get("pecaId"), r.get("quantidade"), r.get("destino"),
+                r.get("solicitanteId"), to_date_or_none(r.get("dataNecessidade")),
+                r.get("status"), u
+            ]
         await arun_exec_retry(f"""
-            INSERT INTO {S_CONFORTO}.requisicoes
+            insert into {S_CONFORTO}.requisicoes
                 (id,peca_id,quantidade,destino,solicitante_id,
                  data_necessidade,status,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?)
-        """, [
-            r["id"], r.get("pecaId"), r.get("quantidade"), r.get("destino"),
-            r.get("solicitanteId"), to_date_or_none(r.get("dataNecessidade")),
-            r.get("status"), u
-        ])
+            VALUES {",".join(rows)}
+        """, params)
 
 async def _salvar_areas(body, u):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.areas")
-    for a in body.get("areas", []):
+    areas = body.get("areas", [])
+    if areas:
+        rows = []
+        params = []
+        for a in areas:
+            rows.append("(?,?,?,?,?,?,?,?,?,?)")
+            params += [
+                a["id"], a.get("nome"), a.get("local"), a.get("tipo"),
+                a.get("metragem", 0), a.get("freqCivil"), a.get("freqTecnica"),
+                a.get("responsavelId"), a.get("obs"), u
+            ]
         await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.areas
                 (id,nome,local,tipo,metragem,freq_civil,
                  freq_tecnica,responsavel_id,obs,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
-        """, [
-            a["id"], a.get("nome"), a.get("local"), a.get("tipo"),
-            a.get("metragem", 0), a.get("freqCivil"), a.get("freqTecnica"),
-            a.get("responsavelId"), a.get("obs"), u
-        ])
+            VALUES {",".join(rows)}
+        """, params)
 
 async def _salvar_fornecedores(body, u):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.fornecedores")
-    for f in body.get("fornecedores", []):
+    fornecedores = body.get("fornecedores", [])
+    if fornecedores:
+        rows = []
+        params = []
+        for f in fornecedores:
+            rows.append("(?,?,?,?,?,?,?,?,?)")
+            params += [
+                f["id"], f.get("nome"), f.get("cnpj"), f.get("tipoServico"),
+                f.get("contato"), f.get("telefone"), f.get("email"),
+                f.get("ativo", "Sim"), u
+            ]
         await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.fornecedores
                 (id,nome,cnpj,tipo_servico,contato,telefone,email,ativo,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?)
-        """, [
-            f["id"], f.get("nome"), f.get("cnpj"), f.get("tipoServico"),
-            f.get("contato"), f.get("telefone"), f.get("email"),
-            f.get("ativo", "Sim"), u
-        ])
+            VALUES {",".join(rows)}
+        """, params)
 
 async def _salvar_rotinas(body, u):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.rotinas")
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.rotina_dias")
-    for r in body.get("rotinas", []):
+    rotinas = body.get("rotinas", [])
+    if rotinas:
+        rows = []
+        params = []
+        for r in rotinas:
+            rows.append("(?,?,?,?,?,?,?,?,?,?)")
+            params += [
+                r["id"], r.get("nome"), r.get("tipo"), r.get("areaId"),
+                r.get("responsavelId"), r.get("frequencia"),
+                r.get("horaInicio", "08:00"), r.get("horaFim", "09:00"),
+                r.get("ativa", True), u
+            ]
         await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.rotinas
                 (id,nome,tipo,area_id,responsavel_id,frequencia,
                  hora_inicio,hora_fim,ativa,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
-        """, [
-            r["id"], r.get("nome"), r.get("tipo"), r.get("areaId"),
-            r.get("responsavelId"), r.get("frequencia"),
-            r.get("horaInicio", "08:00"), r.get("horaFim", "09:00"),
-            r.get("ativa", True), u
-        ])
+            VALUES {",".join(rows)}
+        """, params)
+
+    dia_rows = []
+    dia_params = []
+    for r in rotinas:
         for dia in r.get("diasSemana", []):
-            await arun_exec_retry(f"""
-                INSERT INTO {S_CONFORTO}.rotina_dias (id,rotina_id,dia_semana,atualizado_por)
-                VALUES (?,?,?,?)
-            """, [f"{r['id']}_{dia}", r["id"], dia, u])
+            dia_rows.append("(?,?,?,?)")
+            dia_params += [f"{r['id']}_{dia}", r["id"], dia, u]
+    if dia_rows:
+        await arun_exec_retry(f"""
+            INSERT INTO {S_CONFORTO}.rotina_dias (id,rotina_id,dia_semana,atualizado_por)
+            VALUES {",".join(dia_rows)}
+        """, dia_params)
 
 @app.post("/api/conforto")
 async def save_conforto(request: Request):
@@ -1382,11 +1525,17 @@ async def save_conforto(request: Request):
                 c.get("frequencias", {}).get("almoxarifado", "Quinzenal"),
             ])
             await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.config_checklist")
-            for i, item in enumerate(c.get("checklistPreventiva", [])):
+            checklist_cfg = c.get("checklistPreventiva", [])
+            if checklist_cfg:
+                cfg_rows = []
+                cfg_params = []
+                for i, item in enumerate(checklist_cfg):
+                    cfg_rows.append("(?,?,?,?)")
+                    cfg_params += [f"cfg_{i}", item, i, u]
                 await arun_exec_retry(f"""
                     INSERT INTO {S_CONFORTO}.config_checklist (id,item,ordem,atualizado_por)
-                    VALUES (?,?,?,?)
-                """, [f"cfg_{i}", item, i, u])
+                    VALUES {",".join(cfg_rows)}
+                """, cfg_params)
         cache_invalidate("conforto")
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, _load_conforto)
