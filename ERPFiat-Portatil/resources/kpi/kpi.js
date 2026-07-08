@@ -1138,18 +1138,13 @@ function drawOverlayCharts(tipo,d){
     const disponivel=Math.max(totalB-totalR,0);
     bulletWrap.innerHTML=`
       <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">A Faturar × Faturado</div>
-      <div style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--mono);margin-bottom:6px">A Faturar: <b style="color:var(--text)">${fmtRK(totalB)}</b></div>
-      <div style="position:relative;height:18px;background:#e8edf5;border-radius:9px;overflow:hidden;margin-bottom:10px">
+      <div style="position:relative;height:18px;background:#e8edf5;border-radius:9px;overflow:hidden;margin-bottom:12px">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:9px"></div>
         <div style="position:absolute;right:0;top:-4px;bottom:-4px;width:2px;background:#8a9abf;border-radius:2px"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;margin-bottom:14px">
-        <span style="color:${cor};font-weight:700">Faturado: ${fmtRK(totalR)}</span>
-        <span style="color:var(--text-muted)">${pctTxt}</span>
-      </div>
       <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
         <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span><span style="color:var(--text-muted)">Faturado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b></div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${estourou?'#f8514955':'#1a7f4b'};flex-shrink:0"></span><span style="color:var(--text-muted)">${estourou?'Excedente':'A Faturar'}</span><b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'#1a7f4b'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#e8edf5;border:1px solid #8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">${estourou?'Excedente':'A Faturar'}</span><b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'var(--text)'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b></div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">Uso do budget</span><b style="margin-left:auto;font-family:var(--mono);color:${cor}">${pctTxt}</b></div>
       </div>`;
   }
