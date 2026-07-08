@@ -726,8 +726,7 @@ async def update_chamado(cid: str, request: Request):
         print(f"[chamados] erro ao atualizar {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("chamados")
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _load_chamados)
+    asyncio.create_task(asyncio.to_thread(_load_chamados))
     return JSONResponse({"ok": True})
 
 @app.delete("/api/chamados/{cid}")
@@ -923,8 +922,7 @@ async def save_obras(request: Request):
         print(f"[obras] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _load_obras)
+    asyncio.create_task(asyncio.to_thread(_load_obras))
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/{cod}/etapas/{etapa_id}")
@@ -933,8 +931,7 @@ async def deletar_etapa(cod: str, etapa_id: str):
         await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=? AND id=?", [cod, etapa_id])
         await arun_exec(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE etapa_id=?", [etapa_id])
         await arun_exec(f"DELETE FROM {S_OBRAS}.etapas_avancos WHERE etapa_id=?", [etapa_id])
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _load_obras)
+        asyncio.create_task(asyncio.to_thread(_load_obras))
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -947,8 +944,7 @@ async def delete_obra(cod: str):
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _load_obras)
+    asyncio.create_task(asyncio.to_thread(_load_obras))
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/budget/{bid}")
@@ -996,8 +992,7 @@ async def registrar_avanco(cod: str, etapa_id: str, request: Request):
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _load_obras)
+    asyncio.create_task(asyncio.to_thread(_load_obras))
     return JSONResponse({"ok": True})
 
 @app.get("/api/obras/{cod}/avancos")
@@ -1541,8 +1536,7 @@ async def save_conforto(request: Request):
                     VALUES {",".join(cfg_rows)}
                 """, cfg_params)
         cache_invalidate("conforto")
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _load_conforto)
+        asyncio.create_task(asyncio.to_thread(_load_conforto))
         return JSONResponse({"ok": True})
     except Exception as e:
         import traceback
@@ -1594,8 +1588,7 @@ async def save_atividades(request: Request):
         print(f"[atividades] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("atividades")
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _load_atividades)
+    asyncio.create_task(asyncio.to_thread(_load_atividades))
     return JSONResponse({"ok": True})
 
 @app.delete("/api/atividades/{aid}")
