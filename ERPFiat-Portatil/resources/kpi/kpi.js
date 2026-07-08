@@ -1028,39 +1028,65 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   const maxY = 100;
   const xPos = i => m.l + (i / (meses.length-1||1)) * cw;
   const yPos = v => m.t + ch - (v / maxY) * ch;
-  ctx.strokeStyle = 'rgba(139,148,158,0.12)';
   ctx.lineWidth = 1;
   [0,25,50,75,100].forEach(v => {
     const y = yPos(v);
+    ctx.strokeStyle = (v===0||v===100) ? 'rgba(139,148,158,0.25)' : 'rgba(139,148,158,0.1)';
+    ctx.setLineDash(v===0||v===100 ? [] : [3,3]);
     ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l+cw, y); ctx.stroke();
-    ctx.fillStyle = 'rgba(139,148,158,0.6)';
-    ctx.font = '9px var(--font,sans-serif)';
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(139,148,158,0.7)';
+    ctx.font = '600 9px var(--font,sans-serif)';
     ctx.textAlign = 'right';
-    ctx.fillText(v+'%', m.l-4, y+3);
+    ctx.fillText(v+'%', m.l-6, y+3);
   });
   const curvaPlan = modo==='dinheiro' ? planejadoFinanceiro : planejado;
   const curvaReal = modo==='dinheiro' ? realizado : realizadoFisico;
   ctx.fillStyle = 'rgba(139,148,158,0.9)';
   ctx.font = '600 10px var(--font,sans-serif)';
   ctx.textAlign = 'left';
-  ctx.fillText(modo==='dinheiro' ? 'Financeiro (%)' : 'Físico (%)', m.l, 10);
+  ctx.fillText(modo==='dinheiro' ? 'Budget (%)' : 'Físico (%)', m.l, 10);
+  const gradReal = ctx.createLinearGradient(0, m.t, 0, m.t+ch);
+  gradReal.addColorStop(0, 'rgba(227,113,26,0.18)');
+  gradReal.addColorStop(1, 'rgba(227,113,26,0)');
+  ctx.beginPath();
+  curvaReal.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  ctx.lineTo(xPos(curvaReal.length-1), m.t+ch);
+  ctx.lineTo(xPos(0), m.t+ch);
+  ctx.closePath();
+  ctx.fillStyle = gradReal;
+  ctx.fill();
+
   ctx.beginPath();
   ctx.strokeStyle = '#58a6ff';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   curvaPlan.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
   ctx.stroke();
+
   ctx.beginPath();
   ctx.strokeStyle = '#e3711a';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   curvaReal.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
   ctx.stroke();
+
   const ultR = curvaReal[curvaReal.length-1];
   ctx.beginPath();
-  ctx.arc(xPos(curvaReal.length-1), yPos(ultR), 4, 0, Math.PI*2);
-  ctx.fillStyle = '#e3711a';
+  ctx.arc(xPos(curvaReal.length-1), yPos(ultR), 5, 0, Math.PI*2);
+  ctx.fillStyle = '#fff';
   ctx.fill();
+  ctx.beginPath();
+  ctx.arc(xPos(curvaReal.length-1), yPos(ultR), 5, 0, Math.PI*2);
+  ctx.strokeStyle = '#e3711a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.font = '700 10px var(--mono,monospace)';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#e3711a';
+  ctx.fillText(`${ultR.toFixed(1)}%`, Math.min(xPos(curvaReal.length-1)+8, m.l+cw-32), yPos(ultR)+3);
   const step = Math.max(1, Math.floor(meses.length/6));
   ctx.fillStyle = 'rgba(139,148,158,0.8)';
   ctx.font = '9px var(--font,sans-serif)';
@@ -1201,8 +1227,8 @@ function abrirDetalheObra(cod){
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div class="ob-ov-ctit" style="margin:0">Planejado × Realizado</div>
         <div style="display:flex;gap:4px">
-          <button class="btn-curva-toggle" data-modo="fisico" onclick="trocarModoCurva('${cod}','fisico')" style="font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--blue-mid);color:#fff;cursor:pointer;font-family:var(--font)">📐 Físico</button>
-          <button class="btn-curva-toggle" data-modo="dinheiro" onclick="trocarModoCurva('${cod}','dinheiro')" style="font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);cursor:pointer;font-family:var(--font)">💰 Dinheiro</button>
+          <button class="btn-curva-toggle" data-modo="fisico" onclick="trocarModoCurva('${cod}','fisico')" style="display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--blue-mid);color:#fff;cursor:pointer;font-family:var(--font)"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Físico</button>
+          <button class="btn-curva-toggle" data-modo="dinheiro" onclick="trocarModoCurva('${cod}','dinheiro')" style="display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);cursor:pointer;font-family:var(--font)"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Budget</button>
         </div>
       </div>
       <canvas id="cv-det-curvas" width="500" height="180" style="width:100%;height:180px;display:block"></canvas>
