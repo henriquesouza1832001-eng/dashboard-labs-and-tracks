@@ -1341,7 +1341,7 @@ async def _salvar_manutencoes(body, u):
         await arun_exec_retry(f"""
             MERGE INTO {S_CONFORTO}.manutencoes AS t
             USING ({origem}) AS s ON t.id = s.id
-            WHEN MATCHED AND (t.atualizado_por IS NULL OR t.atualizado_por != 'qr') THEN UPDATE SET
+            WHEN MATCHED THEN UPDATE SET
                 uc_id=s.uc_id, tecnico_id=s.tecnico_id, tipo=s.tipo, falha=s.falha,
                 data_abertura=s.data_abertura, data_fechamento=s.data_fechamento,
                 status=s.status, custo_estimado=s.custo_estimado, obs=s.obs, atualizado_por=s.atualizado_por
