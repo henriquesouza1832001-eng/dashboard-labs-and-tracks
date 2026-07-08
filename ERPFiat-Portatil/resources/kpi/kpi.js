@@ -256,6 +256,7 @@ function desenharMicroBullet(id, orcado, gasto){
 let moduloAtivo=null;
 let _obrasData=null,_drillOb=null;
 let _modoCurvaAtual = 'fisico';
+let _obraDetalheAtual = null;
 let _confortoDrillAtivo=null,_chamDrillAtivo=null;
 let _dtErros=[],_dtInicio=Date.now(),_dtRenderTimes={},_dtConsoleHist=[],_dtConsoleIdx=-1,_dtCacheVizKey=null;
 const TODOS_MODULOS=['obras','capex','chamados','codin','conforto','ergonomia','acesso'];
@@ -1160,11 +1161,12 @@ function drawOverlayCharts(tipo,d){
   }
 }
 function abrirDetalheObra(cod){
+  const trocouObra = _obraDetalheAtual !== cod;
+  _obraDetalheAtual = cod;
   if(!_obrasData)return;
   const o=(_obrasData.obras||[]).find(x=>x.cod===cod);
   if(!o)return;
-
-  _modoCurvaAtual = 'fisico';
+  if(trocouObra) _modoCurvaAtual = 'fisico';
   const b=budgObra(cod),r=realObra(cod),af=calcAvFis(o),pf=b>0?(r/b)*100:0,ef=af-pf;
   const lancsObra=(_obrasData.lancamentos||[]).filter(l=>l.obraCod===cod);
   const mensal={};lancsObra.forEach(l=>{const m=l.dtLanc?l.dtLanc.slice(0,7):'';if(m)mensal[m]=(mensal[m]||0)+l.qtd*l.precoUnit;});
@@ -1702,6 +1704,7 @@ function renderAcesso(container,d){
   },60);
 }
 function voltarParaSubCards(){
+  _obraDetalheAtual = null;
   alternarModulo('obras');
 }
 function voltarParaLista(){
@@ -2640,3 +2643,10 @@ function dtMedirRender(nome,fn){
     try{if(typeof _dtRenderTimes!=='undefined')_dtRenderTimes[nome]=ms;}catch(e){}
   }
 }
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    if(_obraDetalheAtual) abrirDetalheObra(_obraDetalheAtual);
+  }, 200);
+});
