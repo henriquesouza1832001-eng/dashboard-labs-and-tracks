@@ -1328,23 +1328,27 @@ async def _salvar_manutencoes(body, u):
         params = []
         for m in manutencoes:
             selects.append(
-                "SELECT ? AS id, ? AS uc_id, ? AS tipo, ? AS falha, ? AS status, "
-                "? AS obs, ? AS atualizado_por"
+                "SELECT ? AS id, ? AS uc_id, ? AS tecnico_id, ? AS tipo, ? AS falha, "
+                "? AS data_abertura, ? AS data_fechamento, ? AS status, "
+                "? AS custo_estimado, ? AS obs, ? AS atualizado_por"
             )
             params += [
-                m["id"], m.get("ucId"), m.get("tipo"), m.get("falha"),
-                m.get("status"), m.get("obs"), u
+                m["id"], m.get("ucId"), m.get("tecnicoId"), m.get("tipo", "Manutenção"), m.get("falha"),
+                to_date_or_none(m.get("dataAbertura")), to_date_or_none(m.get("dataFechamento")),
+                m.get("status"), m.get("custoEstimado", 0), m.get("obs"), u
             ]
         origem = " UNION ALL ".join(selects)
         await arun_exec_retry(f"""
             MERGE INTO {S_CONFORTO}.manutencoes AS t
             USING ({origem}) AS s ON t.id = s.id
             WHEN MATCHED AND (t.atualizado_por IS NULL OR t.atualizado_por != 'qr') THEN UPDATE SET
-                uc_id=s.uc_id, tipo=s.tipo, falha=s.falha,
-                status=s.status, obs=s.obs, atualizado_por=s.atualizado_por
+                uc_id=s.uc_id, tecnico_id=s.tecnico_id, tipo=s.tipo, falha=s.falha,
+                data_abertura=s.data_abertura, data_fechamento=s.data_fechamento,
+                status=s.status, custo_estimado=s.custo_estimado, obs=s.obs, atualizado_por=s.atualizado_por
             WHEN NOT MATCHED THEN INSERT
-                (id,uc_id,tipo,falha,status,obs,atualizado_por)
-            VALUES (s.id,s.uc_id,s.tipo,s.falha,s.status,s.obs,s.atualizado_por)
+                (id,uc_id,tecnico_id,tipo,falha,data_abertura,data_fechamento,status,custo_estimado,obs,atualizado_por)
+            VALUES (s.id,s.uc_id,s.tecnico_id,s.tipo,s.falha,s.data_abertura,s.data_fechamento,
+                    s.status,s.custo_estimado,s.obs,s.atualizado_por)
         """, params)
 
     # pecas em lote: DELETE apenas onde atualizado_por != 'qr', INSERT em lote
