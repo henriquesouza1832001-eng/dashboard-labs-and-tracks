@@ -29,7 +29,7 @@ async function salvarCentral() {
 }
 function abrirDB(){ return Promise.resolve(); }
 
-function setSaveStatus(s,txt){ const el=$('save-status'); el.className='save-status '+s; $('save-txt').textContent=txt||s; }
+function setSaveStatus(s,txt){ const el=$('save-status'); el.className='save-status '+s; el.title=txt||s; }
 function gerarId(prefix,arr,campo){ let n=arr.length+1; while(arr.find(x=>x[campo]===`${prefix}-${String(n).padStart(3,'0')}`))n++; return `${prefix}-${String(n).padStart(3,'0')}`; }
 function realizado(obraCod){ return state.lancamentos.filter(l=>l.obraCod===obraCod).reduce((s,l)=>s+(l.qtd*l.precoUnit),0); }
 function budgetObra(obraCod){ return state.budget.filter(b=>b.obraCod===obraCod).reduce((s,b)=>s+(b.budgetAprov||0),0); }
@@ -759,13 +759,6 @@ function excluirCresp(idx){
   state.budget=state.budget.filter(b=>b.cresp!==idRemovido);
   state.lancamentos.forEach(l=>{ if(l.cresp===idRemovido)l.cresp=''; });
   agendarSalvamentoCentral(); agendarSalvamento(); renderTudo();
-}
-
-function exportarPDF(){
-  const totalB=totalBudget(),totalR=totalRealizado(),saldo=totalB-totalR;
-  const linhas=state.obras.map(o=>{ const b=budgetObra(o.cod),r=realizado(o.cod),sal=b-r,p=b>0?(r/b)*100:0,af=avancFisico(o.cod); return `<tr><td>${o.cod}</td><td>${o.nome}</td><td>${o.status}</td><td>${o.cresp}</td><td>R$ ${fmt(b,2)}</td><td>R$ ${fmt(r,2)}</td><td>${fmt(p,1)}%</td><td>${fmt(af,1)}%</td><td style="color:${sal<0?'#c00':'#060'}">R$ ${fmt(sal,2)}</td></tr>`; }).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Obras</title><style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:24px}h1{font-size:18px;margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:8px}th{background:#1B3A6B;color:#fff;padding:7px 10px;text-align:left;font-size:10px}td{padding:6px 10px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even) td{background:#f8f9fa}</style></head><body><h1>Relatório — Obras & CAPEX</h1><div style="color:#888;font-size:10px">Gerado em: ${new Date().toLocaleString('pt-BR')}</div><table><thead><tr><th>Código</th><th>Nome</th><th>Status</th><th>CRESP</th><th>Budget</th><th>Realizado</th><th>% Fin.</th><th>% Fís.</th><th>Saldo</th></tr></thead><tbody>${linhas}</tbody></table></body></html>`;
-  const w=window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),500);
 }
 window.excluirObra=excluirObra; window.editarObra=editarObra;
 window.excluirLanc=excluirLanc; window.editarLanc=editarLanc;
