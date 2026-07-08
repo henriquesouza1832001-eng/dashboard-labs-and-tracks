@@ -255,6 +255,7 @@ function desenharMicroBullet(id, orcado, gasto){
 
 let moduloAtivo=null;
 let _obrasData=null,_drillOb=null;
+let _modoCurvaAtual = 'fisico';
 let _confortoDrillAtivo=null,_chamDrillAtivo=null;
 let _dtErros=[],_dtInicio=Date.now(),_dtRenderTimes={},_dtConsoleHist=[],_dtConsoleIdx=-1,_dtCacheVizKey=null;
 const TODOS_MODULOS=['obras','capex','chamados','codin','conforto','ergonomia','acesso'];
@@ -941,7 +942,14 @@ function desenharMicroBarras(id, items){
     </div>`;
   }).join('');
 }
-function desenharCurvaS(canvasId, obra, lancs, budgetTotal) {
+function afEtapa(e){
+  const subs = e.subtarefas||[];
+  if(!subs.length) return 0;
+  const pesoTotal = subs.reduce((s,st)=>s+(st.peso||1),0)||1;
+  const exec = subs.reduce((s,st)=>s+(st.peso||1)*(st.avancoFisico||0),0);
+  return exec/pesoTotal;
+}
+function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   const cv = document.getElementById(canvasId);
   if(!cv) return;
   const ctx = cv.getContext('2d');
@@ -995,6 +1003,28 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal) {
     acumR += (realMap[mes]||0);
     return budgetTotal > 0 ? Math.min(acumR/budgetTotal*100, 100) : 0;
   });
+  const budgetPorEtapa = etapas.reduce((s,e)=>s+(e.orcamento||0),0) || budgetTotal || 1;
+  const planejadoFinanceiro = meses.map(mes => {
+    const mesMs = new Date(mes+'-28').getTime();
+    let acum = 0;
+    etapas.forEach(e => {
+      const s = toMs(e.dtInicio), f = toMs(e.dtFim);
+      if(mesMs < s) return;
+      const prog = Math.min((mesMs - s) / (f - s), 1);
+      acum += prog * (e.orcamento||0);
+    });
+    return Math.min(acum/budgetPorEtapa*100, 100);
+  });
+  const realizadoFisico = meses.map(mes => {
+    const mesMs = new Date(mes+'-28').getTime();
+    let acum = 0;
+    etapas.forEach(e => {
+      const dtR = e.dtInicioReal;
+      if(!dtR || toMs(dtR) > mesMs) return;
+      acum += afEtapa(e) * (e.peso||1) / pesoTotal;
+    });
+    return Math.min(acum, 100);
+  });
   const maxY = 100;
   const xPos = i => m.l + (i / (meses.length-1||1)) * cw;
   const yPos = v => m.t + ch - (v / maxY) * ch;
@@ -1008,6 +1038,29 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal) {
     ctx.textAlign = 'right';
     ctx.fillText(v+'%', m.l-4, y+3);
   });
+  const curvaPlan = modo==='dinheiro' ? planejadoFinanceiro : planejado;
+  const curvaReal = modo==='dinheiro' ? realizado : realizadoFisico;
+  ctx.fillStyle = 'rgba(139,148,158,0.9)';
+  ctx.font = '600 10px var(--font,sans-serif)';
+  ctx.textAlign = 'left';
+  ctx.fillText(modo==='dinheiro' ? 'Financeiro (%)' : 'Físico (%)', m.l, 10);
+  ctx.beginPath();
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  curvaPlan.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.strokeStyle = '#e3711a';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  curvaReal.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  ctx.stroke();
+  const ultR = curvaReal[curvaReal.length-1];
+  ctx.beginPath();
+  ctx.arc(xPos(curvaReal.length-1), yPos(ultR), 4, 0, Math.PI*2);
+  ctx.fillStyle = '#e3711a';
+  ctx.fill();
   const step = Math.max(1, Math.floor(meses.length/6));
   ctx.fillStyle = 'rgba(139,148,158,0.8)';
   ctx.font = '9px var(--font,sans-serif)';
@@ -1017,23 +1070,22 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal) {
     const [a,mo] = mes.split('-');
     ctx.fillText(`${mo}/${a.slice(2)}`, xPos(i), H-m.b+14);
   });
-  ctx.beginPath();
-  ctx.strokeStyle = '#58a6ff';
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  planejado.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.strokeStyle = '#e3711a';
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  realizado.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
-  ctx.stroke();
-  const ultR = realizado[realizado.length-1];
-  ctx.beginPath();
-  ctx.arc(xPos(realizado.length-1), yPos(ultR), 4, 0, Math.PI*2);
-  ctx.fillStyle = '#e3711a';
-  ctx.fill();
+}
+function trocarModoCurva(cod, modo){
+  _modoCurvaAtual = modo;
+  document.querySelectorAll('.btn-curva-toggle').forEach(btn=>{
+    const ativo = btn.dataset.modo===modo;
+    btn.style.background = ativo ? 'var(--blue-mid)' : 'var(--surface)';
+    btn.style.color = ativo ? '#fff' : 'var(--text-muted)';
+  });
+  const obras=_obrasData.obras||[];
+  const o=obras.find(x=>x.cod===cod);
+  if(!o) return;
+  const lancsObra=(_obrasData.lancamentos||[]).filter(l=>l.obraCod===cod);
+  const b=budgObra(cod);
+  const cv=document.getElementById('cv-det-curvas');
+  if(cv) cv.width = cv.parentElement.clientWidth || 500;
+  desenharCurvaS('cv-det-curvas', o, lancsObra, b, modo);
 }
 function drawOverlayCharts(tipo,d){
   const obras=d.obras||[];const lanc=d.lancamentos||[];
@@ -1091,6 +1143,7 @@ function abrirDetalheObra(cod){
   const o=(_obrasData.obras||[]).find(x=>x.cod===cod);
   if(!o)return;
 
+  _modoCurvaAtual = 'fisico';
   const b=budgObra(cod),r=realObra(cod),af=calcAvFis(o),pf=b>0?(r/b)*100:0,ef=af-pf;
   const lancsObra=(_obrasData.lancamentos||[]).filter(l=>l.obraCod===cod);
   const mensal={};lancsObra.forEach(l=>{const m=l.dtLanc?l.dtLanc.slice(0,7):'';if(m)mensal[m]=(mensal[m]||0)+l.qtd*l.precoUnit;});
@@ -1145,7 +1198,13 @@ function abrirDetalheObra(cod){
 
   <div class="ob-ov-charts" style="margin-bottom:12px">
     <div class="ob-ov-cbox" style="flex:2">
-      <div class="ob-ov-ctit">Planejado × Realizado</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="ob-ov-ctit" style="margin:0">Planejado × Realizado</div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-curva-toggle" data-modo="fisico" onclick="trocarModoCurva('${cod}','fisico')" style="font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--blue-mid);color:#fff;cursor:pointer;font-family:var(--font)">📐 Físico</button>
+          <button class="btn-curva-toggle" data-modo="dinheiro" onclick="trocarModoCurva('${cod}','dinheiro')" style="font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);cursor:pointer;font-family:var(--font)">💰 Dinheiro</button>
+        </div>
+      </div>
       <canvas id="cv-det-curvas" width="500" height="180" style="width:100%;height:180px;display:block"></canvas>
       <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--text-muted)">
         <span><span style="display:inline-block;width:12px;height:3px;background:#58a6ff;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Planejado</span>
@@ -1196,7 +1255,7 @@ function abrirDetalheObra(cod){
       if(cvcurvas){
         const pw = cvcurvas.parentElement.clientWidth || 500;
         cvcurvas.width = pw;
-        desenharCurvaS('cv-det-curvas', o, lancsObra, budgObra);
+        desenharCurvaS('cv-det-curvas', o, lancsObra, b, _modoCurvaAtual);
       }
     }
     if(topCat.length){
