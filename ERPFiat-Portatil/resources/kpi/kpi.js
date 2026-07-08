@@ -983,8 +983,41 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   }
   if(!meses.length) return;
   const pesoTotal = etapas.reduce((s,e) => s + (e.peso||1), 0) || 1;
+  const todosItens = [];
+  etapas.forEach(e => {
+    const subs = e.subtarefas || [];
+    const pesoSubsTotal = subs.reduce((s,st) => s + (st.peso||1), 0) || 1;
+    subs.forEach(sub => {
+      const itens = sub.itens || [];
+      if (!itens.length) return;
+      const pesoItensTotal = itens.reduce((s,it) => {
+        const dIni = it.dtInicio ? toMs(it.dtInicio) : null;
+        const dFim = it.dtFim ? toMs(it.dtFim) : null;
+        const dur = (dIni && dFim && dFim > dIni) ? (dFim - dIni) : 0;
+        return s + dur;
+      }, 0);
+      itens.forEach(it => {
+        if (!it.dtInicio || !it.dtFim) return;
+        const dIni = toMs(it.dtInicio), dFim = toMs(it.dtFim);
+        const durItem = Math.max(dFim - dIni, 0);
+        const pesoItemNaSub = pesoItensTotal > 0 ? durItem / pesoItensTotal : (1 / itens.length);
+        const pesoGlobal = pesoItemNaSub * ((sub.peso||1) / pesoSubsTotal) * ((e.peso||1) / pesoTotal);
+        todosItens.push({ dtInicio: dIni, dtFim: dFim, dtConclusao: it.dtConclusao ? toMs(it.dtConclusao) : null, concluido: !!it.concluido, peso: pesoGlobal });
+      });
+    });
+  });
+
   const planejado = meses.map(mes => {
     const mesMs = new Date(mes+'-28').getTime();
+    if (todosItens.length) {
+      let acum = 0;
+      todosItens.forEach(it => {
+        if (mesMs < it.dtInicio) return;
+        const prog = it.dtFim > it.dtInicio ? Math.min((mesMs - it.dtInicio) / (it.dtFim - it.dtInicio), 1) : 1;
+        acum += prog * it.peso * 100;
+      });
+      return Math.min(acum, 100);
+    }
     let acum = 0;
     etapas.forEach(e => {
       const s = toMs(e.dtInicio), f = toMs(e.dtFim);
@@ -1018,6 +1051,15 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   });
   const realizadoFisico = meses.map(mes => {
     const mesMs = new Date(mes+'-28').getTime();
+    if (todosItens.length) {
+      let acum = 0;
+      todosItens.forEach(it => {
+        if (it.concluido && it.dtConclusao && it.dtConclusao <= mesMs) {
+          acum += it.peso * 100;
+        }
+      });
+      return Math.min(acum, 100);
+    }
     let acum = 0;
     etapas.forEach(e => {
       const dtR = e.dtInicioReal;

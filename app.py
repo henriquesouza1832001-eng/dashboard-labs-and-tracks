@@ -849,7 +849,7 @@ async def save_obras(request: Request):
                     itens = s.get("itens", []) or []
                     total_itens = len(itens)
                     concl_itens = sum(1 for it in itens if it.get("concluido"))
-                    af_calc = round(concl_itens/total_itens*100) if total_itens else s.get("avancoFisico", 0)
+                    af_calc = round(s.get("avancoFisico", 0)) if total_itens else s.get("avancoFisico", 0)
                     status_calc = s.get("status", "Pendente")
                     dt_fim_real = s.get("dtFimReal")
                     if status_calc != "Bloqueada":
