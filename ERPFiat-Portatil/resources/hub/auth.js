@@ -15,7 +15,7 @@
       ? (partes[0][0] + partes[partes.length - 1][0])
       : nomecompleto.slice(0, 2);
     window.__authUser = {
-      nome: nomeCompleto,
+      nome: nomecompleto,
       email: payload.email,
       role: payload.role || 'visualizador',
       avatar: iniciais.toUpperCase()
