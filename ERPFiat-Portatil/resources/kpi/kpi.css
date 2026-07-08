@@ -87,7 +87,7 @@
 .mod-footer{flex-shrink:0;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-top:6px}
 .mod-footer-hint{color:var(--blue-mid);font-size:9.5px;font-weight:600}
 
-.main-scroll{overflow:hidden;flex:1;min-width:0;display:flex;flex-direction:column}
+.main-scroll{overflow-y:auto;overflow-x:hidden;flex:1;min-width:0;display:flex;flex-direction:column}
 .detalhe-area{display:none}
 
 /* ── ANIMAÇÕES ── */
