@@ -543,7 +543,7 @@ function renderManutencoesAbertas() {
           <td style="${diasCor}">${diasTxt}</td>
           <td>${badgeStatusMan(m.status)}</td>
           <td><div class="row-actions">
-            <button class="action-btn" onclick="abrirModalFecharManutencao(${idxReal})" title="Fechar manutenção">${SVG_CHECK || '✓'}</button>
+            <button class="action-btn" onclick="abrirModalFecharManutencao(${idxReal})" title="Fechar manutenção">✓</button>
             <button class="action-btn" onclick="editarManutencao(${idxReal})" title="Editar completo">${SVG_EDIT}</button>
           </div></td>
         </tr>`;
