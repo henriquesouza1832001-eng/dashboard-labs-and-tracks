@@ -28,7 +28,13 @@ async function salvarCentral() {
   }
 }
 function abrirDB(){ return Promise.resolve(); }
-
+(function preencherUsuario(){
+  const user = window.__authUser || { nome: '—', avatar: '?' };
+  const av = document.getElementById('el-avatar');
+  const nm = document.getElementById('el-uname');
+  if(av) av.textContent = user.avatar;
+  if(nm) nm.textContent = user.nome;
+})();
 function setSaveStatus(s,txt){ const el=$('save-status'); el.className='save-status '+s; el.title=txt||s; }
 function gerarId(prefix,arr,campo){ let n=arr.length+1; while(arr.find(x=>x[campo]===`${prefix}-${String(n).padStart(3,'0')}`))n++; return `${prefix}-${String(n).padStart(3,'0')}`; }
 function realizado(obraCod){ return state.lancamentos.filter(l=>l.obraCod===obraCod).reduce((s,l)=>s+(l.qtd*l.precoUnit),0); }

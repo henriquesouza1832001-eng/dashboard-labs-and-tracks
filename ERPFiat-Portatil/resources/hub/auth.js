@@ -9,11 +9,16 @@
       window.location.href = '/login';
       return;
     }
+    const nomecompleto = payload.nome || payload.email;
+    const partes = nomecompleto.trim().split(/\s+/);
+    const iniciais = partes.length >= 2
+      ? (partes[0][0] + partes[partes.length - 1][0])
+      : nomecompleto.slice(0, 2);
     window.__authUser = {
-      nome: payload.nome || payload.email,
+      nome: nomeCompleto,
       email: payload.email,
       role: payload.role || 'visualizador',
-      avatar: (payload.nome || payload.email).slice(0, 2).toUpperCase()
+      avatar: iniciais.toUpperCase()
     };
   } catch {
     localStorage.removeItem('ctrl-token');

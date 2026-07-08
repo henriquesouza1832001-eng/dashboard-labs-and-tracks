@@ -1160,6 +1160,16 @@ function drawOverlayCharts(tipo,d){
     wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Faturado por Categoria</div>`+(top.length?barrasHTML(top.map((x,i)=>({label:x[0],val:x[1],cor:cores[i%8]})),{labelW:100}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem lançamentos</div>');
   }
 }
+(function preencherUsuario(){
+  const user = window.__authUser || { nome: '—', role: '—', avatar: '?' };
+  const av = document.getElementById('el-avatar');
+  const nm = document.getElementById('el-uname');
+  const rl = document.getElementById('el-urole');
+  if(av) av.textContent = user.avatar;
+  if(nm) nm.textContent = user.nome;
+  if(rl) rl.textContent = user.role;
+  if(user.role === 'admin'){ const p = document.getElementById('pill-admin'); if(p) p.style.display = ''; }
+})();
 function abrirDetalheObra(cod){
   const trocouObra = _obraDetalheAtual !== cod;
   _obraDetalheAtual = cod;
