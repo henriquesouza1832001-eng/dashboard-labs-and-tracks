@@ -693,10 +693,12 @@ function excluirSubtarefa(cod, etapaIdx, subIdx) {
   const o = state.obras.find(x=>x.cod===cod);
   if(o?.etapas?.[etapaIdx]?.subtarefas) {
     o.etapas[etapaIdx].subtarefas.splice(subIdx,1);
+    recalcularPesosSubtarefas(o.etapas[etapaIdx]);
     const datasEtapa = recalcularDatasEtapa(o.etapas[etapaIdx]);
     o.etapas[etapaIdx].dtInicio = datasEtapa.dtInicio;
     o.etapas[etapaIdx].dtFim = datasEtapa.dtFim;
     o.etapas[etapaIdx].avancoFisico = afEtapaLocal(o.etapas[etapaIdx].subtarefas);
+    recalcularPesosEtapas(o);
     agendarSalvamento();
     renderCronograma(cod);
   }
@@ -766,6 +768,33 @@ $('btn-add-item')?.addEventListener('click', () => {
 $('sub-item-novo')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); $('btn-add-item').click(); }
 });
+function recalcularPesosSubtarefas(etapa) {
+  const subs = etapa.subtarefas || [];
+  const duracoes = subs.map(s => diasEntre(s.dtInicio, s.dtFim));
+  const totalDias = duracoes.reduce((a,b) => a+b, 0);
+  if (totalDias === 0) {
+    const pesoIgual = subs.length ? Math.round(100 / subs.length) : 1;
+    subs.forEach(s => s.peso = pesoIgual);
+    return;
+  }
+  subs.forEach((s, i) => {
+    s.peso = Math.round((duracoes[i] / totalDias) * 100) || 1;
+  });
+}
+
+function recalcularPesosEtapas(obra) {
+  const etapas = obra.etapas || [];
+  const duracoes = etapas.map(e => diasEntre(e.dtInicio, e.dtFim));
+  const totalDias = duracoes.reduce((a,b) => a+b, 0);
+  if (totalDias === 0) {
+    const pesoIgual = etapas.length ? Math.round(100 / etapas.length) : 1;
+    etapas.forEach(e => e.peso = pesoIgual);
+    return;
+  }
+  etapas.forEach((e, i) => {
+    e.peso = Math.round((duracoes[i] / totalDias) * 100) || 1;
+  });
+}
 function recalcularDatasEtapa(etapa) {
   const todasDatas = [];
   (etapa.subtarefas || []).forEach(sub => {
@@ -806,10 +835,12 @@ document.getElementById('btn-salvar-subtarefa')?.addEventListener('click', ()=>{
   };
   if(si>=0) o.etapas[ei].subtarefas[si]=obj;
   else o.etapas[ei].subtarefas.push(obj);
+  recalcularPesosSubtarefas(o.etapas[ei]);
   const datasEtapa = recalcularDatasEtapa(o.etapas[ei]);
   o.etapas[ei].dtInicio = datasEtapa.dtInicio;
   o.etapas[ei].dtFim = datasEtapa.dtFim;
   o.etapas[ei].avancoFisico = afEtapaLocal(o.etapas[ei].subtarefas);
+  recalcularPesosEtapas(o);
   fecharModal('modal-subtarefa');
   agendarSalvamento();
   renderCronograma(cod);
@@ -963,9 +994,10 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
       peso:         parseFloat($('etapa-peso').value)||1,
       avancofisico: afetapalocal(subtarefasatuais),
       obs:          $('etapa-obs').value.trim(),
-      subtarefas:   subtarefasatuais
+      subtarefas:   subtarefasAtuais
     };
     if(idx>=0)o.etapas[idx]=obj; else o.etapas.push(obj);
+    recalcularPesosEtapas(o);
     fecharModal('modal-etapa');agendarSalvamento();renderCronograma(state.obraAtiva);
   });
   ['modal-etapa-close','modal-etapa-cancel'].forEach(id=>$(id)?.addEventListener('click',()=>fecharModal('modal-etapa')));
