@@ -187,7 +187,7 @@
 .mod-section{display:flex;flex-direction:column;height:100%}
 
 /* ── OVERLAY ANÁLISE ── */
-.ob-overlay{background:var(--surface);border:1px solid var(--border);border-radius:12px;z-index:30;padding:18px 20px 22px;animation:obFadeIn 180ms ease;box-shadow:var(--shadow-hover)}
+.ob-overlay{background:var(--surface);border:1px solid var(--border);border-radius:12px;z-index:30;padding:18px 20px 22px;animation:obFadeIn 180ms ease;box-shadow:var(--shadow-hover);flex-shrink:0}
 @keyframes obFadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 
 .ob-ov-charts{display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:14px;width:100%;align-items:flex-start}
