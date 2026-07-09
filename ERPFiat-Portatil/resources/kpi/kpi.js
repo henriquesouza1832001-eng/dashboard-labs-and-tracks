@@ -1190,11 +1190,11 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.textBaseline = 'alphabetic';
     return y;
   }
-  let idxUltimoReal = -1;
-  for (let i = curvaReal.length - 1; i >= 0; i--) {
-    if (curvaReal[i] > 0) { idxUltimoReal = i; break; }
+   const mesAtualStr = new Date().toISOString().slice(0,7);
+  let idxUltimoReal = meses.indexOf(mesAtualStr);
+  if (idxUltimoReal === -1) {
+    idxUltimoReal = mesAtualStr < meses[0] ? 0 : meses.length - 1;
   }
-  if (idxUltimoReal === -1) idxUltimoReal = 0;
 
   const valorRealNoIdx = curvaReal[idxUltimoReal];
   const valorPlanNoIdx = curvaPlan[idxUltimoReal];
