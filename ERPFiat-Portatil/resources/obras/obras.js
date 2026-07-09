@@ -691,20 +691,55 @@ function calcularAvancoFisicoItens(itens) {
   return comPeso.reduce((s, it) => s + (it.concluido ? it.peso : 0), 0) * 100;
 }
 
+let itemExpandidoIdx = null;
+
+function fmtDataBR(iso) {
+  if (!iso) return '—';
+  const [a,m,d] = iso.split('-');
+  return `${d}/${m}/${a}`;
+}
+
+function toggleExpandirItem(i) {
+  itemExpandidoIdx = itemExpandidoIdx === i ? null : i;
+  renderItensSubtarefa();
+}
+
 function renderItensSubtarefa() {
   const wrap = $('sub-itens-list');
   const comPeso = calcularPesosItens(subItensTemp);
   wrap.innerHTML = comPeso.length
-    ? comPeso.map((it, i) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:6px">
-          <input type="checkbox" ${it.concluido ? 'checked' : ''} onchange="toggleItemSubtarefa(${i})">
-          <span style="flex:1;${it.concluido ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">${it.texto}</span>
-          <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${(it.peso*100).toFixed(0)}%</span>
-          <input type="date" value="${it.dtInicio||''}" onchange="atualizarDataItem(${i},'dtInicio',this.value)" title="Início previsto" style="width:130px">
-          <input type="date" value="${it.dtFim||''}" onchange="atualizarDataItem(${i},'dtFim',this.value)" title="Fim previsto" style="width:130px">
-          <input type="date" value="${it.dtConclusao||''}" onchange="atualizarDataItem(${i},'dtConclusao',this.value)" title="Conclusão real" style="width:130px;${it.concluido?'':'opacity:0.5'}">
-          <button type="button" class="btn-icon" onclick="removerItemSubtarefa(${i})" title="Remover">✕</button>
-        </div>`).join('')
+    ? comPeso.map((it, i) => {
+        const aberto = itemExpandidoIdx === i;
+        const resumoData = it.dtInicio && it.dtFim
+          ? `${fmtDataBR(it.dtInicio)} → ${fmtDataBR(it.dtFim)}`
+          : 'sem datas';
+        return `
+        <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer" onclick="toggleExpandirItem(${i})">
+            <input type="checkbox" ${it.concluido ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleItemSubtarefa(${i})">
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${it.concluido ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">${it.texto}</span>
+            <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">${resumoData}</span>
+            <span style="font-size:11px;font-weight:600;color:var(--blue-mid);white-space:nowrap;flex-shrink:0">${(it.peso*100).toFixed(0)}%</span>
+            <span style="flex-shrink:0;color:var(--text-muted);transform:rotate(${aberto?'180':'0'}deg);transition:transform .15s">▾</span>
+          </div>
+          ${aberto ? `
+          <div style="padding:10px;background:var(--bg);border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Início previsto</label>
+              <input type="date" value="${it.dtInicio||''}" onchange="atualizarDataItem(${i},'dtInicio',this.value)" style="width:100%">
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Fim previsto</label>
+              <input type="date" value="${it.dtFim||''}" onchange="atualizarDataItem(${i},'dtFim',this.value)" style="width:100%">
+            </div>
+            <div style="grid-column:1/-1">
+              <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Conclusão real ${it.concluido?'':'(marque o item para habilitar)'}</label>
+              <input type="date" value="${it.dtConclusao||''}" onchange="atualizarDataItem(${i},'dtConclusao',this.value)" ${it.concluido?'':'disabled'} style="width:100%">
+            </div>
+            <button type="button" onclick="removerItemSubtarefa(${i})" style="grid-column:1/-1;font-size:11px;color:var(--red);background:none;border:1px solid var(--border);border-radius:5px;padding:5px;cursor:pointer">Remover item</button>
+          </div>` : ''}
+        </div>`;
+      }).join('')
     : '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Nenhum item adicionado</div>';
   const pct = calcularAvancoFisicoItens(subItensTemp);
   $('sub-af-val').textContent = `(${pct.toFixed(0)}%)`;
