@@ -1195,7 +1195,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   if (idxUltimoReal === -1) {
     idxUltimoReal = mesAtualStr < meses[0] ? 0 : meses.length - 1;
   }
-// conclude
+// conclu
   const valorRealNoIdx = curvaReal[idxUltimoReal];
   const valorPlanNoIdx = curvaPlan[idxUltimoReal];
   ctx.save();
