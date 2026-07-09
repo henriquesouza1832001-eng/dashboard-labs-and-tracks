@@ -954,10 +954,18 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   const cv = document.getElementById(canvasId);
   if(!cv) return;
   const ctx = cv.getContext('2d');
-  const W = cv.width, H = cv.height;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cv.clientWidth || cv.width, cssH = cv.clientHeight || cv.height;
+  if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+    cv.width = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = cssW, H = cssH;
   const m = {l:48, r:16, t:16, b:40};
   const cw = W - m.l - m.r, ch = H - m.t - m.b;
   ctx.clearRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = true;
   const etapas = (obra.etapas || []).filter(e => e.dtInicio && e.dtFim);
   if (!etapas.length && !lancs.length) {
     ctx.fillStyle = 'var(--text-dim, #8b949e)';
@@ -1103,7 +1111,14 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   gradReal.addColorStop(0, 'rgba(227,113,26,0.18)');
   gradReal.addColorStop(1, 'rgba(227,113,26,0)');
   ctx.beginPath();
-  curvaReal.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  curvaReal.forEach((v,i) => {
+    const x = xPos(i), y = yPos(v);
+    if (i===0) ctx.moveTo(x,y);
+    else {
+      const xPrev = xPos(i-1), yPrev = yPos(curvaReal[i-1]);
+      ctx.quadraticCurveTo((xPrev+x)/2, yPrev, x, y);
+    }
+  });
   ctx.lineTo(xPos(curvaReal.length-1), m.t+ch);
   ctx.lineTo(xPos(0), m.t+ch);
   ctx.closePath();
@@ -1115,7 +1130,14 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  curvaPlan.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  curvaPlan.forEach((v,i) => {
+    const x = xPos(i), y = yPos(v);
+    if (i===0) ctx.moveTo(x,y);
+    else {
+      const xPrev = xPos(i-1), yPrev = yPos(curvaPlan[i-1]);
+      ctx.quadraticCurveTo((xPrev+x)/2, yPrev, x, y);
+    }
+  });
   ctx.stroke();
 
   ctx.beginPath();
@@ -1123,37 +1145,84 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  curvaReal.forEach((v,i) => i===0 ? ctx.moveTo(xPos(i),yPos(v)) : ctx.lineTo(xPos(i),yPos(v)));
+  curvaReal.forEach((v,i) => {
+    const x = xPos(i), y = yPos(v);
+    if (i===0) ctx.moveTo(x,y);
+    else {
+      const xPrev = xPos(i-1), yPrev = yPos(curvaReal[i-1]);
+      ctx.quadraticCurveTo((xPrev+x)/2, yPrev, x, y);
+    }
+  });
   ctx.stroke();
 
-  const ultR = curvaReal[curvaReal.length-1];
-  ctx.beginPath();
-  ctx.arc(xPos(curvaReal.length-1), yPos(ultR), 5, 0, Math.PI*2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(xPos(curvaReal.length-1), yPos(ultR), 5, 0, Math.PI*2);
-  ctx.strokeStyle = '#e3711a';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.font = '700 10px var(--mono,monospace)';
-  ctx.fillStyle = '#e3711a';
-  const xUlt = xPos(curvaReal.length-1);
-  const yUlt = yPos(ultR);
-  const rotuloTxt = `${ultR.toFixed(1)}%`;
-  const larguraRotulo = ctx.measureText(rotuloTxt).width;
-  const cabeNaDireita = xUlt + 10 + larguraRotulo <= m.l + cw;
-  if (cabeNaDireita) {
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(rotuloTxt, xUlt + 10, yUlt);
-  } else {
-    ctx.textAlign = 'center';
+  function desenharPontoRotulado(idx, valor, cor, evitarY) {
+    const x = xPos(idx);
+    const y = yPos(valor);
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.strokeStyle = cor;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = '700 10px var(--mono,monospace)';
+    ctx.fillStyle = cor;
+    const rotuloTxt = `${valor.toFixed(1)}%`;
+    const larguraRotulo = ctx.measureText(rotuloTxt).width;
+    const cabeNaDireita = x + 10 + larguraRotulo <= m.l + cw;
+    if (cabeNaDireita) {
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(rotuloTxt, x + 10, y);
+    } else {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      const acimaCabe = (y - 12 >= m.t) && (evitarY == null || Math.abs((y-10) - evitarY) > 12);
+      const abaixoCabe = (y + 18 <= m.t + ch);
+      let yFinal;
+      if (acimaCabe) yFinal = y - 10;
+      else if (abaixoCabe) yFinal = y + 18;
+      else yFinal = y - 10;
+      ctx.fillText(rotuloTxt, x, yFinal);
+    }
     ctx.textBaseline = 'alphabetic';
-    const acimaCabe = yUlt - 12 >= m.t;
-    ctx.fillText(rotuloTxt, xUlt, acimaCabe ? yUlt - 10 : yUlt + 18);
+    return y;
   }
-  ctx.textBaseline = 'alphabetic';
+  let idxUltimoReal = -1;
+  for (let i = curvaReal.length - 1; i >= 0; i--) {
+    if (curvaReal[i] > 0) { idxUltimoReal = i; break; }
+  }
+  if (idxUltimoReal === -1) idxUltimoReal = 0;
+
+  const valorRealNoIdx = curvaReal[idxUltimoReal];
+  const valorPlanNoIdx = curvaPlan[idxUltimoReal];
+  ctx.save();
+  ctx.strokeStyle = 'rgba(139,148,158,0.3)';
+  ctx.setLineDash([3,3]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(xPos(idxUltimoReal), m.t);
+  ctx.lineTo(xPos(idxUltimoReal), m.t + ch);
+  ctx.stroke();
+  ctx.restore();
+
+  const yPlanDesenhado = desenharPontoRotulado(idxUltimoReal, valorPlanNoIdx, '#58a6ff', null);
+  desenharPontoRotulado(idxUltimoReal, valorRealNoIdx, '#e3711a', yPlanDesenhado);
+  const idxFimObra = curvaPlan.length - 1;
+  if (idxFimObra > idxUltimoReal) {
+    const ultPlanFinal = curvaPlan[idxFimObra];
+    ctx.font = '600 9px var(--mono,monospace)';
+    ctx.fillStyle = 'rgba(88,166,255,0.7)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`meta: ${ultPlanFinal.toFixed(0)}%`, xPos(idxFimObra) - 6, yPos(ultPlanFinal));
+    ctx.beginPath();
+    ctx.arc(xPos(idxFimObra), yPos(ultPlanFinal), 3, 0, Math.PI*2);
+    ctx.fillStyle = '#58a6ff';
+    ctx.fill();
+  }
   const step = Math.max(1, Math.floor(meses.length/6));
   ctx.fillStyle = 'rgba(139,148,158,0.8)';
   ctx.font = '9px var(--font,sans-serif)';
