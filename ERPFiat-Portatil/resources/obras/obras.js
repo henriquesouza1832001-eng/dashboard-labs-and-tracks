@@ -616,41 +616,7 @@ async function excluirObra(idx){
   catch(e){ console.error('Erro ao excluir obra:', e); }
 }
 
-function renderItensSubtarefa() {
-  const list = $('sub-itens-list');
-  const total = subItensTemp.length;
-  const concl = subItensTemp.filter(it=>it.concluido).length;
-  const pct = total ? Math.round(concl/total*100) : 0;
-  $('sub-af-val').textContent = `(${pct}%)`;
-  list.innerHTML = total ? subItensTemp.map((it,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px">
-      <input type="checkbox" ${it.concluido?'checked':''} onchange="toggleItemSubtarefa(${i})" style="width:16px;height:16px;accent-color:var(--blue-light);cursor:pointer">
-      <span style="flex:1;font-size:13px;${it.concluido?'text-decoration:line-through;color:var(--text-muted)':''}">${it.texto}</span>
-      <button type="button" onclick="excluirItemSubtarefa(${i})" style="border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
-    </div>`).join('') : '<div style="font-size:12px;color:var(--text-muted)">nenhum item cadastrado — adicione abaixo</div>';
-  // status automático a partir dos itens (exceto se travado manualmente em Bloqueada)
-  if($('sub-status').value !== 'Bloqueada' && total) {
-    $('sub-status').value = concl===total ? 'Concluída' : (concl>0 ? 'Em Andamento' : 'Pendente');
-  }
-  if(concl===total && total && !$('sub-dt-fim-real').value) {
-    $('sub-dt-fim-real').value = hoje();
-  }
-}
-function toggleItemSubtarefa(i){ subItensTemp[i].concluido = !subItensTemp[i].concluido; renderItensSubtarefa(); }
-function excluirItemSubtarefa(i){ subItensTemp.splice(i,1); renderItensSubtarefa(); }
-function adicionarItemSubtarefa(){
-  const inp = $('sub-item-novo');
-  const texto = inp.value.trim();
-  if(!texto) return;
-  subItensTemp.push({texto, concluido:false});
-  inp.value='';
-  renderItensSubtarefa();
-  inp.focus();
-}
-$('btn-add-item')?.addEventListener('click', adicionarItemSubtarefa);
-$('sub-item-novo')?.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'){ ev.preventDefault(); adicionarItemSubtarefa(); } });
-window.toggleItemSubtarefa=toggleItemSubtarefa;
-window.excluirItemSubtarefa=excluirItemSubtarefa;
+
 
 function adicionarSubtarefa(cod, etapaIdx) {
   state.editIdx._etapaAtiva = etapaIdx;
@@ -735,16 +701,27 @@ function renderItensSubtarefa() {
           <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${(it.peso*100).toFixed(0)}%</span>
           <input type="date" value="${it.dtInicio||''}" onchange="atualizarDataItem(${i},'dtInicio',this.value)" title="Início previsto" style="width:130px">
           <input type="date" value="${it.dtFim||''}" onchange="atualizarDataItem(${i},'dtFim',this.value)" title="Fim previsto" style="width:130px">
+          <input type="date" value="${it.dtConclusao||''}" onchange="atualizarDataItem(${i},'dtConclusao',this.value)" title="Conclusão real" style="width:130px;${it.concluido?'':'opacity:0.5'}">
           <button type="button" class="btn-icon" onclick="removerItemSubtarefa(${i})" title="Remover">✕</button>
         </div>`).join('')
     : '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Nenhum item adicionado</div>';
   const pct = calcularAvancoFisicoItens(subItensTemp);
   $('sub-af-val').textContent = `(${pct.toFixed(0)}%)`;
+  const total = subItensTemp.length;
+  const concl = subItensTemp.filter(it => it.concluido).length;
+  if ($('sub-status') && $('sub-status').value !== 'Bloqueada' && total) {
+    $('sub-status').value = concl===total ? 'Concluída' : (concl>0 ? 'Em Andamento' : 'Pendente');
+  }
+  if (concl===total && total && $('sub-dt-fim-real') && !$('sub-dt-fim-real').value) {
+    $('sub-dt-fim-real').value = new Date().toISOString().slice(0,10);
+  }
 }
 
 function toggleItemSubtarefa(i) {
   subItensTemp[i].concluido = !subItensTemp[i].concluido;
-  subItensTemp[i].dtConclusao = subItensTemp[i].concluido ? new Date().toISOString().slice(0,10) : null;
+  if (subItensTemp[i].concluido && !subItensTemp[i].dtConclusao) {
+    subItensTemp[i].dtConclusao = new Date().toISOString().slice(0,10);
+  }
   renderItensSubtarefa();
 }
 

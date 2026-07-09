@@ -1324,7 +1324,7 @@ function abrirDetalheObra(cod){
   </div>`:''}`;
 
   requestAnimationFrame(()=>{
-    if(mKeys.length>=2){
+    {
       const cvcurvas = document.getElementById('cv-det-curvas');
       if(cvcurvas){
         const pw = cvcurvas.parentElement.clientWidth || 500;
