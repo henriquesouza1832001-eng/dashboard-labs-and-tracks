@@ -97,30 +97,6 @@ async def arun_exec_retry(sql_str, params=None, tentativas=3):
                     continue
             raise
 
-async def arun_exec_retry(sql_str, params=None, tentativas=3):
-    for i in range(tentativas):
-        try:
-            return await arun_exec(sql_str, params)
-        except Exception as e:
-            if "DELTA_CONCURRENT_APPEND" in str(e) or "ConcurrentAppendException" in str(e):
-                if i < tentativas - 1:
-                    print(f"[retry] conflito Delta detectado, tentativa {i+1}/{tentativas}...")
-                    await asyncio.sleep(0.5 * (i + 1))
-                    continue
-            raise
-
-async def arun_exec_retry(sql_str, params=None, tentativas=3):
-    for i in range(tentativas):
-        try:
-            return await arun_exec(sql_str, params)
-        except Exception as e:
-            if "DELTA_CONCURRENT_APPEND" in str(e) or "ConcurrentAppendException" in str(e):
-                if i < tentativas - 1:
-                    print(f"[retry] conflito Delta detectado, tentativa {i+1}/{tentativas}...")
-                    await asyncio.sleep(0.5 * (i + 1))
-                    continue
-            raise
-
 # ─── Cache RAM ─────────────────────────────────────────────────────────────────
 _cache      = {}
 _cache_lock = threading.Lock()
@@ -543,7 +519,7 @@ def _background_refresh(intervalo=300):
 async def prefetch():
     loop = asyncio.get_event_loop()
     try:
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             CREATE TABLE IF NOT EXISTS {S_OBRAS}.etapas_avancos (
                 id STRING, etapa_id STRING, obra_cod STRING,
                 avanco_fisico DOUBLE, registrado_em TIMESTAMP, registrado_por STRING
@@ -638,7 +614,7 @@ async def admin_criar(request: Request):
     if not verificar_admin(request):
         return JSONResponse({"erro": "sem permissao"}, status_code=403)
     body = await request.json()
-    await arun_exec(
+    await arun_exec_retry(
         "INSERT INTO eng_lab.`dashboard-labs-and-tracks`.usuarios (nome,email,senha_hash,role,ativo) VALUES (?,?,?,?,true)",
         [body["nome"], body["email"].lower(), hashlib.sha256(body["senha"].encode()).hexdigest(), body.get("role", "visualizador")]
     )
@@ -649,7 +625,7 @@ async def admin_toggle(uid: int, request: Request):
     if not verificar_admin(request):
         return JSONResponse({"erro": "sem permissao"}, status_code=403)
     body = await request.json()
-    await arun_exec(
+    await arun_exec_retry(
         "UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET ativo=? WHERE id=?",
         [body["ativo"], uid]
     )
@@ -660,7 +636,7 @@ async def admin_reset_senha(uid: int, request: Request):
     if not verificar_admin(request):
         return JSONResponse({"erro": "sem permissao"}, status_code=403)
     body = await request.json()
-    await arun_exec(
+    await arun_exec_retry(
         "UPDATE eng_lab.`dashboard-labs-and-tracks`.usuarios SET senha_hash=? WHERE id=?",
         [hashlib.sha256(body["senha"].encode()).hexdigest(), uid]
     )
@@ -676,23 +652,24 @@ async def create_chamado(request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
-        await arun_exec(f"""
-            INSERT INTO {S_CHAMADOS}.chamados
-                (id,titulo,categoria,tipo,prioridade,local,setor,solicitante,
-                 dataDesejada,descricao,status,responsavel,idExterno,
-                 dataAbertura,dataConclusao,atualizado_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, [
-            body["id"], body.get("titulo"), body.get("categoria"), body.get("tipo"),
-            body.get("prioridade"), body.get("local"), body.get("setor"),
-            body.get("solicitante"), body.get("dataDesejada"), body.get("descricao"),
-            body.get("status", "Aberto"), body.get("responsavel"), body.get("idExterno"),
-            body.get("dataAbertura"), body.get("dataConclusao"), u
-        ])
-        for foto in body.get("fotos", []):
-            await arun_exec(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES (?,?)", [body["id"], foto])
-        for h in body.get("historico", []):
-            await arun_exec(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES (?,?,?)", [body["id"], h.get("usuario"), h.get("acao")])
+        await arun_exec_retry(f"""
+            INSERT INTO {S_CHAMADOS}.chamados ...
+        """, [...])
+        fotos = body.get("fotos", [])
+        if fotos:
+            rows, params = [], []
+            for foto in fotos:
+                rows.append("(?,?)")
+                params += [body["id"], foto]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES {','.join(rows)}", params)
+
+        historico = body.get("historico", [])
+        if historico:
+            rows, params = [], []
+            for h in historico:
+                rows.append("(?,?,?)")
+                params += [body["id"], h.get("usuario"), h.get("acao")]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES {','.join(rows)}", params)
     except Exception as e:
         print(f"[chamados] erro ao criar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -704,24 +681,26 @@ async def update_chamado(cid: str, request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
-        await arun_exec(f"""
-            UPDATE {S_CHAMADOS}.chamados SET
-                status=?, responsavel=?, idExterno=?, prioridade=?,
-                tipo=?, dataDesejada=?, dataConclusao=?,
-                atualizado_por=?
-            WHERE id=?
-        """, [
-            body.get("status"), body.get("responsavel"), body.get("idExterno"),
-            body.get("prioridade"), body.get("tipo"), body.get("dataDesejada"),
-            body.get("dataConclusao"), u, cid
-        ])
-        await arun_exec(f"DELETE FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [cid])
-        for foto in body.get("fotos", []):
-            await arun_exec(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES (?,?)", [cid, foto])
-        await arun_exec(f"DELETE FROM {S_CHAMADOS}.historico WHERE chamado_id=?", [cid])
-        for h in body.get("historico", []):
-            await arun_exec(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES (?,?,?)",
-                [cid, h.get("usuario"), h.get("acao")])
+        await arun_exec_retry(f"""
+            UPDATE {S_CHAMADOS}.chamados SET ...
+        """, [...])
+        await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [cid])
+        fotos = body.get("fotos", [])
+        if fotos:
+            rows, params = [], []
+            for foto in fotos:
+                rows.append("(?,?)")
+                params += [cid, foto]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES {','.join(rows)}", params)
+
+        await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.historico WHERE chamado_id=?", [cid])
+        historico = body.get("historico", [])
+        if historico:
+            rows, params = [], []
+            for h in historico:
+                rows.append("(?,?,?)")
+                params += [cid, h.get("usuario"), h.get("acao")]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES {','.join(rows)}", params)
     except Exception as e:
         print(f"[chamados] erro ao atualizar {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -732,7 +711,7 @@ async def update_chamado(cid: str, request: Request):
 @app.delete("/api/chamados/{cid}")
 async def delete_chamado(cid: str):
     try:
-        await arun_exec(f"DELETE FROM {S_CHAMADOS}.chamados WHERE id = ?", [cid])
+        await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.chamados WHERE id = ?", [cid])
     except Exception as e:
         print(f"[chamados] erro ao excluir {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -758,13 +737,13 @@ async def get_areas_qr():
 @app.post("/api/chamados/areas-qr")
 async def add_area_qr(request: Request):
     body = await request.json()
-    await arun_exec(f"INSERT INTO {S_CHAMADOS}.areas_qr (id, nome, slug) VALUES (?,?,?)",
+    await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.areas_qr (id, nome, slug) VALUES (?,?,?)",
         [body["id"], body["nome"], body["slug"]])
     return JSONResponse({"ok": True})
 
 @app.delete("/api/chamados/areas-qr/{aid}")
 async def delete_area_qr(aid: str):
-    await arun_exec(f"DELETE FROM {S_CHAMADOS}.areas_qr WHERE id=?", [aid])
+    await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.areas_qr WHERE id=?", [aid])
     return JSONResponse({"ok": True})
 
 @app.get("/api/chamados/sla")
@@ -787,13 +766,18 @@ async def save_sla(request: Request):
     cfg = await request.json()
     u = get_usuario(request)
     try:
-        for prioridade, dias in cfg.items():
-            await arun_exec(f"""
+        if cfg:
+            selects, params = [], []
+            for prioridade, dias in cfg.items():
+                selects.append("SELECT ? AS prioridade, ? AS dias")
+                params += [prioridade, dias]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
                 MERGE INTO {S_HUB}.sla AS t
-                USING (SELECT ? AS prioridade) AS s ON t.prioridade = s.prioridade
-                WHEN MATCHED THEN UPDATE SET dias=?
-                WHEN NOT MATCHED THEN INSERT (prioridade, dias) VALUES (?,?)
-            """, [prioridade, dias, prioridade, dias])
+                USING ({origem}) AS s ON t.prioridade = s.prioridade
+                WHEN MATCHED THEN UPDATE SET dias=s.dias
+                WHEN NOT MATCHED THEN INSERT (prioridade, dias) VALUES (s.prioridade, s.dias)
+            """, params)
     except Exception as e:
         print(f"[sla] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -810,40 +794,56 @@ async def save_obras(request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
-        async def salvar_obra(o):
-            await arun_exec(f"""
+        obras = body.get("obras", [])
+        if obras:
+            selects, params = [], []
+            for o in obras:
+                selects.append(
+                    "SELECT ? AS cod, ? AS nome, ? AS tipo, ? AS local, ? AS responsavel, "
+                    "? AS respNome, ? AS cresp, ? AS status, ? AS dtInicioPrev, ? AS dtFimPrev, "
+                    "? AS dtInicioReal, ? AS dtFimReal, ? AS obs, ? AS atualizado_por"
+                )
+                params += [
+                    o["cod"], o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
+                    o.get("respNome"), o.get("cresp"), o.get("status"), o.get("dtInicioPrev"),
+                    o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"), o.get("obs"), u
+                ]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
                 MERGE INTO {S_OBRAS}.obras AS t
-                USING (SELECT ? AS cod) AS s ON t.cod = s.cod
+                USING ({origem}) AS s ON t.cod = s.cod
                 WHEN MATCHED THEN UPDATE SET
-                    nome=?,tipo=?,local=?,responsavel=?,respNome=?,cresp=?,status=?,
-                    dtInicioPrev=?,dtFimPrev=?,dtInicioReal=?,dtFimReal=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
+                    nome=s.nome,tipo=s.tipo,local=s.local,responsavel=s.responsavel,
+                    respNome=s.respNome,cresp=s.cresp,status=s.status,
+                    dtInicioPrev=s.dtInicioPrev,dtFimPrev=s.dtFimPrev,
+                    dtInicioReal=s.dtInicioReal,dtFimReal=s.dtFimReal,obs=s.obs,
+                    atualizado_em=current_timestamp(),atualizado_por=s.atualizado_por
                 WHEN NOT MATCHED THEN INSERT
                     (cod,nome,tipo,local,responsavel,respNome,cresp,status,
                      dtInicioPrev,dtFimPrev,dtInicioReal,dtFimReal,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, [
-                o["cod"], o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
-                o.get("respNome"), o.get("cresp"), o.get("status"), o.get("dtInicioPrev"),
-                o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"), o.get("obs"), u,
-                o["cod"], o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
-                o.get("respNome"), o.get("cresp"), o.get("status"), o.get("dtInicioPrev"),
-                o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"), o.get("obs"), u
-            ])
-            await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [o["cod"]])
-            await arun_exec(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE obra_cod=?", [o["cod"]])
+                VALUES (s.cod,s.nome,s.tipo,s.local,s.responsavel,s.respNome,s.cresp,s.status,
+                        s.dtInicioPrev,s.dtFimPrev,s.dtInicioReal,s.dtFimReal,s.obs,s.atualizado_por)
+            """, params)
+
+        cods = [o["cod"] for o in obras]
+        if cods:
+            ph = ",".join(["?" for _ in cods])
+            await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod IN ({ph})", cods)
+            await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE obra_cod IN ({ph})", cods)
+
+        etapa_rows, etapa_params = [], []
+        sub_rows, sub_params = [], []
+        for o in obras:
             for i, e in enumerate(o.get("etapas", [])):
                 eid = e.get("id") or f"{o['cod']}_e_{i}"
-                await arun_exec(f"""
-                    INSERT INTO {S_OBRAS}.etapas
-                        (id,obra_cod,nome,dt_inicio,dt_fim,dt_inicio_real,dt_fim_real,
-                         responsavel,peso,avanco_fisico,orcamento,ordem,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """, [eid, o["cod"], e.get("nome"),
-                      to_date_or_none(e.get("dtInicio")), to_date_or_none(e.get("dtFim")),
-                      to_date_or_none(e.get("dtInicioReal")), to_date_or_none(e.get("dtFimReal")),
-                      e.get("responsavel"), e.get("peso",1), e.get("avancoFisico",0),
-                      e.get("orcamento",0), i, e.get("obs"), u])
+                etapa_rows.append("(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+                etapa_params += [
+                    eid, o["cod"], e.get("nome"),
+                    to_date_or_none(e.get("dtInicio")), to_date_or_none(e.get("dtFim")),
+                    to_date_or_none(e.get("dtInicioReal")), to_date_or_none(e.get("dtFimReal")),
+                    e.get("responsavel"), e.get("peso",1), e.get("avancoFisico",0),
+                    e.get("orcamento",0), i, e.get("obs"), u
+                ]
                 for j, s in enumerate(e.get("subtarefas", [])):
                     sid = s.get("id") or f"{eid}_s_{j}"
                     itens = s.get("itens", []) or []
@@ -860,64 +860,89 @@ async def save_obras(request: Request):
                             status_calc = "Em Andamento"
                         elif total_itens:
                             status_calc = "Pendente"
-                    await arun_exec(f"""
-                        INSERT INTO {S_OBRAS}.etapa_subtarefas
-                            (id,etapa_id,obra_cod,nome,responsavel,dt_inicio,dt_fim,
-                             dt_inicio_real,dt_fim_real,orcamento,peso,avanco_fisico,
-                             status,itens,obs,ordem,atualizado_por,atualizado_em)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,current_timestamp())
-                    """, [sid, eid, o["cod"], s.get("nome"), s.get("responsavel"),
-                          to_date_or_none(s.get("dtInicio")), to_date_or_none(s.get("dtFim")),
-                          to_date_or_none(s.get("dtInicioReal")), to_date_or_none(dt_fim_real),
-                          s.get("orcamento",0), s.get("peso",1), af_calc,
-                          status_calc, json.dumps(itens), s.get("obs"), j, u])
+                    sub_rows.append("(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,current_timestamp())")
+                    sub_params += [
+                        sid, eid, o["cod"], s.get("nome"), s.get("responsavel"),
+                        to_date_or_none(s.get("dtInicio")), to_date_or_none(s.get("dtFim")),
+                        to_date_or_none(s.get("dtInicioReal")), to_date_or_none(dt_fim_real),
+                        s.get("orcamento",0), s.get("peso",1), af_calc,
+                        status_calc, json.dumps(itens), s.get("obs"), j, u
+                    ]
 
-        async def salvar_lanc(l):
-            await arun_exec(f"""
+        if etapa_rows:
+            await arun_exec_retry(f"""
+                INSERT INTO {S_OBRAS}.etapas
+                    (id,obra_cod,nome,dt_inicio,dt_fim,dt_inicio_real,dt_fim_real,
+                     responsavel,peso,avanco_fisico,orcamento,ordem,obs,atualizado_por)
+                VALUES {",".join(etapa_rows)}
+            """, etapa_params)
+
+        if sub_rows:
+            await arun_exec_retry(f"""
+                INSERT INTO {S_OBRAS}.etapa_subtarefas
+                    (id,etapa_id,obra_cod,nome,responsavel,dt_inicio,dt_fim,
+                     dt_inicio_real,dt_fim_real,orcamento,peso,avanco_fisico,
+                     status,itens,obs,ordem,atualizado_por,atualizado_em)
+                VALUES {",".join(sub_rows)}
+            """, sub_params)
+
+        lancamentos = body.get("lancamentos", [])
+        if lancamentos:
+            selects, params = [], []
+            for l in lancamentos:
+                selects.append(
+                    "SELECT ? AS id, ? AS obraCod, ? AS cresp, ? AS categoria, ? AS subcategoria, "
+                    "? AS descricao, ? AS unid, ? AS qtd, ? AS precoUnit, ? AS nfDoc, "
+                    "? AS dtLanc, ? AS fornecedor, ? AS obs, ? AS atualizado_por"
+                )
+                params += [
+                    l["id"], l.get("obraCod"), l.get("cresp"), l.get("categoria"),
+                    l.get("subcategoria"), l.get("descricao"), l.get("unid"),
+                    l.get("qtd"), l.get("precoUnit"), l.get("nfDoc"),
+                    l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u
+                ]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
                 MERGE INTO {S_OBRAS}.lancamentos AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
+                USING ({origem}) AS s ON t.id = s.id
                 WHEN MATCHED THEN UPDATE SET
-                    obraCod=?,cresp=?,categoria=?,subcategoria=?,descricao=?,unid=?,
-                    qtd=?,precoUnit=?,nfDoc=?,dtLanc=?,fornecedor=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
+                    obraCod=s.obraCod,cresp=s.cresp,categoria=s.categoria,subcategoria=s.subcategoria,
+                    descricao=s.descricao,unid=s.unid,qtd=s.qtd,precoUnit=s.precoUnit,nfDoc=s.nfDoc,
+                    dtLanc=s.dtLanc,fornecedor=s.fornecedor,obs=s.obs,
+                    atualizado_em=current_timestamp(),atualizado_por=s.atualizado_por
                 WHEN NOT MATCHED THEN INSERT
                     (id,obraCod,cresp,categoria,subcategoria,descricao,unid,
                      qtd,precoUnit,nfDoc,dtLanc,fornecedor,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, [
-                l["id"], l.get("obraCod"), l.get("cresp"), l.get("categoria"),
-                l.get("subcategoria"), l.get("descricao"), l.get("unid"),
-                l.get("qtd"), l.get("precoUnit"), l.get("nfDoc"),
-                l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u,
-                l["id"], l.get("obraCod"), l.get("cresp"), l.get("categoria"),
-                l.get("subcategoria"), l.get("descricao"), l.get("unid"),
-                l.get("qtd"), l.get("precoUnit"), l.get("nfDoc"),
-                l.get("dtLanc"), l.get("fornecedor"), l.get("obs"), u
-            ])
+                VALUES (s.id,s.obraCod,s.cresp,s.categoria,s.subcategoria,s.descricao,s.unid,
+                        s.qtd,s.precoUnit,s.nfDoc,s.dtLanc,s.fornecedor,s.obs,s.atualizado_por)
+            """, params)
 
-        async def salvar_budget(b):
-            await arun_exec(f"""
+        budgets = body.get("budget", [])
+        if budgets:
+            selects, params = [], []
+            for b in budgets:
+                selects.append(
+                    "SELECT ? AS id, ? AS obraCod, ? AS cresp, ? AS tipoVerba, ? AS budgetAprov, "
+                    "? AS capex, ? AS opex, ? AS contingencia, ? AS obs, ? AS atualizado_por"
+                )
+                params += [
+                    b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
+                    b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
+                    b.get("contingencia",0), b.get("obs"), u
+                ]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
                 MERGE INTO {S_OBRAS}.budget AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
+                USING ({origem}) AS s ON t.id = s.id
                 WHEN MATCHED THEN UPDATE SET
-                    obraCod=?,cresp=?,tipoVerba=?,budgetAprov=?,capex=?,opex=?,contingencia=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
+                    obraCod=s.obraCod,cresp=s.cresp,tipoVerba=s.tipoVerba,budgetAprov=s.budgetAprov,
+                    capex=s.capex,opex=s.opex,contingencia=s.contingencia,obs=s.obs,
+                    atualizado_em=current_timestamp(),atualizado_por=s.atualizado_por
                 WHEN NOT MATCHED THEN INSERT
                     (id,obraCod,cresp,tipoVerba,budgetAprov,capex,opex,contingencia,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
-            """, [
-                b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
-                b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
-                b.get("contingencia",0), b.get("obs"), u,
-                b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
-                b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
-                b.get("contingencia",0), b.get("obs"), u
-            ])
-        await asyncio.gather(
-            *[salvar_obra(o) for o in body.get("obras", [])],
-            *[salvar_lanc(l) for l in body.get("lancamentos", [])],
-            *[salvar_budget(b) for b in body.get("budget", [])],
-        )
+                VALUES (s.id,s.obraCod,s.cresp,s.tipoVerba,s.budgetAprov,s.capex,s.opex,s.contingencia,s.obs,s.atualizado_por)
+            """, params)
+
     except Exception as e:
         print(f"[obras] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -928,9 +953,9 @@ async def save_obras(request: Request):
 @app.delete("/api/obras/{cod}/etapas/{etapa_id}")
 async def deletar_etapa(cod: str, etapa_id: str):
     try:
-        await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=? AND id=?", [cod, etapa_id])
-        await arun_exec(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE etapa_id=?", [etapa_id])
-        await arun_exec(f"DELETE FROM {S_OBRAS}.etapas_avancos WHERE etapa_id=?", [etapa_id])
+        await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=? AND id=?", [cod, etapa_id])
+        await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE etapa_id=?", [etapa_id])
+        await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas_avancos WHERE etapa_id=?", [etapa_id])
         asyncio.create_task(asyncio.to_thread(_load_obras))
         return JSONResponse({"ok": True})
     except Exception as e:
@@ -939,8 +964,8 @@ async def deletar_etapa(cod: str, etapa_id: str):
 @app.delete("/api/obras/{cod}")
 async def delete_obra(cod: str):
     try:
-        await arun_exec(f"DELETE FROM {S_OBRAS}.obras WHERE cod=?", [cod])
-        await arun_exec(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [cod])
+        await arun_exec_retry(f"DELETE FROM {S_OBRAS}.obras WHERE cod=?", [cod])
+        await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [cod])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
@@ -950,7 +975,7 @@ async def delete_obra(cod: str):
 @app.delete("/api/obras/budget/{bid}")
 async def delete_budget(bid: str):
     try:
-        await arun_exec(f"DELETE FROM {S_OBRAS}.budget WHERE id=?", [bid])
+        await arun_exec_retry(f"DELETE FROM {S_OBRAS}.budget WHERE id=?", [bid])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
@@ -959,7 +984,7 @@ async def delete_budget(bid: str):
 @app.delete("/api/obras/lancamento/{lid}")
 async def delete_lancamento(lid: str):
     try:
-        await arun_exec(f"DELETE FROM {S_OBRAS}.lancamentos WHERE id=?", [lid])
+        await arun_exec_retry(f"DELETE FROM {S_OBRAS}.lancamentos WHERE id=?", [lid])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
@@ -977,18 +1002,18 @@ async def registrar_avanco(cod: str, etapa_id: str, request: Request):
         subtarefa_id    = body.get("subtarefaId")
         avanco_fin      = float(body.get("avancoFinanceiro", 0))
         obs_avanco      = body.get("obs", "")
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             INSERT INTO {S_OBRAS}.etapas_avancos
                 (id, etapa_id, obra_cod, subtarefa_id, avanco_fisico,
                  avanco_financeiro, obs, registrado_em, registrado_por)
             VALUES (?,?,?,?,?,?,?,?,?)
         """, [aid, etapa_id, cod, subtarefa_id, avanco, avanco_fin, obs_avanco, ts, u])
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             MERGE INTO {S_OBRAS}.etapas AS t
-            USING (SELECT '{cod}' AS obra_cod, '{body.get("nomeEtapa","")}' AS nome_etapa) AS s
+            USING (SELECT ? AS obra_cod, ? AS nome_etapa) AS s
             ON t.obra_cod = s.obra_cod AND t.nome = s.nome_etapa
-            WHEN MATCHED THEN UPDATE SET avanco_fisico = {avanco}
-        """)
+            WHEN MATCHED THEN UPDATE SET avanco_fisico = ?
+        """, [cod, body.get("nomeEtapa",""), avanco])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_invalidate("obras")
@@ -1018,38 +1043,61 @@ async def save_codin(request: Request):
     u = get_usuario(request)
     try:
         for p in body.get("pessoas", []):
-            await arun_exec(f"""
+            pessoas = body.get("pessoas", [])
+        if pessoas:
+            selects, params = [], []
+            for p in pessoas:
+                selects.append(
+                    "SELECT ? AS id, ? AS nome, ? AS cargo, ? AS setor, ? AS status, ? AS lib, ? AS obs, ? AS atualizado_por"
+                )
+                params += [p["id"], p.get("nome"), p.get("cargo"), p.get("setor"),
+                           p.get("status"), p.get("lib"), p.get("obs"), u]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
                 MERGE INTO {S_CODIN}.pessoas AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
+                USING ({origem}) AS s ON t.id = s.id
                 WHEN MATCHED THEN UPDATE SET
-                    nome=?,cargo=?,setor=?,status=?,lib=?,obs=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
+                    nome=s.nome,cargo=s.cargo,setor=s.setor,status=s.status,lib=s.lib,obs=s.obs,
+                    atualizado_em=current_timestamp(),atualizado_por=s.atualizado_por
                 WHEN NOT MATCHED THEN INSERT (id,nome,cargo,setor,status,lib,obs,atualizado_por)
-                    VALUES (?,?,?,?,?,?,?,?)
-            """, [
-                p["id"], p.get("nome"), p.get("cargo"), p.get("setor"),
-                p.get("status"), p.get("lib"), p.get("obs"), u,
-                p["id"], p.get("nome"), p.get("cargo"), p.get("setor"),
-                p.get("status"), p.get("lib"), p.get("obs"), u
-            ])
-        for p in body.get("pontos", []):
-            ponto_id = p.get("id") or p.get("codin") or p.get("nome")
-            await arun_exec(f"""
+                    VALUES (s.id,s.nome,s.cargo,s.setor,s.status,s.lib,s.obs,s.atualizado_por)
+            """, params)
+
+        pontos = body.get("pontos", [])
+        for p in pontos:
+            p["_id"] = p.get("id") or p.get("codin") or p.get("nome")
+        if pontos:
+            selects, params = [], []
+            for p in pontos:
+                selects.append(
+                    "SELECT ? AS id, ? AS nome, ? AS codin, ? AS tipo, ? AS senhaHash, ? AS atualizado_por"
+                )
+                params += [p["_id"], p.get("nome"), p.get("codin"), p.get("tipo"), p.get("senhaHash"), u]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
                 MERGE INTO {S_CODIN}.pontos AS t
-                USING (SELECT ? AS id) AS s ON t.id = s.id
+                USING ({origem}) AS s ON t.id = s.id
                 WHEN MATCHED THEN UPDATE SET
-                    nome=?,codin=?,tipo=?,senhaHash=?,
-                    atualizado_em=current_timestamp(),atualizado_por=?
+                    nome=s.nome,codin=s.codin,tipo=s.tipo,senhaHash=s.senhaHash,
+                    atualizado_em=current_timestamp(),atualizado_por=s.atualizado_por
                 WHEN NOT MATCHED THEN INSERT (id,nome,codin,tipo,senhaHash,atualizado_por)
-                    VALUES (?,?,?,?,?,?)
-            """, [
-                ponto_id, p.get("nome"), p.get("codin"), p.get("tipo"), p.get("senhaHash"), u,
-                ponto_id, p.get("nome"), p.get("codin"), p.get("tipo"), p.get("senhaHash"), u
-            ])
-            await arun_exec(f"DELETE FROM {S_CODIN}.ponto_leitores WHERE ponto_id=?", [ponto_id])
-            for leitor in p.get("leitores", []):
-                await arun_exec(f"INSERT INTO {S_CODIN}.ponto_leitores (ponto_id, leitor_id) VALUES (?,?)",
-                    [ponto_id, leitor])
+                    VALUES (s.id,s.nome,s.codin,s.tipo,s.senhaHash,s.atualizado_por)
+            """, params)
+
+            ponto_ids = [p["_id"] for p in pontos]
+            ph = ",".join(["?" for _ in ponto_ids])
+            await arun_exec_retry(f"DELETE FROM {S_CODIN}.ponto_leitores WHERE ponto_id IN ({ph})", ponto_ids)
+
+            leitor_rows, leitor_params = [], []
+            for p in pontos:
+                for leitor in p.get("leitores", []):
+                    leitor_rows.append("(?,?)")
+                    leitor_params += [p["_id"], leitor]
+            if leitor_rows:
+                await arun_exec_retry(f"""
+                    INSERT INTO {S_CODIN}.ponto_leitores (ponto_id, leitor_id)
+                    VALUES {",".join(leitor_rows)}
+                """, leitor_params)
     except Exception as e:
         print(f"[codin] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -1077,7 +1125,7 @@ async def listar_solicitacoes_codin():
 async def criar_solicitacao_codin(request: Request):
     body = await request.json()
     try:
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             INSERT INTO {S_CODIN}.solicitacoes (id, codin, nome, email, cargo, setor, motivo, status, data)
             VALUES (?,?,?,?,?,?,?,?,?)
         """, [
@@ -1096,12 +1144,12 @@ async def atualizar_solicitacao_codin(sid: str, request: Request):
     novo_status = body["status"]
     try:
         if novo_status in ("Aprovada", "Rejeitada"):
-            await arun_exec(
+            await arun_exec_retry(
                 f"UPDATE {S_CODIN}.solicitacoes SET status=?, data_resposta=current_timestamp() WHERE id=?",
                 [novo_status, sid]
             )
         else:
-            await arun_exec(f"UPDATE {S_CODIN}.solicitacoes SET status=? WHERE id=?", [novo_status, sid])
+            await arun_exec_retry(f"UPDATE {S_CODIN}.solicitacoes SET status=? WHERE id=?", [novo_status, sid])
     except Exception as e:
         print(f"[codin] erro ao atualizar solicitacao: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -1555,7 +1603,7 @@ async def save_atividades(request: Request):
     u = get_usuario(request)
     try:
         for a in body.get("atividades", []):
-            await arun_exec(f"""
+            await arun_exec_retry(f"""
                 MERGE INTO {S_ATIVIDADES}.atividades AS t
                 USING (SELECT ? AS id) AS s ON t.id = s.id
                 WHEN MATCHED THEN UPDATE SET
@@ -1578,9 +1626,9 @@ async def save_atividades(request: Request):
             ])
             # só atualiza comentários se o payload tem comentários (evita apagar os existentes)
             if "comentarios" in a:
-                await arun_exec(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [a["id"]])
+                await arun_exec_retry(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [a["id"]])
                 for c in a.get("comentarios", []):
-                    await arun_exec(f"""
+                    await arun_exec_retry(f"""
                         INSERT INTO {S_ATIVIDADES}.comentarios (atividade_id, autor, texto)
                         VALUES (?,?,?)
                     """, [a["id"], c.get("autor"), c.get("texto")])
@@ -1594,8 +1642,8 @@ async def save_atividades(request: Request):
 @app.delete("/api/atividades/{aid}")
 async def delete_atividade(aid: str):
     try:
-        await arun_exec(f"DELETE FROM {S_ATIVIDADES}.atividades WHERE id=?", [aid])
-        await arun_exec(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [aid])
+        await arun_exec_retry(f"DELETE FROM {S_ATIVIDADES}.atividades WHERE id=?", [aid])
+        await arun_exec_retry(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [aid])
     except Exception as e:
         print(f"[atividades] erro ao excluir {aid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -1607,7 +1655,7 @@ async def add_comentario(aid: str, request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             INSERT INTO {S_ATIVIDADES}.comentarios (atividade_id, autor, texto, data)
             VALUES (?,?,?,current_timestamp())
         """, [aid, body.get("autor"), body.get("texto")])
@@ -1621,12 +1669,17 @@ async def add_comentario(aid: str, request: Request):
 async def rewrite_comentarios(aid: str, request: Request):
     body = await request.json()
     try:
-        await arun_exec(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [aid])
-        for c in body.get("comentarios", []):
-            await arun_exec(f"""
+        await arun_exec_retry(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [aid])
+        comentarios = body.get("comentarios", [])
+        if comentarios:
+            rows, params = [], []
+            for c in comentarios:
+                rows.append("(?,?,?)")
+                params += [aid, c.get("autor"), c.get("texto")]
+            await arun_exec_retry(f"""
                 INSERT INTO {S_ATIVIDADES}.comentarios (atividade_id, autor, texto)
-                VALUES (?,?,?)
-            """, [aid, c.get("autor"), c.get("texto")])
+                VALUES {",".join(rows)}
+            """, params)
     except Exception as e:
         print(f"[comentario] erro ao reescrever: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -1665,24 +1718,24 @@ async def save_hub_config(request: Request):
     dados   = await request.json()
     usuario = get_usuario(request)
     try:
-        await arun_exec(f"DELETE FROM {S_HUB}.pessoas")
+        await arun_exec_retry(f"DELETE FROM {S_HUB}.pessoas")
         for p in dados.get("pessoas", []):
-            await arun_exec(f"INSERT INTO {S_HUB}.pessoas (id, nome, cargo) VALUES (?,?,?)",
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.pessoas (id, nome, cargo) VALUES (?,?,?)",
                 [p.get("id"), p.get("nome"), p.get("cargo")])
-        await arun_exec(f"DELETE FROM {S_HUB}.cresp")
+        await arun_exec_retry(f"DELETE FROM {S_HUB}.cresp")
         for c in dados.get("cresp", []):
-            await arun_exec(f"INSERT INTO {S_HUB}.cresp (id, descricao, area) VALUES (?,?,?)",
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.cresp (id, descricao, area) VALUES (?,?,?)",
                 [c.get("id"), c.get("descricao"), c.get("area")])
-        await arun_exec(f"DELETE FROM {S_HUB}.tipos_obra")
+        await arun_exec_retry(f"DELETE FROM {S_HUB}.tipos_obra")
         for nome in dados.get("tiposObra", []):
-            await arun_exec(f"INSERT INTO {S_HUB}.tipos_obra (nome) VALUES (?)", [nome])
-        await arun_exec(f"DELETE FROM {S_HUB}.categorias_custo")
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.tipos_obra (nome) VALUES (?)", [nome])
+        await arun_exec_retry(f"DELETE FROM {S_HUB}.categorias_custo")
         for cat in dados.get("categoriasCusto", []):
-            await arun_exec(f"INSERT INTO {S_HUB}.categorias_custo (categoria, subcategoria) VALUES (?,?)",
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.categorias_custo (categoria, subcategoria) VALUES (?,?)",
                 [cat.get("categoria"), cat.get("subcategoria")])
-        await arun_exec(f"DELETE FROM {S_HUB}.leitores")
+        await arun_exec_retry(f"DELETE FROM {S_HUB}.leitores")
         for l in dados.get("leitores", []):
-            await arun_exec(f"INSERT INTO {S_HUB}.leitores (id, nome) VALUES (?,?)",
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.leitores (id, nome) VALUES (?,?)",
                 [l.get("id"), l.get("nome")])
     except Exception as e:
         print(f"[hub/config] erro ao salvar: {e}")
@@ -1928,7 +1981,7 @@ async def criar_preventiva_qr(request: Request):
     body = await request.json()
     try:
         pid = body["id"]
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.preventivas
                 (id, uc_id, tecnico_id, data_prevista, data_realizada,
                  status, obs, origem, atualizado_por,
@@ -1943,18 +1996,29 @@ async def criar_preventiva_qr(request: Request):
             body.get("duracaoMin"), body.get("numPessoas"),
             body.get("foto")
         ])
-        for i, item in enumerate(body.get("checklist", [])):
-            nome = item if isinstance(item, str) else item.get("item", "")
-            conc = False if isinstance(item, str) else bool(item.get("concluido", False))
-            await arun_exec(f"""
-                INSERT INTO {S_CONFORTO}.preventiva_checklist (id,preventiva_id,item,concluido,ordem,atualizado_por)
-                VALUES (?,?,?,?,?,?)
-            """, [f"{pid}_c_{i}", pid, nome, conc, i, "qr"])
-        for tec in body.get("tecnicos", []):
-            await arun_exec(f"""
-                INSERT INTO {S_CONFORTO}.preventiva_tecnicos (id,preventiva_id,nome_tecnico,atualizado_por)
-                VALUES (?,?,?,?)
-            """, [f"{pid}_t_{tec}", pid, tec, "qr"])
+        checklist = body.get("checklist", [])
+        if checklist:
+            rows, params = [], []
+            for i, item in enumerate(checklist):
+                nome = item if isinstance(item, str) else item.get("item", "")
+                conc = False if isinstance(item, str) else bool(item.get("concluido", False))
+                rows.append("(?,?,?,?,?,?)")
+                params += [f"{pid}_c_{i}", pid, nome, conc, i, "qr"]
+            await arun_exec_retry(f"""
+                insert into {S_CONFORTO}.preventiva_checklist (id,preventiva_id,item,concluido,ordem,atualizado_por)
+                values {','.join(rows)}
+            """, params)
+
+        tecnicos = body.get("tecnicos", [])
+        if tecnicos:
+            rows, params = [], []
+            for tec in tecnicos:
+                rows.append("(?,?,?,?)")
+                params += [f"{pid}_t_{tec}", pid, tec, "qr"]
+            await arun_exec_retry(f"""
+                insert into {S_CONFORTO}.preventiva_tecnicos (id,preventiva_id,nome_tecnico,atualizado_por)
+                values {','.join(rows)}
+            """, params)
     except Exception as e:
         import traceback
         print(f"[conforto] erro ao criar preventiva qr: {e}")
@@ -1968,7 +2032,7 @@ async def criar_manutencao_qr(request: Request):
     body = await request.json()
     try:
         mid = body["id"]
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.manutencoes
                 (id, uc_id, tecnico_id, tipo, falha, data_abertura,
                  status, obs, atualizado_por, foto_url)
@@ -1982,26 +2046,37 @@ async def criar_manutencao_qr(request: Request):
             body.get("obs", ""), "qr",
             body.get("foto")
         ])
-        for tec in body.get("tecnicos", []):
-            await arun_exec(f"""
-                INSERT INTO {S_CONFORTO}.manutencao_tecnicos (id,manutencao_id,nome_tecnico,atualizado_por)
-                VALUES (?,?,?,?)
-            """, [f"{mid}_t_{tec}", mid, tec, "qr"])
+        tecnicos = body.get("tecnicos", [])
+        if tecnicos:
+            rows, params = [], []
+            for tec in tecnicos:
+                rows.append("(?,?,?,?)")
+                params += [f"{mid}_t_{tec}", mid, tec, "qr"]
+            await arun_exec_retry(f"""
+                insert into {S_CONFORTO}.manutencao_tecnicos (id,manutencao_id,nome_tecnico,atualizado_por)
+                VALUES {','.join(rows)}
+            """, params)
+
         if body.get("inicioEm"):
-            await arun_exec(f"""
+            await arun_exec_retry(f"""
                 INSERT INTO {S_CONFORTO}.manutencao_sessoes
                     (id,manutencao_id,tipo_sessao,inicio_em,fim_em,duracao_min,motivo_pausa,atualizado_por,criado_em)
                 VALUES (?,?,?,?,?,?,?,?,current_timestamp())
-            """, [f"{mid}_t_0", mid, "trabalho",
-                  body.get("inicioEm"), body.get("fimEm"),
+            """, [f"{mid}_t_0", mid, "trabalho", body.get("inicioEm"), body.get("fimEm"),
                   body.get("duracaoMin"), None, "qr"])
-        for peca in body.get("pecasSelecionadas", []):
-            await arun_exec(f"""
-                INSERT INTO {S_CONFORTO}.manutencao_pecas (id,manutencao_id,peca_id,nome_peca,quantidade,atualizado_por)
-                VALUES (?,?,?,?,?,?)
-            """, [f"{mid}_p_{peca.get('pecaId','')}", mid,
-                  peca.get("pecaId"), peca.get("nome"),
-                  peca.get("quantidade", 1), "qr"])
+
+        pecas = body.get("pecasSelecionadas", [])
+        if pecas:
+            rows, params = [], []
+            for peca in pecas:
+                rows.append("(?,?,?,?,?,?)")
+                params += [f"{mid}_p_{peca.get('pecaId','')}", mid,
+                            peca.get("pecaId"), peca.get("nome"),
+                            peca.get("quantidade", 1), "qr"]
+            await arun_exec_retry(f"""
+                insert into {S_CONFORTO}.manutencao_pecas (id,manutencao_id,peca_id,nome_peca,quantidade,atualizado_por)
+                VALUES {','.join(rows)}
+            """, params)
         cache_invalidate("conforto")
         asyncio.create_task(asyncio.to_thread(_load_conforto))
         return JSONResponse({"ok": True})
@@ -2021,20 +2096,24 @@ async def atualizar_manutencao(mid: str, request: Request):
             sets.append("status=?"); vals.append(body["status"])
         if "fimEm" in body:
             sets.append("data_fechamento=?"); vals.append(body["fimEm"])
-        if "pausas" in body:
+        if "pausas" in body and body["pausas"]:
+            rows, params = [], []
             for pausa in body["pausas"]:
                 sess_id = f"{mid}_p_{pausa.get('motivo','')[:8]}_{int(asyncio.get_event_loop().time())}"
-                await arun_exec(f"""
-                    INSERT INTO {S_CONFORTO}.manutencao_sessoes
-                        (id,manutencao_id,tipo_sessao,inicio_em,fim_em,duracao_min,motivo_pausa,atualizado_por,criado_em)
-                    VALUES (?,?,?,?,?,?,?,?,current_timestamp())
-                """, [sess_id, mid, "pausa", pausa.get("inicio"), pausa.get("fim"), pausa.get("duracaoMin"), pausa.get("motivo"), "qr"])
+                rows.append("(?,?,?,?,?,?,?,?,current_timestamp())")
+                params += [sess_id, mid, "pausa", pausa.get("inicio"), pausa.get("fim"),
+                            pausa.get("duracaoMin"), pausa.get("motivo"), "qr"]
+            await arun_exec_retry(f"""
+                insert into {S_CONFORTO}.manutencao_sessoes
+                    (id,manutencao_id,tipo_sessao,inicio_em,fim_em,duracao_min,motivo_pausa,atualizado_por,criado_em)
+                VALUES {','.join(rows)}
+            """, params)
         if "obs" in body:
             sets.append("obs=?"); vals.append(body["obs"])
         if not sets:
             return JSONResponse({"ok": True})
         vals.append(mid)
-        await arun_exec(
+        await arun_exec_retry(
             f"UPDATE {S_CONFORTO}.manutencoes SET {', '.join(sets)} WHERE id=?",
             vals
         )
@@ -2088,7 +2167,7 @@ async def concluir_manutencao(mid: str, request: Request):
     try:
         duracao_atual = body.get("duracaoMin", 0) or 0
         sess_id = f"{mid}_t_{int(asyncio.get_event_loop().time())}"
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.manutencao_sessoes
                 (id,manutencao_id,tipo_sessao,inicio_em,fim_em,duracao_min,motivo_pausa,atualizado_por,criado_em)
             VALUES (?,?,?,?,?,?,?,?,current_timestamp())
@@ -2099,20 +2178,27 @@ async def concluir_manutencao(mid: str, request: Request):
             f"SELECT COALESCE(SUM(duracao_min),0) AS total FROM {S_CONFORTO}.manutencao_sessoes WHERE manutencao_id=? AND tipo_sessao='trabalho'", [mid]
         )
         duracao_total = (rows or [{"total": 0}])[0]["total"]
-        await arun_exec(f"""
+        await arun_exec_retry(f"""
             UPDATE {S_CONFORTO}.manutencoes SET
                 status=?, data_fechamento=?, foto_url=?, obs=?, atualizado_por=?
             WHERE id=?
         """, ["Concluída", body.get("fimEm"), body.get("foto"), body.get("obs",""), "qr", mid])
-        for tec in body.get("tecnicos", []):
-            existing = await arun_query(
-                f"SELECT id FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id=? AND nome_tecnico=?", [mid, tec]
+        tecnicos_novos = body.get("tecnicos", [])
+        if tecnicos_novos:
+            existentes = await arun_query(
+                f"SELECT nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id=?", [mid]
             )
-            if not existing:
-                await arun_exec(f"""
+            nomes_existentes = {e["nome_tecnico"] for e in (existentes or [])}
+            faltantes = [t for t in tecnicos_novos if t not in nomes_existentes]
+            if faltantes:
+                rows, params = [], []
+                for tec in faltantes:
+                    rows.append("(?,?,?,?)")
+                    params += [f"{mid}_t_{tec}", mid, tec, "qr"]
+                await arun_exec_retry(f"""
                     INSERT INTO {S_CONFORTO}.manutencao_tecnicos (id,manutencao_id,nome_tecnico,atualizado_por)
-                    VALUES (?,?,?,?)
-                """, [f"{mid}_t_{tec}", mid, tec, "qr"])
+                    VALUES {','.join(rows)}
+                """, params)
         cache_invalidate("conforto")
         asyncio.create_task(asyncio.to_thread(_load_conforto))
         return JSONResponse({"ok": True, "duracaoTotal": duracao_total})
@@ -2126,18 +2212,23 @@ async def concluir_manutencao(mid: str, request: Request):
 async def criar_requisicao_qr(request: Request):
     body = await request.json()
     try:
-        for req in body.get("requisicoes", []):
-            await arun_exec(f"""
+        requisicoes = body.get("requisicoes", [])
+        if requisicoes:
+            rows, params = [], []
+            for req in requisicoes:
+                rows.append("(?,?,?,?,?,?,?,?)")
+                params += [
+                    req["id"], req.get("pecaId"), req.get("quantidade", 1),
+                    req.get("destino", "Manutenção QR"),
+                    req.get("solicitante", "qr"),
+                    None, "Pendente", "qr"
+                ]
+            await arun_exec_retry(f"""
                 INSERT INTO {S_CONFORTO}.requisicoes
                     (id, peca_id, quantidade, destino, solicitante_id,
                      data_necessidade, status, atualizado_por)
-                VALUES (?,?,?,?,?,?,?,?)
-            """, [
-                req["id"], req.get("pecaId"), req.get("quantidade", 1),
-                req.get("destino", "Manutenção QR"),
-                req.get("solicitante", "qr"),
-                None, "Pendente", "qr"
-            ])
+                VALUES {','.join(rows)}
+            """, params)
         cache_invalidate("conforto")
         asyncio.create_task(asyncio.to_thread(_load_conforto))
         return JSONResponse({"ok": True})
@@ -2205,7 +2296,7 @@ async def portal_atividades(request: Request):
 @app.delete("/api/conforto/preventivas/{pid}")
 async def deletar_preventiva(pid: str, request: Request):
     try:
-        await arun_exec(f"DELETE FROM {S_CONFORTO}.preventivas WHERE id=?", [pid])
+        await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.preventivas WHERE id=?", [pid])
         cache_invalidate("conforto")
         asyncio.create_task(asyncio.to_thread(_load_conforto))
         return JSONResponse({"ok": True})
