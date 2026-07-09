@@ -1137,9 +1137,23 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.font = '700 10px var(--mono,monospace)';
-  ctx.textAlign = 'left';
   ctx.fillStyle = '#e3711a';
-  ctx.fillText(`${ultR.toFixed(1)}%`, Math.min(xPos(curvaReal.length-1)+8, m.l+cw-32), yPos(ultR)+3);
+  const xUlt = xPos(curvaReal.length-1);
+  const yUlt = yPos(ultR);
+  const rotuloTxt = `${ultR.toFixed(1)}%`;
+  const larguraRotulo = ctx.measureText(rotuloTxt).width;
+  const cabeNaDireita = xUlt + 10 + larguraRotulo <= m.l + cw;
+  if (cabeNaDireita) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(rotuloTxt, xUlt + 10, yUlt);
+  } else {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const acimaCabe = yUlt - 12 >= m.t;
+    ctx.fillText(rotuloTxt, xUlt, acimaCabe ? yUlt - 10 : yUlt + 18);
+  }
+  ctx.textBaseline = 'alphabetic';
   const step = Math.max(1, Math.floor(meses.length/6));
   ctx.fillStyle = 'rgba(139,148,158,0.8)';
   ctx.font = '9px var(--font,sans-serif)';
