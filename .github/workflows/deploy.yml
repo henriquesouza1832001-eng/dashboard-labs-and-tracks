@@ -4,9 +4,14 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: deploy-databricks
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Install Databricks CLI
         run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
