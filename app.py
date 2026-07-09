@@ -170,32 +170,54 @@ def inject(html_path, dados):
     return HTMLResponse(html.replace("</body>", f"{script}\n</body>"),
                          headers={"Cache-Control": "no-store"})
 
-# ─── Loaders (síncronos — rodam em thread pool no startup e no refresh) ────────
-def _load_chamados():
-    rows = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados ORDER BY dataAbertura DESC")
-    ids = [r["id"] for r in rows]
+def _transformar_chamados(rows, fotos, historico):
     fotos_map = {}
+    for f in fotos:
+        fotos_map.setdefault(f["chamado_id"], []).append(f["url"])
     historico_map = {}
-    if ids:
-        fotos = run_query(f"SELECT chamado_id, url FROM {S_CHAMADOS}.fotos")
-        for f in fotos:
-            fotos_map.setdefault(f["chamado_id"], []).append(f["url"])
-        historico = run_query(f"SELECT chamado_id, usuario, acao, data FROM {S_CHAMADOS}.historico ORDER BY data")
-        for h in historico:
-            historico_map.setdefault(h["chamado_id"], []).append(h)
+    for h in historico:
+        historico_map.setdefault(h["chamado_id"], []).append(h)
     for r in rows:
         r["fotos"]     = fotos_map.get(r["id"], [])
         r["historico"] = historico_map.get(r["id"], [])
         for f in ("dataAbertura", "dataConclusao", "atualizado_em"):
             r[f] = _ts(r.get(f))
+    return rows
+
+# ─── Loaders (síncronos — rodam em thread pool no startup e no refresh) ────────
+def _load_chamados():
+    rows = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados ORDER BY dataAbertura DESC")
+    ids = [r["id"] for r in rows]
+    fotos, historico = [], []
+    if ids:
+        fotos = run_query(f"SELECT chamado_id, url FROM {S_CHAMADOS}.fotos")
+        historico = run_query(f"SELECT chamado_id, usuario, acao, data FROM {S_CHAMADOS}.historico ORDER BY data")
+    rows = _transformar_chamados(rows, fotos, historico)
     payload = {"chamados": rows}
     cache_set("chamados", payload)
     return payload
 
-def _load_obras():
-    obras = run_query(f"SELECT * FROM {S_OBRAS}.obras")
-    etapas_todas   = run_query(f"SELECT * FROM {S_OBRAS}.etapas ORDER BY ordem ASC")
-    subtarefas_todas = run_query(f"SELECT * FROM {S_OBRAS}.etapa_subtarefas ORDER BY ordem ASC")
+def _atualizar_cache_chamados_parcial(ids_chamados):
+    if not ids_chamados:
+        return
+    payload = cache_get("chamados")
+    if payload is None:
+        _load_chamados()
+        return
+    ph = ",".join(["?" for _ in ids_chamados])
+    rows_novos = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados WHERE id IN ({ph})", ids_chamados)
+    fotos_novas = run_query(f"SELECT chamado_id, url FROM {S_CHAMADOS}.fotos WHERE chamado_id IN ({ph})", ids_chamados)
+    historico_novo = run_query(
+        f"SELECT chamado_id, usuario, acao, data FROM {S_CHAMADOS}.historico WHERE chamado_id IN ({ph}) ORDER BY data",
+        ids_chamados
+    )
+    rows_novos = _transformar_chamados(rows_novos, fotos_novas, historico_novo)
+
+    ids_set = set(ids_chamados)
+    payload["chamados"] = [c for c in payload.get("chamados", []) if c["id"] not in ids_set] + rows_novos
+    cache_set("chamados", payload)
+
+def _transformar_obras(obras, etapas_todas, subtarefas_todas, budget, lancs, avancos):
     sub_map = {}
     for s in subtarefas_todas:
         s["dtInicio"]     = str(s.pop("dt_inicio", None) or "")
@@ -222,23 +244,53 @@ def _load_obras():
     for o in obras:
         o["etapas"]        = etapas_map.get(o["cod"], [])
         o["atualizado_em"] = _ts(o.get("atualizado_em"))
-    budget = run_query(f"SELECT * FROM {S_OBRAS}.budget")
     for b in budget:
         b["atualizado_em"] = _ts(b.get("atualizado_em"))
-    lancs = run_query(f"SELECT * FROM {S_OBRAS}.lancamentos ORDER BY dtLanc DESC")
     for l in lancs:
         l["atualizado_em"] = _ts(l.get("atualizado_em"))
-    avancos = run_query(f"SELECT * FROM {S_OBRAS}.etapas_avancos ORDER BY registrado_em ASC")
     for a in avancos:
         a["registrado_em"] = _ts(a.get("registrado_em"))
+    return obras, budget, lancs, avancos
+
+def _load_obras():
+    obras = run_query(f"SELECT * FROM {S_OBRAS}.obras")
+    etapas_todas   = run_query(f"SELECT * FROM {S_OBRAS}.etapas ORDER BY ordem ASC")
+    subtarefas_todas = run_query(f"SELECT * FROM {S_OBRAS}.etapa_subtarefas ORDER BY ordem ASC")
+    budget = run_query(f"SELECT * FROM {S_OBRAS}.budget")
+    lancs = run_query(f"SELECT * FROM {S_OBRAS}.lancamentos ORDER BY dtLanc DESC")
+    avancos = run_query(f"SELECT * FROM {S_OBRAS}.etapas_avancos ORDER BY registrado_em ASC")
+    obras, budget, lancs, avancos = _transformar_obras(obras, etapas_todas, subtarefas_todas, budget, lancs, avancos)
     payload = {"versao": "2.0", "obras": obras, "budget": budget, "lancamentos": lancs, "avancos": avancos, "revisoes": []}
     cache_set("obras", payload)
     return payload
 
-def _load_codin():
-    pessoas = run_query(f"SELECT * FROM {S_CODIN}.pessoas")
-    pontos  = run_query(f"SELECT * FROM {S_CODIN}.pontos")
-    leitores_todos = run_query(f"SELECT ponto_id, leitor_id FROM {S_CODIN}.ponto_leitores")
+def _atualizar_cache_obras_parcial(cods_obras):
+    if not cods_obras:
+        return
+    payload = cache_get("obras")
+    if payload is None:
+        _load_obras()
+        return
+    ph = ",".join(["?" for _ in cods_obras])
+    obras_novas = run_query(f"SELECT * FROM {S_OBRAS}.obras WHERE cod IN ({ph})", cods_obras)
+    etapas_novas = run_query(f"SELECT * FROM {S_OBRAS}.etapas WHERE obra_cod IN ({ph}) ORDER BY ordem ASC", cods_obras)
+    subtarefas_novas = run_query(f"SELECT * FROM {S_OBRAS}.etapa_subtarefas WHERE obra_cod IN ({ph}) ORDER BY ordem ASC", cods_obras)
+    budget_novo = run_query(f"SELECT * FROM {S_OBRAS}.budget WHERE obraCod IN ({ph})", cods_obras)
+    lancs_novos = run_query(f"SELECT * FROM {S_OBRAS}.lancamentos WHERE obraCod IN ({ph}) ORDER BY dtLanc DESC", cods_obras)
+    avancos_novos = run_query(f"SELECT * FROM {S_OBRAS}.etapas_avancos WHERE obra_cod IN ({ph}) ORDER BY registrado_em ASC", cods_obras)
+
+    obras_novas, budget_novo, lancs_novos, avancos_novos = _transformar_obras(
+        obras_novas, etapas_novas, subtarefas_novas, budget_novo, lancs_novos, avancos_novos
+    )
+
+    cods_set = set(cods_obras)
+    payload["obras"] = [o for o in payload.get("obras", []) if o["cod"] not in cods_set] + obras_novas
+    payload["budget"] = [b for b in payload.get("budget", []) if b.get("obraCod") not in cods_set] + budget_novo
+    payload["lancamentos"] = [l for l in payload.get("lancamentos", []) if l.get("obraCod") not in cods_set] + lancs_novos
+    payload["avancos"] = [a for a in payload.get("avancos", []) if a.get("obra_cod") not in cods_set] + avancos_novos
+    cache_set("obras", payload)
+
+def _transformar_codin(pessoas, pontos, leitores_todos):
     leitores_map = {}
     for l in leitores_todos:
         leitores_map.setdefault(l["ponto_id"], []).append(l["leitor_id"])
@@ -247,9 +299,46 @@ def _load_codin():
         p["leitores"] = leitores_map.get(p["id"], [])
     for x in pessoas + pontos:
         x["atualizado_em"] = _ts(x.get("atualizado_em"))
+    return pessoas, pontos
+
+def _load_codin():
+    pessoas = run_query(f"SELECT * FROM {S_CODIN}.pessoas")
+    pontos  = run_query(f"SELECT * FROM {S_CODIN}.pontos")
+    leitores_todos = run_query(f"SELECT ponto_id, leitor_id FROM {S_CODIN}.ponto_leitores")
+    pessoas, pontos = _transformar_codin(pessoas, pontos, leitores_todos)
     payload = {"pessoas": pessoas, "pontos": pontos, "acessos": [], "leitores": []}
     cache_set("codin", payload)
     return payload
+
+def _atualizar_cache_codin_parcial(ids_pessoas, ids_pontos):
+    payload = cache_get("codin")
+    if payload is None:
+        _load_codin()
+        return
+    if ids_pessoas:
+        ph = ",".join(["?" for _ in ids_pessoas])
+        pessoas_novas = run_query(f"SELECT * FROM {S_CODIN}.pessoas WHERE id IN ({ph})", ids_pessoas)
+        pessoas_novas, _ = _transformar_codin(pessoas_novas, [], [])
+        ids_set = set(ids_pessoas)
+        payload["pessoas"] = [p for p in payload.get("pessoas", []) if p["id"] not in ids_set] + pessoas_novas
+    if ids_pontos:
+        ph = ",".join(["?" for _ in ids_pontos])
+        pontos_novos = run_query(f"SELECT * FROM {S_CODIN}.pontos WHERE id IN ({ph})", ids_pontos)
+        leitores_novos = run_query(f"SELECT ponto_id, leitor_id FROM {S_CODIN}.ponto_leitores WHERE ponto_id IN ({ph})", ids_pontos)
+        _, pontos_novos = _transformar_codin([], pontos_novos, leitores_novos)
+        ids_set = set(ids_pontos)
+        payload["pontos"] = [p for p in payload.get("pontos", []) if p["id"] not in ids_set] + pontos_novos
+    cache_set("codin", payload)
+
+def _transformar_atividades(rows, comentarios_todos):
+    comentarios_map = {}
+    for c in comentarios_todos:
+        c["data"] = _ts(c.get("data")) or ""
+        comentarios_map.setdefault(c["atividade_id"], []).append(c)
+    for r in rows:
+        r["comentarios"]   = comentarios_map.get(r["id"], [])
+        r["atualizado_em"] = _ts(r.get("atualizado_em"))
+    return rows
 
 def _load_atividades():
     rows = run_query(f"""
@@ -264,62 +353,45 @@ def _load_atividades():
     for r in rows:
         r.pop("_rn", None)
     comentarios_todos = run_query(f"SELECT atividade_id, autor, texto, data FROM {S_ATIVIDADES}.comentarios ORDER BY data")
-    comentarios_map = {}
-    for c in comentarios_todos:
-        c["data"] = _ts(c.get("data")) or ""
-        comentarios_map.setdefault(c["atividade_id"], []).append(c)
-    for r in rows:
-        r["comentarios"]   = comentarios_map.get(r["id"], [])
-        r["atualizado_em"] = _ts(r.get("atualizado_em"))
+    rows = _transformar_atividades(rows, comentarios_todos)
     payload = {"versao": "2.0", "atividades": rows}
     cache_set("atividades", payload)
     return payload
 
-def _load_conforto():
-    def safe_json(v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except:
-                return []
-        return v or []
+def _atualizar_cache_atividades_parcial(ids_atividades):
+    if not ids_atividades:
+        return
+    payload = cache_get("atividades")
+    if payload is None:
+        _load_atividades()
+        return
+    ph = ",".join(["?" for _ in ids_atividades])
+    rows_novos = run_query(f"""
+        SELECT * FROM (
+            SELECT *, ROW_NUMBER() OVER (
+                PARTITION BY id ORDER BY atualizado_em DESC NULLS LAST
+            ) AS _rn
+            FROM {S_ATIVIDADES}.atividades
+            WHERE id IN ({ph})
+        ) WHERE _rn = 1
+    """, ids_atividades)
+    for r in rows_novos:
+        r.pop("_rn", None)
+    comentarios_novos = run_query(
+        f"SELECT atividade_id, autor, texto, data FROM {S_ATIVIDADES}.comentarios WHERE atividade_id IN ({ph}) ORDER BY data",
+        ids_atividades
+    )
+    rows_novos = _transformar_atividades(rows_novos, comentarios_novos)
 
-    try:
-        rows = run_query(f"SELECT * FROM {S_CONFORTO}.config LIMIT 1")
-        config = rows[0] if rows else {}
-        if "checklist_preventiva" in config:
-            config["checklistPreventiva"] = safe_json(config.pop("checklist_preventiva"))
-        config = json.loads(json.dumps(config, default=str))
-    except Exception as e:
-        print(f"[conforto] erro ao carregar config: {e}")
-        config = {}
+    ids_set = set(ids_atividades)
+    payload["atividades"] = [a for a in payload.get("atividades", []) if a["id"] not in ids_set] + rows_novos
+    cache_set("atividades", payload)
 
-    def load_table(tabela, mapper):
-        try:
-            return [mapper(r) for r in run_query(f"SELECT * FROM {S_CONFORTO}.{tabela}")]
-        except Exception as e:
-            print(f"[conforto] erro ao carregar {tabela}: {e}")
-            return []
+def _transformar_conforto_simples(rows, mapper):
+    return [mapper(r) for r in rows]
 
-    ucs = load_table("ucs", lambda u: {
-        "id":              u.get("id"),
-        "codigo":          u.get("codigo"),
-        "nome":            u.get("nome"),
-        "local":           u.get("local"),
-        "modelo":          u.get("modelo"),
-        "categoria":       u.get("categoria") or "Ar-Condicionado",
-        "tipo":            u.get("tipo"),
-        "capacidadeBtu":   u.get("capacidade_btu"),
-        "dataInstalacao":  str(u.get("data_instalacao") or ""),
-        "cicloFiltroDias": u.get("ciclo_filtro_dias"),
-        "responsavelId":   u.get("responsavel_id"),
-        "obs":             u.get("obs") or "",
-    })
-
-    prev_rows = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas ORDER BY data_prevista DESC")
-    prev_checklist = run_query(f"SELECT preventiva_id, item, concluido, ordem FROM {S_CONFORTO}.preventiva_checklist ORDER BY ordem")
-    prev_tecnicos  = run_query(f"SELECT preventiva_id, nome_tecnico FROM {S_CONFORTO}.preventiva_tecnicos")
-    prev_cl_map  = {}
+def _transformar_preventivas(prev_rows, prev_checklist, prev_tecnicos):
+    prev_cl_map = {}
     for c in prev_checklist:
         prev_cl_map.setdefault(c["preventiva_id"], []).append({"item": c["item"], "concluido": bool(c["concluido"])})
     prev_tec_map = {}
@@ -344,25 +416,9 @@ def _load_conforto():
             "tecnicos":      prev_tec_map.get(p["id"], []),
             "fotoUrl":       p.get("foto_url") or "",
         })
+    return preventivas
 
-    ordens = load_table("ordens", lambda o: {
-        "id":            o.get("id"),
-        "tipo":          o.get("tipo"),
-        "areaId":        o.get("area_id"),
-        "responsavelId": o.get("responsavel_id"),
-        "dataPrevista":  str(o.get("data_prevista") or ""),
-        "dataRealizada": str(o.get("data_realizada") or ""),
-        "status":        o.get("status"),
-        "horaInicio":    o.get("hora_inicio") or "08:00",
-        "horaFim":       o.get("hora_fim") or "09:00",
-        "obs":           o.get("obs") or "",
-        "origemRotina":  o.get("origem_rotina") or "",
-    })
-
-    man_rows    = run_query(f"SELECT * FROM {S_CONFORTO}.manutencoes ORDER BY data_abertura DESC")
-    man_sessoes = run_query(f"SELECT manutencao_id, tipo_sessao, inicio_em, fim_em, duracao_min, motivo_pausa FROM {S_CONFORTO}.manutencao_sessoes ORDER BY inicio_em")
-    man_tecs    = run_query(f"SELECT manutencao_id, nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos")
-    man_pecas   = run_query(f"SELECT manutencao_id, peca_id, nome_peca, quantidade FROM {S_CONFORTO}.manutencao_pecas")
+def _transformar_manutencoes(man_rows, man_sessoes, man_tecs, man_pecas):
     man_ses_map = {}
     for s in man_sessoes:
         man_ses_map.setdefault(s["manutencao_id"], []).append({
@@ -405,62 +461,9 @@ def _load_conforto():
             "numPessoas":     num_pessoas,
             "hhTotal":        round(duracao_total / 60 * num_pessoas, 2),
         })
+    return manutencoes
 
-    pecas = load_table("pecas", lambda p: {
-        "id":         p.get("id"),
-        "codigo":     p.get("codigo"),
-        "descricao":  p.get("descricao") or "",
-        "categoria":  p.get("categoria") or "",
-        "fabricante": p.get("fabricante") or "",
-        "referencia": p.get("referencia") or "",
-        "unidade":    p.get("unidade") or "",
-        "estqAtual":  p.get("estq_atual") or 0,
-        "estqMinimo": p.get("estq_minimo") or 0,
-    })
-
-    requisicoes = load_table("requisicoes", lambda r: {
-        "id":             r.get("id"),
-        "pecaId":         r.get("peca_id"),
-        "quantidade":     r.get("quantidade") or 0,
-        "destino":        r.get("destino") or "",
-        "solicitanteId":  r.get("solicitante_id"),
-        "dataNecessidade":str(r.get("data_necessidade") or ""),
-        "status":         r.get("status"),
-    })
-
-    areas = load_table("areas", lambda a: {
-        "id":            a.get("id"),
-        "nome":          a.get("nome"),
-        "local":         a.get("local") or "",
-        "tipo":          a.get("tipo") or "",
-        "metragem":      a.get("metragem") or 0,
-        "freqCivil":     a.get("freq_civil") or "",
-        "freqTecnica":   a.get("freq_tecnica") or "",
-        "responsavelId": a.get("responsavel_id"),
-        "obs":           a.get("obs") or "",
-    })
-
-    fornecedores = load_table("fornecedores", lambda f: {
-        "id":          f.get("id"),
-        "nome":        f.get("nome"),
-        "cnpj":        f.get("cnpj") or "",
-        "tipoServico": f.get("tipo_servico") or "",
-        "contato":     f.get("contato") or "",
-        "telefone":    f.get("telefone") or "",
-        "email":       f.get("email") or "",
-        "ativo":       f.get("ativo") or "Sim",
-    })
-
-    tecnicos = load_table("tecnicos", lambda t: {
-        "id":           t.get("id"),
-        "nome":         t.get("nome"),
-        "matricula":    t.get("matricula") or "",
-        "especialidade":t.get("especialidade") or "",
-        "turno":        t.get("turno") or "",
-    })
-
-    rot_rows = run_query(f"SELECT * FROM {S_CONFORTO}.rotinas ORDER BY nome")
-    rot_dias = run_query(f"SELECT rotina_id, dia_semana FROM {S_CONFORTO}.rotina_dias")
+def _transformar_rotinas(rot_rows, rot_dias):
     rot_dias_map = {}
     for d in rot_dias:
         rot_dias_map.setdefault(d["rotina_id"], []).append(d["dia_semana"])
@@ -478,6 +481,93 @@ def _load_conforto():
             "horaFim":       r.get("hora_fim") or "09:00",
             "ativa":         bool(r.get("ativa", True)),
         })
+    return rotinas
+
+_MAPPER_UCS = lambda u: {
+    "id": u.get("id"), "codigo": u.get("codigo"), "nome": u.get("nome"), "local": u.get("local"),
+    "modelo": u.get("modelo"), "categoria": u.get("categoria") or "Ar-Condicionado", "tipo": u.get("tipo"),
+    "capacidadeBtu": u.get("capacidade_btu"), "dataInstalacao": str(u.get("data_instalacao") or ""),
+    "cicloFiltroDias": u.get("ciclo_filtro_dias"), "responsavelId": u.get("responsavel_id"), "obs": u.get("obs") or "",
+}
+_MAPPER_ORDENS = lambda o: {
+    "id": o.get("id"), "tipo": o.get("tipo"), "areaId": o.get("area_id"), "responsavelId": o.get("responsavel_id"),
+    "dataPrevista": str(o.get("data_prevista") or ""), "dataRealizada": str(o.get("data_realizada") or ""),
+    "status": o.get("status"), "horaInicio": o.get("hora_inicio") or "08:00", "horaFim": o.get("hora_fim") or "09:00",
+    "obs": o.get("obs") or "", "origemRotina": o.get("origem_rotina") or "",
+}
+_MAPPER_PECAS = lambda p: {
+    "id": p.get("id"), "codigo": p.get("codigo"), "descricao": p.get("descricao") or "",
+    "categoria": p.get("categoria") or "", "fabricante": p.get("fabricante") or "", "referencia": p.get("referencia") or "",
+    "unidade": p.get("unidade") or "", "estqAtual": p.get("estq_atual") or 0, "estqMinimo": p.get("estq_minimo") or 0,
+}
+_MAPPER_REQUISICOES = lambda r: {
+    "id": r.get("id"), "pecaId": r.get("peca_id"), "quantidade": r.get("quantidade") or 0,
+    "destino": r.get("destino") or "", "solicitanteId": r.get("solicitante_id"),
+    "dataNecessidade": str(r.get("data_necessidade") or ""), "status": r.get("status"),
+}
+_MAPPER_AREAS = lambda a: {
+    "id": a.get("id"), "nome": a.get("nome"), "local": a.get("local") or "", "tipo": a.get("tipo") or "",
+    "metragem": a.get("metragem") or 0, "freqCivil": a.get("freq_civil") or "", "freqTecnica": a.get("freq_tecnica") or "",
+    "responsavelId": a.get("responsavel_id"), "obs": a.get("obs") or "",
+}
+_MAPPER_FORNECEDORES = lambda f: {
+    "id": f.get("id"), "nome": f.get("nome"), "cnpj": f.get("cnpj") or "", "tipoServico": f.get("tipo_servico") or "",
+    "contato": f.get("contato") or "", "telefone": f.get("telefone") or "", "email": f.get("email") or "",
+    "ativo": f.get("ativo") or "Sim",
+}
+_MAPPER_TECNICOS = lambda t: {
+    "id": t.get("id"), "nome": t.get("nome"), "matricula": t.get("matricula") or "",
+    "especialidade": t.get("especialidade") or "", "turno": t.get("turno") or "",
+}
+
+def _load_conforto():
+    def safe_json(v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return []
+        return v or []
+
+    try:
+        rows = run_query(f"SELECT * FROM {S_CONFORTO}.config LIMIT 1")
+        config = rows[0] if rows else {}
+        if "checklist_preventiva" in config:
+            config["checklistPreventiva"] = safe_json(config.pop("checklist_preventiva"))
+        config = json.loads(json.dumps(config, default=str))
+    except Exception as e:
+        print(f"[conforto] erro ao carregar config: {e}")
+        config = {}
+
+    def load_table(tabela, mapper):
+        try:
+            return _transformar_conforto_simples(run_query(f"SELECT * FROM {S_CONFORTO}.{tabela}"), mapper)
+        except Exception as e:
+            print(f"[conforto] erro ao carregar {tabela}: {e}")
+            return []
+
+    ucs = load_table("ucs", _MAPPER_UCS)
+    ordens = load_table("ordens", _MAPPER_ORDENS)
+    pecas = load_table("pecas", _MAPPER_PECAS)
+    requisicoes = load_table("requisicoes", _MAPPER_REQUISICOES)
+    areas = load_table("areas", _MAPPER_AREAS)
+    fornecedores = load_table("fornecedores", _MAPPER_FORNECEDORES)
+    tecnicos = load_table("tecnicos", _MAPPER_TECNICOS)
+
+    prev_rows = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas ORDER BY data_prevista DESC")
+    prev_checklist = run_query(f"SELECT preventiva_id, item, concluido, ordem FROM {S_CONFORTO}.preventiva_checklist ORDER BY ordem")
+    prev_tecnicos  = run_query(f"SELECT preventiva_id, nome_tecnico FROM {S_CONFORTO}.preventiva_tecnicos")
+    preventivas = _transformar_preventivas(prev_rows, prev_checklist, prev_tecnicos)
+
+    man_rows    = run_query(f"SELECT * FROM {S_CONFORTO}.manutencoes ORDER BY data_abertura DESC")
+    man_sessoes = run_query(f"SELECT manutencao_id, tipo_sessao, inicio_em, fim_em, duracao_min, motivo_pausa FROM {S_CONFORTO}.manutencao_sessoes ORDER BY inicio_em")
+    man_tecs    = run_query(f"SELECT manutencao_id, nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos")
+    man_pecas   = run_query(f"SELECT manutencao_id, peca_id, nome_peca, quantidade FROM {S_CONFORTO}.manutencao_pecas")
+    manutencoes = _transformar_manutencoes(man_rows, man_sessoes, man_tecs, man_pecas)
+
+    rot_rows = run_query(f"SELECT * FROM {S_CONFORTO}.rotinas ORDER BY nome")
+    rot_dias = run_query(f"SELECT rotina_id, dia_semana FROM {S_CONFORTO}.rotina_dias")
+    rotinas = _transformar_rotinas(rot_rows, rot_dias)
 
     payload = {
         "modulo": "conforto", "versao": "2.0",
@@ -488,7 +578,6 @@ def _load_conforto():
     }
     cache_set("conforto", payload)
     return payload
-
 LOADERS = {
     "chamados":   _load_chamados,
     "obras":      _load_obras,
@@ -496,6 +585,54 @@ LOADERS = {
     "atividades": _load_atividades,
     "conforto":   _load_conforto,
 }
+
+def _atualizar_cache_conforto_lista(chave, tabela, mapper, ids):
+    if not ids:
+        return
+    payload = cache_get("conforto")
+    if payload is None:
+        _load_conforto()
+        return
+    ph = ",".join(["?" for _ in ids])
+    rows_novos = _transformar_conforto_simples(
+        run_query(f"SELECT * FROM {S_CONFORTO}.{tabela} WHERE id IN ({ph})", ids), mapper
+    )
+    ids_set = set(ids)
+    payload[chave] = [x for x in payload.get(chave, []) if x["id"] not in ids_set] + rows_novos
+    cache_set("conforto", payload)
+
+def _atualizar_cache_conforto_preventivas(ids):
+    if not ids:
+        return
+    payload = cache_get("conforto")
+    if payload is None:
+        _load_conforto()
+        return
+    ph = ",".join(["?" for _ in ids])
+    prev_rows = run_query(f"SELECT * FROM {S_CONFORTO}.preventivas WHERE id IN ({ph})", ids)
+    prev_checklist = run_query(f"SELECT preventiva_id, item, concluido, ordem FROM {S_CONFORTO}.preventiva_checklist WHERE preventiva_id IN ({ph}) ORDER BY ordem", ids)
+    prev_tecnicos = run_query(f"SELECT preventiva_id, nome_tecnico FROM {S_CONFORTO}.preventiva_tecnicos WHERE preventiva_id IN ({ph})", ids)
+    novas = _transformar_preventivas(prev_rows, prev_checklist, prev_tecnicos)
+    ids_set = set(ids)
+    payload["preventivas"] = [p for p in payload.get("preventivas", []) if p["id"] not in ids_set] + novas
+    cache_set("conforto", payload)
+
+def _atualizar_cache_conforto_manutencoes(ids):
+    if not ids:
+        return
+    payload = cache_get("conforto")
+    if payload is None:
+        _load_conforto()
+        return
+    ph = ",".join(["?" for _ in ids])
+    man_rows = run_query(f"SELECT * FROM {S_CONFORTO}.manutencoes WHERE id IN ({ph})", ids)
+    man_sessoes = run_query(f"SELECT manutencao_id, tipo_sessao, inicio_em, fim_em, duracao_min, motivo_pausa FROM {S_CONFORTO}.manutencao_sessoes WHERE manutencao_id IN ({ph}) ORDER BY inicio_em", ids)
+    man_tecs = run_query(f"SELECT manutencao_id, nome_tecnico FROM {S_CONFORTO}.manutencao_tecnicos WHERE manutencao_id IN ({ph})", ids)
+    man_pecas = run_query(f"SELECT manutencao_id, peca_id, nome_peca, quantidade FROM {S_CONFORTO}.manutencao_pecas WHERE manutencao_id IN ({ph})", ids)
+    novas = _transformar_manutencoes(man_rows, man_sessoes, man_tecs, man_pecas)
+    ids_set = set(ids)
+    payload["manutencoes"] = [m for m in payload.get("manutencoes", []) if m["id"] not in ids_set] + novas
+    cache_set("conforto", payload)
 
 def get_cached(modulo):
     v = cache_get(modulo)
@@ -673,7 +810,7 @@ async def create_chamado(request: Request):
     except Exception as e:
         print(f"[chamados] erro ao criar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("chamados")
+    await asyncio.to_thread(_atualizar_cache_chamados_parcial, [body["id"]])
     return JSONResponse({"ok": True})
 
 @app.put("/api/chamados/{cid}")
@@ -704,8 +841,7 @@ async def update_chamado(cid: str, request: Request):
     except Exception as e:
         print(f"[chamados] erro ao atualizar {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("chamados")
-    asyncio.create_task(asyncio.to_thread(_load_chamados))
+    await asyncio.to_thread(_atualizar_cache_chamados_parcial, [cid])
     return JSONResponse({"ok": True})
 
 @app.delete("/api/chamados/{cid}")
@@ -715,7 +851,10 @@ async def delete_chamado(cid: str):
     except Exception as e:
         print(f"[chamados] erro ao excluir {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("chamados")
+    payload = cache_get("chamados")
+    if payload is not None:
+        payload["chamados"] = [c for c in payload.get("chamados", []) if c["id"] != cid]
+        cache_set("chamados", payload)
     return JSONResponse({"ok": True})
 
 @app.get("/api/chamados/por-email/{email}")
@@ -946,8 +1085,8 @@ async def save_obras(request: Request):
     except Exception as e:
         print(f"[obras] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("obras")
-    asyncio.create_task(asyncio.to_thread(_load_obras))
+    cods_tocados = [o["cod"] for o in obras]
+    await asyncio.to_thread(_atualizar_cache_obras_parcial, cods_tocados)
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/{cod}/etapas/{etapa_id}")
@@ -956,7 +1095,7 @@ async def deletar_etapa(cod: str, etapa_id: str):
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=? AND id=?", [cod, etapa_id])
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE etapa_id=?", [etapa_id])
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas_avancos WHERE etapa_id=?", [etapa_id])
-        asyncio.create_task(asyncio.to_thread(_load_obras))
+        await asyncio.to_thread(_atualizar_cache_obras_parcial, [cod])
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -968,8 +1107,10 @@ async def delete_obra(cod: str):
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [cod])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("obras")
-    asyncio.create_task(asyncio.to_thread(_load_obras))
+    payload = cache_get("obras")
+    if payload is not None:
+        payload["obras"] = [o for o in payload.get("obras", []) if o["cod"] != cod]
+        cache_set("obras", payload)
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/budget/{bid}")
@@ -978,7 +1119,10 @@ async def delete_budget(bid: str):
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.budget WHERE id=?", [bid])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("obras")
+    payload = cache_get("obras")
+    if payload is not None:
+        payload["budget"] = [b for b in payload.get("budget", []) if b["id"] != bid]
+        cache_set("obras", payload)
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/lancamento/{lid}")
@@ -987,9 +1131,11 @@ async def delete_lancamento(lid: str):
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.lancamentos WHERE id=?", [lid])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("obras")
+    payload = cache_get("obras")
+    if payload is not None:
+        payload["lancamentos"] = [l for l in payload.get("lancamentos", []) if l["id"] != lid]
+        cache_set("obras", payload)
     return JSONResponse({"ok": True})
-
 
 @app.post("/api/obras/{cod}/etapas/{etapa_id}/avanco")
 async def registrar_avanco(cod: str, etapa_id: str, request: Request):
@@ -1016,8 +1162,7 @@ async def registrar_avanco(cod: str, etapa_id: str, request: Request):
         """, [cod, body.get("nomeEtapa",""), avanco])
     except Exception as e:
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("obras")
-    asyncio.create_task(asyncio.to_thread(_load_obras))
+    await asyncio.to_thread(_atualizar_cache_obras_parcial, [cod])
     return JSONResponse({"ok": True})
 
 @app.get("/api/obras/{cod}/avancos")
@@ -1101,7 +1246,9 @@ async def save_codin(request: Request):
     except Exception as e:
         print(f"[codin] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("codin")
+    ids_pessoas = [p["id"] for p in body.get("pessoas", [])]
+    ids_pontos = [p["_id"] for p in body.get("pontos", [])] if body.get("pontos") else []
+    await asyncio.to_thread(_atualizar_cache_codin_parcial, ids_pessoas, ids_pontos)
     return JSONResponse({"ok": True})
 
 @app.get("/codin-qr/codinqr.css")
@@ -1583,8 +1730,23 @@ async def save_conforto(request: Request):
                     INSERT INTO {S_CONFORTO}.config_checklist (id,item,ordem,atualizado_por)
                     VALUES {",".join(cfg_rows)}
                 """, cfg_params)
-        cache_invalidate("conforto")
-        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        ids_ucs = [uc["id"] for uc in body.get("ucs", [])]
+        ids_prev = [p["id"] for p in body.get("preventivas", [])]
+        ids_man = [m["id"] for m in body.get("manutencoes", [])]
+        tabelas_replace_total = any(k in body for k in
+            ("tecnicos", "ordens", "pecas", "requisicoes", "areas", "fornecedores", "rotinas"))
+
+        if tabelas_replace_total:
+            await asyncio.to_thread(_load_conforto)
+        else:
+            if ids_ucs:
+                await asyncio.to_thread(_atualizar_cache_conforto_lista, "ucs", "ucs", _MAPPER_UCS, ids_ucs)
+            if ids_prev:
+                await asyncio.to_thread(_atualizar_cache_conforto_preventivas, ids_prev)
+            if ids_man:
+                await asyncio.to_thread(_atualizar_cache_conforto_manutencoes, ids_man)
+            if not (ids_ucs or ids_prev or ids_man):
+                await asyncio.to_thread(_load_conforto)
         return JSONResponse({"ok": True})
     except Exception as e:
         import traceback
@@ -1635,8 +1797,8 @@ async def save_atividades(request: Request):
     except Exception as e:
         print(f"[atividades] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("atividades")
-    asyncio.create_task(asyncio.to_thread(_load_atividades))
+    ids_tocados = [a["id"] for a in body.get("atividades", [])]
+    await asyncio.to_thread(_atualizar_cache_atividades_parcial, ids_tocados)
     return JSONResponse({"ok": True})
 
 @app.delete("/api/atividades/{aid}")
@@ -1647,7 +1809,7 @@ async def delete_atividade(aid: str):
     except Exception as e:
         print(f"[atividades] erro ao excluir {aid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("atividades")
+    await asyncio.to_thread(_atualizar_cache_atividades_parcial, [aid])
     return JSONResponse({"ok": True})
 
 @app.post("/api/atividades/{aid}/comentarios")
@@ -1662,7 +1824,7 @@ async def add_comentario(aid: str, request: Request):
     except Exception as e:
         print(f"[comentario] erro: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("atividades")
+    await asyncio.to_thread(_atualizar_cache_atividades_parcial, [aid])
     return JSONResponse({"ok": True})
 
 @app.post("/api/atividades/{aid}/comentarios/rewrite")
@@ -1683,7 +1845,7 @@ async def rewrite_comentarios(aid: str, request: Request):
     except Exception as e:
         print(f"[comentario] erro ao reescrever: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("atividades")
+    await asyncio.to_thread(_atualizar_cache_atividades_parcial, [aid])
     return JSONResponse({"ok": True})
 
 # ─── Hub ──────────────────────────────────────────────────────────────────────
@@ -1719,24 +1881,49 @@ async def save_hub_config(request: Request):
     usuario = get_usuario(request)
     try:
         await arun_exec_retry(f"DELETE FROM {S_HUB}.pessoas")
-        for p in dados.get("pessoas", []):
-            await arun_exec_retry(f"INSERT INTO {S_HUB}.pessoas (id, nome, cargo) VALUES (?,?,?)",
-                [p.get("id"), p.get("nome"), p.get("cargo")])
+        pessoas = dados.get("pessoas", [])
+        if pessoas:
+            rows, params = [], []
+            for p in pessoas:
+                rows.append("(?,?,?)")
+                params += [p.get("id"), p.get("nome"), p.get("cargo")]
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.pessoas (id, nome, cargo) VALUES {','.join(rows)}", params)
+
         await arun_exec_retry(f"DELETE FROM {S_HUB}.cresp")
-        for c in dados.get("cresp", []):
-            await arun_exec_retry(f"INSERT INTO {S_HUB}.cresp (id, descricao, area) VALUES (?,?,?)",
-                [c.get("id"), c.get("descricao"), c.get("area")])
+        cresp = dados.get("cresp", [])
+        if cresp:
+            rows, params = [], []
+            for c in cresp:
+                rows.append("(?,?,?)")
+                params += [c.get("id"), c.get("descricao"), c.get("area")]
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.cresp (id, descricao, area) VALUES {','.join(rows)}", params)
+
         await arun_exec_retry(f"DELETE FROM {S_HUB}.tipos_obra")
-        for nome in dados.get("tiposObra", []):
-            await arun_exec_retry(f"INSERT INTO {S_HUB}.tipos_obra (nome) VALUES (?)", [nome])
+        tipos = dados.get("tiposObra", [])
+        if tipos:
+            rows, params = [], []
+            for nome in tipos:
+                rows.append("(?)")
+                params.append(nome)
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.tipos_obra (nome) VALUES {','.join(rows)}", params)
+
         await arun_exec_retry(f"DELETE FROM {S_HUB}.categorias_custo")
-        for cat in dados.get("categoriasCusto", []):
-            await arun_exec_retry(f"INSERT INTO {S_HUB}.categorias_custo (categoria, subcategoria) VALUES (?,?)",
-                [cat.get("categoria"), cat.get("subcategoria")])
+        cats = dados.get("categoriasCusto", [])
+        if cats:
+            rows, params = [], []
+            for cat in cats:
+                rows.append("(?,?)")
+                params += [cat.get("categoria"), cat.get("subcategoria")]
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.categorias_custo (categoria, subcategoria) VALUES {','.join(rows)}", params)
+
         await arun_exec_retry(f"DELETE FROM {S_HUB}.leitores")
-        for l in dados.get("leitores", []):
-            await arun_exec_retry(f"INSERT INTO {S_HUB}.leitores (id, nome) VALUES (?,?)",
-                [l.get("id"), l.get("nome")])
+        leitores = dados.get("leitores", [])
+        if leitores:
+            rows, params = [], []
+            for l in leitores:
+                rows.append("(?,?)")
+                params += [l.get("id"), l.get("nome")]
+            await arun_exec_retry(f"INSERT INTO {S_HUB}.leitores (id, nome) VALUES {','.join(rows)}", params)
     except Exception as e:
         print(f"[hub/config] erro ao salvar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -2024,7 +2211,7 @@ async def criar_preventiva_qr(request: Request):
         print(f"[conforto] erro ao criar preventiva qr: {e}")
         print(traceback.format_exc())
         return JSONResponse({"erro": str(e)}, status_code=500)
-    cache_invalidate("conforto")
+    await asyncio.to_thread(_atualizar_cache_conforto_preventivas, [pid])
     return JSONResponse({"ok": True})
 
 @app.post("/api/conforto/manutencoes-qr")
@@ -2077,8 +2264,7 @@ async def criar_manutencao_qr(request: Request):
                 insert into {S_CONFORTO}.manutencao_pecas (id,manutencao_id,peca_id,nome_peca,quantidade,atualizado_por)
                 VALUES {','.join(rows)}
             """, params)
-        cache_invalidate("conforto")
-        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        await asyncio.to_thread(_atualizar_cache_conforto_manutencoes, [mid])
         return JSONResponse({"ok": True})
     except Exception as e:
         import traceback
@@ -2117,8 +2303,7 @@ async def atualizar_manutencao(mid: str, request: Request):
             f"UPDATE {S_CONFORTO}.manutencoes SET {', '.join(sets)} WHERE id=?",
             vals
         )
-        cache_invalidate("conforto")
-        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        await asyncio.to_thread(_atualizar_cache_conforto_manutencoes, [mid])
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -2199,8 +2384,7 @@ async def concluir_manutencao(mid: str, request: Request):
                     INSERT INTO {S_CONFORTO}.manutencao_tecnicos (id,manutencao_id,nome_tecnico,atualizado_por)
                     VALUES {','.join(rows)}
                 """, params)
-        cache_invalidate("conforto")
-        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        await asyncio.to_thread(_atualizar_cache_conforto_manutencoes, [mid])
         return JSONResponse({"ok": True, "duracaoTotal": duracao_total})
     except Exception as e:
         import traceback
@@ -2229,8 +2413,8 @@ async def criar_requisicao_qr(request: Request):
                      data_necessidade, status, atualizado_por)
                 VALUES {','.join(rows)}
             """, params)
-        cache_invalidate("conforto")
-        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        ids_req = [req["id"] for req in requisicoes]
+        await asyncio.to_thread(_atualizar_cache_conforto_lista, "requisicoes", "requisicoes", _MAPPER_REQUISICOES, ids_req)
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -2297,8 +2481,10 @@ async def portal_atividades(request: Request):
 async def deletar_preventiva(pid: str, request: Request):
     try:
         await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.preventivas WHERE id=?", [pid])
-        cache_invalidate("conforto")
-        asyncio.create_task(asyncio.to_thread(_load_conforto))
+        payload = cache_get("conforto")
+        if payload is not None:
+            payload["preventivas"] = [p for p in payload.get("preventivas", []) if p["id"] != pid]
+            cache_set("conforto", payload)
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
