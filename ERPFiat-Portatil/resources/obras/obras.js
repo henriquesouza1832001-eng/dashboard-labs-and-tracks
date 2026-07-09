@@ -7,6 +7,8 @@ let state = {
 };
 let subItensTemp = [];
 let saveTimeout = null, centralSaveTimeout = null;
+const sujos = { obras: new Set(), budget: new Set(), lancamentos: new Set() };
+function marcarSujo(tipo, id) { sujos[tipo].add(id); }
 const $ = id => document.getElementById(id);
 const fmt = (v, dec=0) => (v||0).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
 const fmtR = v => 'R$ '+fmt(v,2);
@@ -75,16 +77,22 @@ let _salvando = false;
 async function salvarDados() {
   if (typeof API === 'undefined') return;
   if (_salvando) { agendarSalvamento(); return; }
-  if (!state.obras.length && !state.lancamentos.length && !state.budget.length) return;
+  if (!sujos.obras.size && !sujos.budget.size && !sujos.lancamentos.size) return;
   _salvando = true;
+  const idsObras = new Set(sujos.obras);
+  const idsBudget = new Set(sujos.budget);
+  const idsLanc = new Set(sujos.lancamentos);
   try {
     await API.obras.salvar({
-      versao:       '2.0',
-      obras:        state.obras,
-      budget:       state.budget,
-      lancamentos:  state.lancamentos,
-      revisoes:     state.revisoes,
+      versao:      '2.0',
+      obras:       state.obras.filter(o => idsObras.has(o.cod)),
+      budget:      state.budget.filter(b => idsBudget.has(b.id)),
+      lancamentos: state.lancamentos.filter(l => idsLanc.has(l.id)),
+      revisoes:    state.revisoes,
     });
+    idsObras.forEach(id => sujos.obras.delete(id));
+    idsBudget.forEach(id => sujos.budget.delete(id));
+    idsLanc.forEach(id => sujos.lancamentos.delete(id));
     API.invalidar('/obras');
     setSaveStatus('saved', 'salvo');
   } catch(err) {
@@ -415,6 +423,7 @@ function excluirEtapa(cod, idx){
   if(!confirm('Excluir esta etapa?')) return;
   const o = state.obras.find(x=>x.cod===cod);
   if(o?.etapas) o.etapas.splice(idx,1);
+  marcarSujo('obras',cod);
   agendarSalvamento();
   renderCronograma(cod);
 }
@@ -666,6 +675,7 @@ function excluirSubtarefa(cod, etapaIdx, subIdx) {
     o.etapas[etapaIdx].dtFim = datasEtapa.dtFim;
     o.etapas[etapaIdx].avancoFisico = afEtapaLocal(o.etapas[etapaIdx].subtarefas);
     recalcularPesosEtapas(o);
+    marcarSujo('obras',cod);
     agendarSalvamento();
     renderCronograma(cod);
   }
@@ -858,6 +868,7 @@ document.getElementById('btn-salvar-subtarefa')?.addEventListener('click', ()=>{
   o.etapas[ei].avancoFisico = afEtapaLocal(o.etapas[ei].subtarefas);
   recalcularPesosEtapas(o);
   fecharModal('modal-subtarefa');
+  marcarSujo('obras',cod);
   agendarSalvamento();
   renderCronograma(cod);
 });
@@ -897,9 +908,10 @@ function excluirCresp(idx){
   if(!confirm('Excluir este CRESP?'))return;
   const idRemovido=state.central.cresp[idx].id;
   state.central.cresp.splice(idx,1);
-  state.obras.forEach(o=>{ if(o.cresp===idRemovido)o.cresp=''; });
+  state.obras.forEach(o=>{ if(o.cresp===idRemovido){o.cresp='';marcarSujo('obras',o.cod);} });
+  state.budget.forEach(b=>{ if(b.cresp===idRemovido)marcarSujo('budget',b.id); });
   state.budget=state.budget.filter(b=>b.cresp!==idRemovido);
-  state.lancamentos.forEach(l=>{ if(l.cresp===idRemovido)l.cresp=''; });
+  state.lancamentos.forEach(l=>{ if(l.cresp===idRemovido){l.cresp='';marcarSujo('lancamentos',l.id);} });
   agendarSalvamentoCentral(); agendarSalvamento(); renderTudo();
 }
 window.excluirObra=excluirObra; window.editarObra=editarObra;
@@ -1014,7 +1026,7 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
     };
     if(idx>=0)o.etapas[idx]=obj; else o.etapas.push(obj);
     recalcularPesosEtapas(o);
-    fecharModal('modal-etapa');agendarSalvamento();renderCronograma(state.obraAtiva);
+    fecharModal('modal-etapa');marcarSujo('obras',state.obraAtiva);agendarSalvamento();renderCronograma(state.obraAtiva);
   });
   ['modal-etapa-close','modal-etapa-cancel'].forEach(id=>$(id)?.addEventListener('click',()=>fecharModal('modal-etapa')));
   $('detalhe-filtro-cat')?.addEventListener('change', ()=>renderDetalheLancamentos(state.obraAtiva));
@@ -1025,13 +1037,13 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
   $('lanc-filtro-obra').addEventListener('change', renderLancamentos);
   $('lanc-filtro-cat').addEventListener('change', renderLancamentos);
   $('btn-nova-obra').addEventListener('click', () => { state.editIdx.obra=-1; $('modal-obra-title').textContent='Nova Obra'; ['ob-cod','ob-nome','ob-local','ob-obs'].forEach(id=>$(id).value=''); $('ob-status').value='Planejado'; $('ob-dt-ini-prev').value=$('ob-dt-fim-prev').value=$('ob-dt-ini-real').value=$('ob-dt-fim-real').value=''; $('ob-resp').value='';$('ob-cresp').value='';$('ob-err').textContent=''; abrirModal('modal-obra'); });
-  $('btn-salvar-obra').addEventListener('click', () => { const cod=$('ob-cod').value.trim(),nome=$('ob-nome').value.trim(); if(!cod||!nome){$('ob-err').textContent='Código e nome obrigatórios.';return;} const idx=state.editIdx.obra; if(idx===-1&&state.obras.find(o=>o.cod===cod)){$('ob-err').textContent='Código já existe.';return;} const resp=$('ob-resp').value,pessoa=state.central.pessoas.find(p=>p.id===resp); const obj={cod,nome,tipo:$('ob-tipo').value,local:$('ob-local').value.trim(),responsavel:resp,respNome:pessoa?pessoa.nome:'',cresp:$('ob-cresp').value,status:$('ob-status').value,dtInicioPrev:$('ob-dt-ini-prev').value,dtFimPrev:$('ob-dt-fim-prev').value,dtInicioReal:$('ob-dt-ini-real').value,dtFimReal:$('ob-dt-fim-real').value,obs:$('ob-obs').value.trim(),etapas:idx>=0?(state.obras[idx].etapas||[]):[] }; if(idx===-1)state.obras.push(obj);else state.obras[idx]=obj; fecharModal('modal-obra');agendarSalvamento();renderTudo(); });
+  $('btn-salvar-obra').addEventListener('click', () => { const cod=$('ob-cod').value.trim(),nome=$('ob-nome').value.trim(); if(!cod||!nome){$('ob-err').textContent='Código e nome obrigatórios.';return;} const idx=state.editIdx.obra; if(idx===-1&&state.obras.find(o=>o.cod===cod)){$('ob-err').textContent='Código já existe.';return;} const resp=$('ob-resp').value,pessoa=state.central.pessoas.find(p=>p.id===resp); const obj={cod,nome,tipo:$('ob-tipo').value,local:$('ob-local').value.trim(),responsavel:resp,respNome:pessoa?pessoa.nome:'',cresp:$('ob-cresp').value,status:$('ob-status').value,dtInicioPrev:$('ob-dt-ini-prev').value,dtFimPrev:$('ob-dt-fim-prev').value,dtInicioReal:$('ob-dt-ini-real').value,dtFimReal:$('ob-dt-fim-real').value,obs:$('ob-obs').value.trim(),etapas:idx>=0?(state.obras[idx].etapas||[]):[] }; if(idx===-1)state.obras.push(obj);else state.obras[idx]=obj; fecharModal('modal-obra');marcarSujo('obras',cod);agendarSalvamento();renderTudo(); });
   ['modal-obra-close','modal-obra-cancel'].forEach(id=>$(id).addEventListener('click',()=>fecharModal('modal-obra')));
   $('btn-novo-lanc').addEventListener('click', () => { state.editIdx.lanc=-1; $('modal-lanc-title').textContent='Novo Lançamento'; ['lanc-desc','lanc-unid','lanc-nf','lanc-forn','lanc-obs'].forEach(id=>$(id).value=''); $('lanc-qtd').value='';$('lanc-preco').value='';$('lanc-data').value=hoje();$('lanc-obra').value='';$('lanc-cresp').value='';$('lanc-cat').value='';$('lanc-subcat').innerHTML='<option>—</option>';$('lanc-err').textContent=''; abrirModal('modal-lanc'); });
-  $('btn-salvar-lanc').addEventListener('click', () => { const obra=$('lanc-obra').value,cresp=$('lanc-cresp').value,desc=$('lanc-desc').value.trim(),qtd=parseFloat($('lanc-qtd').value),preco=parseFloat($('lanc-preco').value); if(!obra||!cresp||!desc||isNaN(qtd)||isNaN(preco)){$('lanc-err').textContent='Preencha todos os campos obrigatórios.';return;} const idx=state.editIdx.lanc; const obj={id:idx===-1?gerarId('L',state.lancamentos,'id'):state.lancamentos[idx].id,obraCod:obra,cresp,categoria:$('lanc-cat').value,subcategoria:$('lanc-subcat').value,descricao:desc,unid:$('lanc-unid').value.trim(),qtd,precoUnit:preco,nfDoc:$('lanc-nf').value.trim(),dtLanc:$('lanc-data').value,fornecedor:$('lanc-forn').value.trim(),obs:$('lanc-obs').value.trim()}; if(idx===-1)state.lancamentos.push(obj);else state.lancamentos[idx]=obj; fecharModal('modal-lanc');agendarSalvamento();renderTudo(); if(state.obraAtiva)renderDetalheLancamentos(state.obraAtiva); });
+  $('btn-salvar-lanc').addEventListener('click', () => { const obra=$('lanc-obra').value,cresp=$('lanc-cresp').value,desc=$('lanc-desc').value.trim(),qtd=parseFloat($('lanc-qtd').value),preco=parseFloat($('lanc-preco').value); if(!obra||!cresp||!desc||isNaN(qtd)||isNaN(preco)){$('lanc-err').textContent='Preencha todos os campos obrigatórios.';return;} const idx=state.editIdx.lanc; const obj={id:idx===-1?gerarId('L',state.lancamentos,'id'):state.lancamentos[idx].id,obraCod:obra,cresp,categoria:$('lanc-cat').value,subcategoria:$('lanc-subcat').value,descricao:desc,unid:$('lanc-unid').value.trim(),qtd,precoUnit:preco,nfDoc:$('lanc-nf').value.trim(),dtLanc:$('lanc-data').value,fornecedor:$('lanc-forn').value.trim(),obs:$('lanc-obs').value.trim()}; if(idx===-1)state.lancamentos.push(obj);else state.lancamentos[idx]=obj; fecharModal('modal-lanc');marcarSujo('lancamentos',obj.id);agendarSalvamento();renderTudo(); if(state.obraAtiva)renderDetalheLancamentos(state.obraAtiva); });
   ['modal-lanc-close','modal-lanc-cancel'].forEach(id=>$(id).addEventListener('click',()=>fecharModal('modal-lanc')));
   $('btn-novo-budget').addEventListener('click', () => { state.editIdx.budget=-1; $('modal-budget-title').textContent='Novo Budget'; ['bgt-aprov','bgt-capex','bgt-opex','bgt-cont','bgt-obs'].forEach(id=>$(id).value=''); $('bgt-obra').value=state.obraAtiva||'';$('bgt-cresp').value='';$('bgt-tipo').value='CAPEX';$('bgt-err').textContent=''; abrirModal('modal-budget'); });
-  $('btn-salvar-budget').addEventListener('click', () => { const obra=$('bgt-obra').value,cresp=$('bgt-cresp').value,aprov=parseFloat($('bgt-aprov').value); if(!obra||!cresp||isNaN(aprov)){$('bgt-err').textContent='Obra, CRESP e budget obrigatórios.';return;} const idx=state.editIdx.budget; const obj={id:idx===-1?Date.now():state.budget[idx].id,obraCod:obra,cresp,tipoVerba:$('bgt-tipo').value,budgetAprov:aprov,capex:parseFloat($('bgt-capex').value)||0,opex:parseFloat($('bgt-opex').value)||0,contingencia:parseFloat($('bgt-cont').value)||0,obs:$('bgt-obs').value.trim()}; if(idx===-1)state.budget.push(obj);else state.budget[idx]=obj; fecharModal('modal-budget');agendarSalvamento();renderTudo(); if(state.obraAtiva)renderDetalheBudget(state.obraAtiva); });
+  $('btn-salvar-budget').addEventListener('click', () => { const obra=$('bgt-obra').value,cresp=$('bgt-cresp').value,aprov=parseFloat($('bgt-aprov').value); if(!obra||!cresp||isNaN(aprov)){$('bgt-err').textContent='Obra, CRESP e budget obrigatórios.';return;} const idx=state.editIdx.budget; const obj={id:idx===-1?Date.now():state.budget[idx].id,obraCod:obra,cresp,tipoVerba:$('bgt-tipo').value,budgetAprov:aprov,capex:parseFloat($('bgt-capex').value)||0,opex:parseFloat($('bgt-opex').value)||0,contingencia:parseFloat($('bgt-cont').value)||0,obs:$('bgt-obs').value.trim()}; if(idx===-1)state.budget.push(obj);else state.budget[idx]=obj; fecharModal('modal-budget');marcarSujo('budget',obj.id);agendarSalvamento();renderTudo(); if(state.obraAtiva)renderDetalheBudget(state.obraAtiva); });
   ['modal-budget-close','modal-budget-cancel'].forEach(id=>$(id).addEventListener('click',()=>fecharModal('modal-budget')));
   $('btn-nova-revisao').addEventListener('click', () => { state.editIdx.rev=-1; ['rev-ant','rev-adit','rev-motivo','rev-aprov'].forEach(id=>$(id).value=''); $('rev-data').value=hoje();$('rev-obra').value=state.obraAtiva||'';$('rev-cresp').value='';$('rev-err').textContent=''; abrirModal('modal-rev'); });
   $('btn-salvar-rev').addEventListener('click', () => { const obra=$('rev-obra').value,cresp=$('rev-cresp').value,adit=parseFloat($('rev-adit').value),motivo=$('rev-motivo').value.trim(); if(!obra||!cresp||isNaN(adit)||!motivo){$('rev-err').textContent='Obra, CRESP, aditivo e motivo obrigatórios.';return;} const nRev=state.revisoes.filter(r=>r.obraCod===obra).length+1; const obj={id:gerarId('R',state.revisoes,'id'),nRev,obraCod:obra,cresp,dataRevisao:$('rev-data').value,budgetAnterior:parseFloat($('rev-ant').value)||0,valorAditivo:adit,motivo,aprovadoPor:$('rev-aprov').value.trim()}; state.revisoes.push(obj);fecharModal('modal-rev');agendarSalvamento();renderRevisoes();renderDashboard(); if(state.obraAtiva)renderDetalheRevisoes(state.obraAtiva); });
