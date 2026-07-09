@@ -1002,7 +1002,12 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
         const durItem = Math.max(dFim - dIni, 0);
         const pesoItemNaSub = pesoItensTotal > 0 ? durItem / pesoItensTotal : (1 / itens.length);
         const pesoGlobal = pesoItemNaSub * ((sub.peso||1) / pesoSubsTotal) * ((e.peso||1) / pesoTotal);
-        todosItens.push({ dtInicio: dIni, dtFim: dFim, dtConclusao: it.dtConclusao ? toMs(it.dtConclusao) : null, concluido: !!it.concluido, peso: pesoGlobal });
+        todosItens.push({
+          dtInicio: dIni, dtFim: dFim,
+          dtInicioReal: it.dtInicioReal ? toMs(it.dtInicioReal) : null,
+          dtConclusao: it.dtConclusao ? toMs(it.dtConclusao) : null,
+          concluido: !!it.concluido, peso: pesoGlobal
+        });
       });
     });
   });
@@ -1054,8 +1059,13 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     if (todosItens.length) {
       let acum = 0;
       todosItens.forEach(it => {
-        if (it.concluido && it.dtConclusao && it.dtConclusao <= mesMs) {
-          acum += it.peso * 100;
+        if (!it.concluido || !it.dtConclusao) return;
+        if (it.dtInicioReal && it.dtInicioReal < it.dtConclusao) {
+          if (mesMs < it.dtInicioReal) return;
+          const prog = Math.min((mesMs - it.dtInicioReal) / (it.dtConclusao - it.dtInicioReal), 1);
+          acum += prog * it.peso * 100;
+        } else {
+          if (it.dtConclusao <= mesMs) acum += it.peso * 100;
         }
       });
       return Math.min(acum, 100);

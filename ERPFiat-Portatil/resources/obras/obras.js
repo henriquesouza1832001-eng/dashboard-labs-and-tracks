@@ -732,7 +732,11 @@ function renderItensSubtarefa() {
               <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Fim previsto</label>
               <input type="date" value="${it.dtFim||''}" onchange="atualizarDataItem(${i},'dtFim',this.value)" style="width:100%">
             </div>
-            <div style="grid-column:1/-1">
+            <div>
+              <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Início real</label>
+              <input type="date" value="${it.dtInicioReal||''}" onchange="atualizarDataItem(${i},'dtInicioReal',this.value)" style="width:100%">
+            </div>
+            <div>
               <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Conclusão real ${it.concluido?'':'(marque o item para habilitar)'}</label>
               <input type="date" value="${it.dtConclusao||''}" onchange="atualizarDataItem(${i},'dtConclusao',this.value)" ${it.concluido?'':'disabled'} style="width:100%">
             </div>
@@ -773,7 +777,7 @@ $('btn-add-item')?.addEventListener('click', () => {
   const input = $('sub-item-novo');
   const texto = input.value.trim();
   if (!texto) return;
-  subItensTemp.push({ id: crypto.randomUUID(), texto, concluido: false, dtInicio: null, dtFim: null, dtConclusao: null, peso: 0 });
+  subItensTemp.push({ id: crypto.randomUUID(), texto, concluido: false, dtInicio: null, dtFim: null, dtInicioReal: null, dtConclusao: null, peso: 0 });
   input.value = '';
   renderItensSubtarefa();
 });
