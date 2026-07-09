@@ -1101,6 +1101,11 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.textAlign = 'right';
     ctx.fillText(v+'%', m.l-6, y+3);
   });
+  const mesAtualStr = new Date().toISOString().slice(0,7);
+  let idxUltimoReal = meses.indexOf(mesAtualStr);
+  if (idxUltimoReal === -1) {
+    idxUltimoReal = mesAtualStr < meses[0] ? 0 : meses.length - 1;
+  }
   const curvaPlan = modo==='dinheiro' ? planejadoFinanceiro : planejado;
   const curvaReal = modo==='dinheiro' ? realizado : realizadoFisico;
   ctx.fillStyle = 'rgba(139,148,158,0.9)';
@@ -1111,7 +1116,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   gradReal.addColorStop(0, 'rgba(227,113,26,0.18)');
   gradReal.addColorStop(1, 'rgba(227,113,26,0)');
   ctx.beginPath();
-  curvaReal.forEach((v,i) => {
+  curvaReal.slice(0, idxUltimoReal+1).forEach((v,i) => {
     const x = xPos(i), y = yPos(v);
     if (i===0) ctx.moveTo(x,y);
     else {
@@ -1119,7 +1124,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
       ctx.quadraticCurveTo((xPrev+x)/2, yPrev, x, y);
     }
   });
-  ctx.lineTo(xPos(curvaReal.length-1), m.t+ch);
+  ctx.lineTo(xPos(idxUltimoReal), m.t+ch);
   ctx.lineTo(xPos(0), m.t+ch);
   ctx.closePath();
   ctx.fillStyle = gradReal;
@@ -1145,7 +1150,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  curvaReal.forEach((v,i) => {
+  curvaReal.slice(0, idxUltimoReal+1).forEach((v,i) => {
     const x = xPos(i), y = yPos(v);
     if (i===0) ctx.moveTo(x,y);
     else {
@@ -1185,12 +1190,6 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.textBaseline = 'alphabetic';
     return yFinal;
   }
-   const mesAtualStr = new Date().toISOString().slice(0,7);
-  let idxUltimoReal = meses.indexOf(mesAtualStr);
-  if (idxUltimoReal === -1) {
-    idxUltimoReal = mesAtualStr < meses[0] ? 0 : meses.length - 1;
-  }
-// conclu
   const valorRealNoIdx = curvaReal[idxUltimoReal];
   const valorPlanNoIdx = curvaPlan[idxUltimoReal];
   ctx.save();
@@ -1251,8 +1250,8 @@ function drawOverlayCharts(tipo,d){
   const av1=document.getElementById('cv-ov-pizza1');
   if(av1){
     const wrap=av1.parentElement;
-    const avTop=lista.slice(0,8).map(o=>({nome:tnome(o.nome),av:calcAvFis(o)})).filter(x=>x.av>0&&x.av<100);
-    const fins=lista.slice(0,8).map(o=>{const b=budgObra(o.cod),r=realObra(o.cod);return{nome:tnome(o.nome),pct:b>0?Math.round(r/b*100):0};}).filter(x=>x.pct>0);
+    const avTop=lista.slice(0,8).map(o=>({nome:tnome(o.nome),av:calcAvFis(o)})).filter(x=>x.av>=0&&x.av<=100);
+    const fins=lista.slice(0,8).map(o=>{const b=budgObra(o.cod),r=realObra(o.cod);return{nome:tnome(o.nome),pct:b>0?Math.round(r/b*100):0};}).filter(x=>x.pct>=0);
     const src=avTop.length?avTop.map((x,i)=>({label:x.nome,val:x.av,cor:['#2E5FA3','#3fb950','#e3711a','#d29922','#a371f7','#58a6ff','#f85149','#8b949e'][i%8]})):fins.map(x=>({label:x.nome,val:x.pct,cor:x.pct>100?'#f85149':x.pct>80?'#3fb950':'#2E5FA3'}));
     wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px" id="cv-ov-pizza1-titulo">Avanço por Obras em Andamento</div>`+(src.length?barrasHTML(src,{labelW:90}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem dados</div>');
   }
