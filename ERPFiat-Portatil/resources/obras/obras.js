@@ -28,6 +28,7 @@ async function salvarCentral() {
     console.error('salvarCentral falhou:', err);
   }
 }
+// concluido
 function abrirDB(){ return Promise.resolve(); }
 (function preencherUsuario(){
   const user = window.__authUser || { nome: '—', avatar: '?' };

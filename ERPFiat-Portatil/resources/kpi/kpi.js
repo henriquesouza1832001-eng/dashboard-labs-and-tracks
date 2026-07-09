@@ -1232,13 +1232,11 @@ function abrirDetalheObra(cod){
   let prazo=null,prazoTxt='—',corP='var(--text-dim)';
   if(fimPrev){
     if(fimRef){
-      // obra concluída — compara fim real vs fim previsto
       const dias=Math.floor((new Date(fimRef+'T00:00:00')-new Date(fimPrev+'T00:00:00'))/86400000);
       if(dias>0){prazoTxt=dias+'d atraso';corP='var(--red)';}
       else if(dias<0){prazoTxt=Math.abs(dias)+'d adiantado';corP='var(--green)';}
       else{prazoTxt='No prazo';corP='var(--green)';}
     } else {
-      // obra em aberto — compara hoje vs fim previsto
       prazo=Math.floor((new Date(fimPrev+'T00:00:00')-hoje)/86400000);
       if(prazo<0){prazoTxt=Math.abs(prazo)+'d atraso';corP='var(--red)';}
       else if(prazo===0){prazoTxt='Vence hoje';corP='var(--yellow)';}
