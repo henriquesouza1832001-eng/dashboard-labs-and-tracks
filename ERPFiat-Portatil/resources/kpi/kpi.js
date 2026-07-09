@@ -1168,27 +1168,22 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.font = '700 10px var(--mono,monospace)';
-    ctx.fillStyle = cor;
     const rotuloTxt = `${valor.toFixed(1)}%`;
     const larguraRotulo = ctx.measureText(rotuloTxt).width;
-    const cabeNaDireita = x + 10 + larguraRotulo <= m.l + cw;
-    if (cabeNaDireita) {
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(rotuloTxt, x + 10, y);
-    } else {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      const acimaCabe = (y - 12 >= m.t) && (evitarY == null || Math.abs((y-10) - evitarY) > 12);
-      const abaixoCabe = (y + 18 <= m.t + ch);
-      let yFinal;
-      if (acimaCabe) yFinal = y - 10;
-      else if (abaixoCabe) yFinal = y + 18;
-      else yFinal = y - 10;
-      ctx.fillText(rotuloTxt, x, yFinal);
+    let yFinal = y - 12;
+    if (evitarY != null && Math.abs(yFinal - evitarY) < 14) {
+      yFinal = evitarY < y ? evitarY - 14 : yFinal - 10;
     }
+    if (yFinal - 10 < m.t) yFinal = m.t + 10; 
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    return y;
+    const padX = 4, padY = 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect(x - larguraRotulo/2 - padX, yFinal - 10 - padY, larguraRotulo + padX*2, 12 + padY*2);
+    ctx.fillStyle = cor;
+    ctx.fillText(rotuloTxt, x, yFinal);
+    ctx.textBaseline = 'alphabetic';
+    return yFinal;
   }
    const mesAtualStr = new Date().toISOString().slice(0,7);
   let idxUltimoReal = meses.indexOf(mesAtualStr);
