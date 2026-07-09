@@ -715,10 +715,10 @@ function renderItensSubtarefa() {
           : 'sem datas';
         return `
         <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden">
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer" onclick="toggleExpandirItem(${i})">
+          <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;cursor:pointer;min-width:0" onclick="toggleExpandirItem(${i})">
             <input type="checkbox" ${it.concluido ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleItemSubtarefa(${i})">
             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${it.concluido ? 'text-decoration:line-through;color:var(--text-muted)' : ''}">${it.texto}</span>
-            <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">${resumoData}</span>
+            <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">${resumoData}</span>
             <span style="font-size:11px;font-weight:600;color:var(--blue-mid);white-space:nowrap;flex-shrink:0">${(it.peso*100).toFixed(0)}%</span>
             <span style="flex-shrink:0;color:var(--text-muted);transform:rotate(${aberto?'180':'0'}deg);transition:transform .15s">▾</span>
           </div>
@@ -752,7 +752,6 @@ function renderItensSubtarefa() {
     $('sub-dt-fim-real').value = new Date().toISOString().slice(0,10);
   }
 }
-//concluidi
 function toggleItemSubtarefa(i) {
   subItensTemp[i].concluido = !subItensTemp[i].concluido;
   if (subItensTemp[i].concluido && !subItensTemp[i].dtConclusao) {
