@@ -752,7 +752,7 @@ function renderItensSubtarefa() {
     $('sub-dt-fim-real').value = new Date().toISOString().slice(0,10);
   }
 }
-
+//concluidi
 function toggleItemSubtarefa(i) {
   subItensTemp[i].concluido = !subItensTemp[i].concluido;
   if (subItensTemp[i].concluido && !subItensTemp[i].dtConclusao) {
