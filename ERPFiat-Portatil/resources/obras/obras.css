@@ -185,9 +185,9 @@ body {
 
 /* ── DASHBOARD CARDS ── */
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; overflow: hidden; min-width: 0; }
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; overflow: hidden; min-width: 0; container-type: inline-size; }
 .kpi-label { font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
-.kpi-val { font-size: clamp(15px, 5vw, 24px); font-weight: 600; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; }
+.kpi-val { font-size: clamp(13px, 15cqw, 24px); font-weight: 600; font-family: var(--mono); white-space: nowrap; overflow: hidden; display: block; max-width: 100%; }
 .kpi-val.blue { color: var(--blue-light); }
 .kpi-val.green { color: var(--green); }
 .kpi-val.yellow { color: var(--yellow); }
