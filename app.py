@@ -224,6 +224,7 @@ def _transformar_obras(obras, etapas_todas, subtarefas_todas, budget, lancs, ava
         s["dtFim"]        = str(s.pop("dt_fim", None) or "")
         s["dtInicioReal"] = str(s.pop("dt_inicio_real", None) or "")
         s["dtFimReal"]    = str(s.pop("dt_fim_real", None) or "")
+        s["avancoFisico"] = s.pop("avanco_fisico", None) or 0
         s["atualizado_em"] = _ts(s.get("atualizado_em"))
         try:
             s["itens"] = json.loads(s.get("itens") or "[]")
@@ -237,6 +238,7 @@ def _transformar_obras(obras, etapas_todas, subtarefas_todas, budget, lancs, ava
         e["dtInicioReal"] = str(e.pop("dt_inicio_real", None) or "")
         e["dtFimReal"]    = str(e.pop("dt_fim_real", None) or "")
         e["orcamento"]    = e.get("orcamento") or 0
+        e["avancoFisico"] = e.pop("avanco_fisico", None) or 0
         if "atualizado_em" in e:
             e["atualizado_em"] = _ts(e.get("atualizado_em"))
         e["subtarefas"]   = sub_map.get(e["id"], [])
