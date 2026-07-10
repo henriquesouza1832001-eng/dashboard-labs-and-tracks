@@ -493,9 +493,33 @@ function desenharOrçado(id,obras){
    OBRAS — novo layout full height com overlay
 ══════════════════════════════════════════════ */
 function calcAvFis(o){
-  const et=o.etapas||[];const tot=et.reduce((a,e)=>a+(e.peso||1),0);
-  const ex=et.reduce((a,e)=>a+((e.peso||1)*(e.avancoFisico||0)/100),0);
-  return tot>0?(ex/tot)*100:0;
+  const et=o.etapas||[];
+  if(!et.length) return 0;
+  const pesoTotalEtapas=et.reduce((s,e)=>s+(e.peso||1),0)||1;
+  let somaGlobal=0;
+  et.forEach(e=>{
+    const subs=e.subtarefas||[];
+    const pesoSubsTotal=subs.reduce((s,st)=>s+(st.peso||1),0)||1;
+    subs.forEach(sub=>{
+      const itens=sub.itens||[];
+      if(!itens.length) return;
+      const pesoItensTotal=itens.reduce((s,it)=>{
+        const dIni=it.dtInicio?new Date(it.dtInicio).getTime():null;
+        const dFim=it.dtFim?new Date(it.dtFim).getTime():null;
+        const dur=(dIni&&dFim&&dFim>dIni)?(dFim-dIni):0;
+        return s+dur;
+      },0);
+      itens.forEach(it=>{
+        if(!it.dtInicio||!it.dtFim) return;
+        const dIni=new Date(it.dtInicio).getTime(),dFim=new Date(it.dtFim).getTime();
+        const durItem=Math.max(dFim-dIni,0);
+        const pesoItemNaSub=pesoItensTotal>0?durItem/pesoItensTotal:(1/itens.length);
+        const pesoGlobal=pesoItemNaSub*((sub.peso||1)/pesoSubsTotal)*((e.peso||1)/pesoTotalEtapas);
+        if(it.concluido) somaGlobal+=pesoGlobal;
+      });
+    });
+  });
+  return somaGlobal*100;
 }
 
 function budgObra(cod){if(!_obrasData)return 0;return(_obrasData.budget||[]).filter(b=>b.obraCod===cod).reduce((s,b)=>s+(b.budgetAprov||0),0);}
