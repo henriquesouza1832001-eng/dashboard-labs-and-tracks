@@ -19,6 +19,21 @@ const fmtDate=s=>{if(!s)return'—';const p=s.split('-');return p.length===3?p[2
 
 function tick(){const n=new Date();$('clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
 tick();setInterval(tick,1000);
+function budgRealSemConcluidas(obras, budget, lanc){
+  const codsConcluidas=new Set(obras.filter(o=>o.status==='Concluído').map(o=>o.cod));
+  let budgTotal=0, real=0;
+  obras.forEach(o=>{
+    const bObra=budget.filter(b=>b.obraCod===o.cod).reduce((s,b)=>s+(b.budgetAprov||0),0);
+    const rObra=lanc.filter(l=>l.obraCod===o.cod).reduce((s,l)=>s+l.qtd*l.precoUnit,0);
+    if(codsConcluidas.has(o.cod)){
+      real+=Math.max(rObra-bObra,0);
+    } else {
+      budgTotal+=bObra;
+      real+=rObra;
+    }
+  });
+  return {budgTotal, real};
+}
 async function preencherMicroCards(){
   const d=window.__DADOS__||await(await fetch('/api/kpi/dados')).json();
   window._kpiDados_obras    = d.obras    || null;
@@ -39,8 +54,18 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const obras=dOb.obras||[];
     const lanc=dOb.lancamentos||[];
     const budget=dOb.budget||[];
-    const budgTotal=budget.reduce((s,b)=>s+(b.budgetAprov||0),0);
-    const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
+    const {budgTotal, real}=budgRealSemConcluidas(obras, budget, lanc);
+    obras.forEach(o=>{
+      const bObra=budget.filter(b=>b.obraCod===o.cod).reduce((s,b)=>s+(b.budgetAprov||0),0);
+      const rObra=lanc.filter(l=>l.obraCod===o.cod).reduce((s,l)=>s+l.qtd*l.precoUnit,0);
+      if(codsConcluidas.has(o.cod)){
+        const excedente=Math.max(rObra-bObra,0);
+        real+=excedente;
+      } else {
+        budgTotal+=bObra;
+        real+=rObra;
+      }
+    });
     const emAnd=obras.filter(o=>o.status==='Em Andamento').length;
     const conc=obras.filter(o=>o.status==='Concluído').length;
     const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
