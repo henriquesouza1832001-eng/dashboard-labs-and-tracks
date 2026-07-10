@@ -788,7 +788,7 @@ function _obOvBase(d,tipo){
     <div class="ob-ov-header-btns"><button class="ob-ov-close" onclick="voltarParaSubCards()">← voltar</button></div>
   </div>
   <div class="ob-ov-kpis">
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Total A Faturar</div><div class="ob-ov-kpi-val c-azul">${fmtRK(totalB)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget</div><div class="ob-ov-kpi-val c-azul">${fmtRK(totalB)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(totalR)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio - Obras em andamento</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>

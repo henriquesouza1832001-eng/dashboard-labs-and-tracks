@@ -1956,9 +1956,13 @@ async def get_hub_dados():
 
 @app.get("/api/kpi/dados")
 async def get_kpi():
+    cache_obras = get_cached("obras") or {}
     return JSONResponse({
         "chamados":   get_cached("chamados"),
-        "obras":      get_cached("obras"),
+        "obras":      cache_obras.get("obras", []),
+        "budget":     cache_obras.get("budget", []),
+        "lancamentos": cache_obras.get("lancamentos", []),
+        "avancos":    cache_obras.get("avancos", []),
         "atividades": get_cached("atividades"),
         "conforto":   get_cached("conforto"),
     })
