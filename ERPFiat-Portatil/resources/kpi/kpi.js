@@ -525,10 +525,14 @@ function calcAvFis(o){
         return s+dur;
       },0);
       itens.forEach(it=>{
-        if(!it.dtInicio||!it.dtFim) return;
-        const dIni=new Date(it.dtInicio).getTime(),dFim=new Date(it.dtFim).getTime();
-        const durItem=Math.max(dFim-dIni,0);
-        const pesoItemNaSub=pesoItensTotal>0?durItem/pesoItensTotal:(1/itens.length);
+        let pesoItemNaSub;
+        if(pesoItensTotal>0 && it.dtInicio && it.dtFim){
+          const dIni=new Date(it.dtInicio).getTime(),dFim=new Date(it.dtFim).getTime();
+          const durItem=Math.max(dFim-dIni,0);
+          pesoItemNaSub=durItem/pesoItensTotal;
+        } else {
+          pesoItemNaSub=1/itens.length;
+        }
         const pesoGlobal=pesoItemNaSub*((sub.peso||1)/pesoSubsTotal)*((e.peso||1)/pesoTotalEtapas);
         if(it.concluido) somaGlobal+=pesoGlobal;
       });
@@ -1030,6 +1034,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   }
   if(!meses.length) return;
   const pesoTotal = etapas.reduce((s,e) => s + (e.peso||1), 0) || 1;
+  let semDataConcluidoPeso = 0;
   const todosItens = [];
   etapas.forEach(e => {
     const subs = e.subtarefas || [];
@@ -1044,17 +1049,21 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
         return s + dur;
       }, 0);
       itens.forEach(it => {
-        if (!it.dtInicio || !it.dtFim) return;
-        const dIni = toMs(it.dtInicio), dFim = toMs(it.dtFim);
-        const durItem = Math.max(dFim - dIni, 0);
-        const pesoItemNaSub = pesoItensTotal > 0 ? durItem / pesoItensTotal : (1 / itens.length);
+        const temData = it.dtInicio && it.dtFim;
+        const pesoItemNaSub = (pesoItensTotal > 0 && temData)
+          ? Math.max(toMs(it.dtFim) - toMs(it.dtInicio), 0) / pesoItensTotal
+          : (1 / itens.length);
         const pesoGlobal = pesoItemNaSub * ((sub.peso||1) / pesoSubsTotal) * ((e.peso||1) / pesoTotal);
-        todosItens.push({
-          dtInicio: dIni, dtFim: dFim,
-          dtInicioReal: it.dtInicioReal ? toMs(it.dtInicioReal) : null,
-          dtConclusao: it.dtConclusao ? toMs(it.dtConclusao) : null,
-          concluido: !!it.concluido, peso: pesoGlobal
-        });
+        if (temData) {
+          todosItens.push({
+            dtInicio: toMs(it.dtInicio), dtFim: toMs(it.dtFim),
+            dtInicioReal: it.dtInicioReal ? toMs(it.dtInicioReal) : null,
+            dtConclusao: it.dtConclusao ? toMs(it.dtConclusao) : null,
+            concluido: !!it.concluido, peso: pesoGlobal
+          });
+        } else if (it.concluido) {
+          semDataConcluidoPeso += pesoGlobal;
+        }
       });
     });
   });
@@ -1101,9 +1110,10 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     });
     return Math.min(acum/budgetPorEtapa*100, 100);
   });
+  const hojeMs = new Date().getTime();
   const realizadoFisico = meses.map(mes => {
     const mesMs = new Date(mes+'-28').getTime();
-    if (todosItens.length) {
+    if (todosItens.length || semDataConcluidoPeso > 0) {
       let acum = 0;
       todosItens.forEach(it => {
         if (!it.concluido || !it.dtConclusao) return;
@@ -1115,6 +1125,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
           if (it.dtConclusao <= mesMs) acum += it.peso * 100;
         }
       });
+      if (mesMs >= hojeMs) acum += semDataConcluidoPeso * 100;
       return Math.min(acum, 100);
     }
     let acum = 0;
