@@ -741,7 +741,7 @@ function buildOverlayEstudo(d){
   </div>`;
 }
 function _obOvBase(d,tipo){
-  const obras=d.obras||[];const hoje=new Date();
+  const obras=(d.obras&&d.obras.obras)?d.obras.obras:(Array.isArray(d.obras)?d.obras:[]);const hoje=new Date();
   const filtros={total:obras,andamento:obras.filter(o=>o.status==='Em Andamento'),concluidas:obras.filter(o=>o.status==='Concluído'),planejadas:obras.filter(o=>o.status==='Planejado'),estudo:obras.filter(o=>o.status==='Em Estudo')};
   const titulos={total:'Todas as Obras',andamento:'Em Andamento',concluidas:'Concluídas',planejadas:'Planejadas',estudo:'Em Estudo'};
   const lista=filtros[tipo]||[];
