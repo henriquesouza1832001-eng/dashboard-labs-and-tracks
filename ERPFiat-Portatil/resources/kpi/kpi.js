@@ -66,7 +66,8 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
       mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')");
     const pctGasto = budgTotal>0?Math.round(real/budgTotal*100):0;
-    document.getElementById('mfoot-obras').textContent = fmtRK(real)+' faturado de '+fmtRK(budgTotal)+' ('+pctGasto+'%)';
+    const concluidasQtd = obras.filter(o=>o.status==='Concluído').length;
+    document.getElementById('mfoot-obras').textContent = fmtRK(real)+' faturado de '+fmtRK(budgTotal)+' ('+pctGasto+'%) · exclui '+concluidasQtd+' obra(s) concluída(s)';
     setTimeout(()=>desenharMicroBullet('mcv-obras', budgTotal, real),80);
   }
   if(dCod){
