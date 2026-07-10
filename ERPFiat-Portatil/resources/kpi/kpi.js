@@ -55,17 +55,6 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const lanc=dOb.lancamentos||[];
     const budget=dOb.budget||[];
     const {budgTotal, real}=budgRealSemConcluidas(obras, budget, lanc);
-    obras.forEach(o=>{
-      const bObra=budget.filter(b=>b.obraCod===o.cod).reduce((s,b)=>s+(b.budgetAprov||0),0);
-      const rObra=lanc.filter(l=>l.obraCod===o.cod).reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-      if(codsConcluidas.has(o.cod)){
-        const excedente=Math.max(rObra-bObra,0);
-        real+=excedente;
-      } else {
-        budgTotal+=bObra;
-        real+=rObra;
-      }
-    });
     const emAnd=obras.filter(o=>o.status==='Em Andamento').length;
     const conc=obras.filter(o=>o.status==='Concluído').length;
     const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
