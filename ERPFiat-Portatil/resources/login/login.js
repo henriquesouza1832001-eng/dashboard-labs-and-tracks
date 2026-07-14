@@ -7,21 +7,47 @@ btn.addEventListener('click', async () => {
   const senha = document.getElementById('inp-senha').value;
   err.textContent = '';
   if (!email || !senha) { err.textContent = 'preencha os dois campos'; return; }
+
   btn.disabled = true;
+  btn.textContent = 'Entrando...';
+
+  // avisa o usuário se demorar mais de 5s (warehouse acordando)
+  const avisoTimeout = setTimeout(() => {
+    err.textContent = 'Aguarde, o servidor está acordando... pode levar até 1 minuto na primeira vez.';
+  }, 5000);
+
   try {
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), 90000); // 90s limite máximo
+
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, senha })
+      body: JSON.stringify({ email, senha }),
+      signal: controller.signal
     });
+
+    clearTimeout(fetchTimeout);
+    clearTimeout(avisoTimeout);
+
     const d = await res.json();
-    if (!res.ok || !d.token) { err.textContent = d.erro || 'credenciais inválidas'; return; }
-    
+    if (!res.ok || !d.token) {
+      err.textContent = d.erro || 'credenciais inválidas';
+      return;
+    }
+
+    err.textContent = '';
     window.location.href = '/kpi';
-  } catch {
-    err.textContent = 'erro de conexão';
+  } catch (e) {
+    clearTimeout(avisoTimeout);
+    if (e.name === 'AbortError') {
+      err.textContent = 'Tempo limite atingido. O servidor demorou demais para responder. Tente novamente.';
+    } else {
+      err.textContent = 'erro de conexão';
+    }
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Entrar';
   }
 });
 
