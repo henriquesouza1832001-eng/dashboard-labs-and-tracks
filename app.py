@@ -665,6 +665,13 @@ def _background_refresh(intervalo=300):
 
 @app.on_event("startup")
 async def prefetch():
+    # Dispara o aquecimento de cache em background e retorna na hora.
+    # O Uvicorn só emite "Application startup complete" depois que essa
+    # função termina, e o proxy do Databricks só libera a URL pública
+    # depois disso — por isso não podemos esperar o SQL Warehouse aqui.
+    asyncio.create_task(_prefetch_body())
+
+async def _prefetch_body():
     loop = asyncio.get_event_loop()
     try:
         await arun_exec_retry(f"""

@@ -19,21 +19,6 @@ jobs:
       - name: Install Databricks CLI
         run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
-      - name: Inject env vars into app.yaml
-        run: |
-          cat >> app.yaml << EOF
-
-          env:
-            - name: DATABRICKS_HOST
-              value: "adb-5678659344564033.13.azuredatabricks.net"
-            - name: DATABRICKS_TOKEN
-              value: "${{ secrets.DATABRICKS_TOKEN }}"
-            - name: DATABRICKS_WAREHOUSE_ID
-              value: "${{ secrets.DATABRICKS_WAREHOUSE_ID }}"
-            - name: JWT_SECRET
-              value: "${{ secrets.JWT_SECRET }}"
-          EOF
-
       - name: Deploy app from Git
         env:
           DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net

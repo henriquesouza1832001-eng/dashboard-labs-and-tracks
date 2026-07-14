@@ -1,0 +1,25 @@
+bundle:
+  name: dashboard-labs-and-tracks
+
+resources:
+  apps:
+    dashboard_labs_and_tracks:
+      name: dashboard-labs-and-tracks
+      source_code_path: .
+      resources:
+        - name: databricks-token-secret
+          secret:
+            scope: dashboard-secrets
+            key: DATABRICKS_TOKEN
+            permission: READ
+        - name: jwt-secret
+          secret:
+            scope: dashboard-secrets
+            key: JWT_SECRET
+            permission: READ
+
+targets:
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-5678659344564033.13.azuredatabricks.net
