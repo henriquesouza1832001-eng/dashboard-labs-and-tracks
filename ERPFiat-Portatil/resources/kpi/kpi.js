@@ -1209,6 +1209,32 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     }
   });
   ctx.stroke();
+  if (cod === 'OB-007' && modo === 'fisico') {
+    const dtIniCrono = new Date('2025-12-10').getTime();
+    const dtFimCrono = new Date('2026-04-30').getTime();
+    const cronoPlan = meses.map(mes => {
+      const mesMs = new Date(mes+'-28').getTime();
+      if (mesMs < dtIniCrono) return 0;
+      if (mesMs >= dtFimCrono) return 100;
+      return Math.min(((mesMs - dtIniCrono) / (dtFimCrono - dtIniCrono)) * 100, 100);
+    });
+    ctx.beginPath();
+    ctx.strokeStyle = '#2ea043';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.setLineDash([5, 3]);
+    cronoPlan.forEach((v, i) => {
+      const x = xPos(i), y = yPos(v);
+      if (i === 0) ctx.moveTo(x, y);
+      else {
+        const xPrev = xPos(i-1), yPrev = yPos(cronoPlan[i-1]);
+        ctx.quadraticCurveTo((xPrev+x)/2, yPrev, x, y);
+      }
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
   function desenharPontoRotulado(idx, valor, cor, evitarY) {
     const x = xPos(idx);
@@ -1419,6 +1445,7 @@ function abrirDetalheObra(cod){
       <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--text-muted)">
         <span><span style="display:inline-block;width:12px;height:3px;background:#58a6ff;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Planejado</span>
         <span><span style="display:inline-block;width:12px;height:3px;background:#e3711a;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Realizado</span>
+        ${o && o.cod==='OB-007'?'<span><span style="display:inline-block;width:12px;height:3px;background:#2ea043;border-radius:2px;vertical-align:middle;margin-right:4px;border-top:2px dashed #2ea043;height:0"></span>Cronograma Inicial</span>':''}
       </div>
     </div>
     <div class="ob-ov-cbox" style="flex:1">
