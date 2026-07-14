@@ -693,7 +693,7 @@ async def _prefetch_body():
     except Exception as e:
         print(f"[startup] tipos_uc: {e}")
     try:
-        existe = run_query(f"SELECT id FROM {S_CONFORTO}.tipos_uc LIMIT 1")
+        existe = await arun_query(f"SELECT id FROM {S_CONFORTO}.tipos_uc LIMIT 1")
         if not existe:
             tipos_padrao = [
                 'Split','Cassete','Chiller','Fan Coil','Central',
