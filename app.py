@@ -25,6 +25,7 @@ JWT_SECRET   = os.getenv("JWT_SECRET")
 HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
 WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "d523a4cf58739a90")
+print(f"[boot] HOST={HOST!r}  TOKEN={'SET' if TOKEN else 'VAZIO'}  WAREHOUSE={WAREHOUSE_ID!r}")
 BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ERPFiat-Portatil/resources")
 IS_PROD      = os.getenv("ENV", "prod") == "prod"
 
@@ -41,6 +42,10 @@ _conn_lock = threading.Lock()
 _local = threading.local()
 
 def get_conn():
+    if not TOKEN:
+        raise RuntimeError("DATABRICKS_TOKEN não encontrado no ambiente — verifique os secrets do app")
+    if not HOST:
+        raise RuntimeError("DATABRICKS_HOST não encontrado no ambiente")
     conn = getattr(_local, "conn", None)
     for _ in range(2):
         try:
@@ -57,11 +62,12 @@ def get_conn():
                 server_hostname=HOST,
                 http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
                 access_token=TOKEN,
+                auth_type="pat",
                 _socket_timeout=30,
             )
             _local.conn = conn
-        except:
-            pass
+        except Exception as e:
+            print(f"[get_conn] falha ao conectar: {e}")
     return conn
 
 # ─── Helpers SQL síncronos (uso interno e em threads) ─────────────────────────

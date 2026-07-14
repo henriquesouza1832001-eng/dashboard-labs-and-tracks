@@ -1,6 +1,24 @@
 bundle:
   name: dashboard-labs-and-tracks
 
+resources:
+  apps:
+    dashboard_labs_and_tracks:
+      name: dashboard-labs-and-tracks
+      source_code_path: .
+      skip_creation: true
+      resources:
+        - name: DATABRICKS_TOKEN
+          secret:
+            scope: dashboard-secrets
+            key: DATABRICKS_TOKEN
+            permission: READ
+        - name: JWT_SECRET
+          secret:
+            scope: dashboard-secrets
+            key: JWT_SECRET
+            permission: READ
+
 targets:
   prod:
     mode: production
