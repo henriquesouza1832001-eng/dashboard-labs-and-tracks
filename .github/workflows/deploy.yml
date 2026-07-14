@@ -19,14 +19,14 @@ jobs:
       - name: Install Databricks CLI
         run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
+      - name: Delete existing app
+        env:
+          DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: databricks apps delete dashboard-labs-and-tracks || true
+
       - name: Deploy bundle
         env:
           DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: databricks bundle deploy --target prod
-
-      - name: Restart app
-        env:
-          DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-        run: databricks apps restart dashboard-labs-and-tracks
