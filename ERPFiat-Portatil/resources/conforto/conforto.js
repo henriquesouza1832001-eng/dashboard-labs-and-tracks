@@ -65,7 +65,107 @@ function setSaveStatus(s, txt) {
   const t = $('save-txt');
   if (t) t.textContent = txt;
 }
+let _tiposUC = [];
+let _tipoUCEditIdx = -1;
+let _tipoUCChecklist = [];
 
+function renderTiposUC() {
+  const container = $('tipos-uc-list');
+  if (!container) return;
+  if (!_tiposUC.length) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">Nenhum tipo cadastrado.</div>';
+    return;
+  }
+  container.innerHTML = _tiposUC.map((t, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:13px">${t.nome}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${t.checklist?.length ? t.checklist.length + ' item(s)' : 'Usa checklist global'}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="editarTipoUC(${i})">Editar</button>
+        <button class="btn btn-sm" style="background:var(--vermelho-soft,#ffeaea);color:var(--vermelho,#c00)" onclick="excluirTipoUC(${i})">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function atualizarSelectTipoUC() {
+  const sel = $('uc-tipo');
+  if (!sel) return;
+  const val = sel.value;
+  sel.innerHTML = _tiposUC.map(t => `<option value="${t.nome}">${t.nome}</option>`).join('');
+  if (_tiposUC.find(t => t.nome === val)) sel.value = val;
+}
+
+function abrirModalTipoUC(idx = -1) {
+  _tipoUCEditIdx = idx;
+  const t = idx >= 0 ? _tiposUC[idx] : null;
+  $('modal-tipo-uc-title').textContent = t ? 'Editar Tipo de UC' : 'Novo Tipo de UC';
+  $('tipo-uc-nome').value = t?.nome || '';
+  $('tipo-uc-err').textContent = '';
+  _tipoUCChecklist = t?.checklist ? [...t.checklist] : [];
+  renderChecklistTipoUC();
+  abrirModal('modal-tipo-uc');
+}
+
+function editarTipoUC(idx) { abrirModalTipoUC(idx); }
+
+function renderChecklistTipoUC() {
+  const el = $('tipo-uc-checklist-list');
+  if (!el) return;
+  el.innerHTML = _tipoUCChecklist.map((item, i) => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="flex:1;font-size:12px">${item}</span>
+      <button onclick="_tipoUCChecklist.splice(${i},1);renderChecklistTipoUC()" style="background:none;border:none;color:var(--vermelho,#c00);cursor:pointer;font-size:14px">×</button>
+    </div>
+  `).join('') || '<div style="color:var(--text-muted);font-size:12px">Nenhum item.</div>';
+}
+
+function adicionarItemTipoUC() {
+  const inp = $('tipo-uc-novo-item');
+  const val = inp.value.trim();
+  if (!val) return;
+  _tipoUCChecklist.push(val);
+  inp.value = '';
+  renderChecklistTipoUC();
+}
+
+async function salvarTipoUC() {
+  const nome = $('tipo-uc-nome').value.trim();
+  if (!nome) { $('tipo-uc-err').textContent = 'Nome obrigatório.'; return; }
+  const obj = {
+    id: _tipoUCEditIdx >= 0 ? (_tiposUC[_tipoUCEditIdx].id || `tipo_${Date.now()}`) : `tipo_${Date.now()}`,
+    nome, checklist: [..._tipoUCChecklist],
+    ordem: _tipoUCEditIdx >= 0 ? (_tiposUC[_tipoUCEditIdx].ordem ?? _tiposUC.length) : _tiposUC.length
+  };
+  if (_tipoUCEditIdx >= 0) _tiposUC[_tipoUCEditIdx] = obj;
+  else _tiposUC.push(obj);
+  try {
+    await fetch('/api/conforto/tipos-uc', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
+      body: JSON.stringify([obj])
+    });
+  } catch(e) { console.error('Erro ao salvar tipo UC:', e); }
+  fecharModal('modal-tipo-uc');
+  renderTiposUC();
+  atualizarSelectTipoUC();
+}
+
+async function excluirTipoUC(idx) {
+  if (!confirm('Excluir este tipo?')) return;
+  const t = _tiposUC[idx];
+  _tiposUC.splice(idx, 1);
+  try {
+    await fetch(`/api/conforto/tipos-uc/${t.id}`, {
+      method: 'DELETE',
+      headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''}
+    });
+  } catch(e) { console.error('Erro ao excluir tipo UC:', e); }
+  renderTiposUC();
+  atualizarSelectTipoUC();
+}
 function abrirModal(id) { const el = $(id); if (el) el.classList.add('open'); }
 function fecharModal(id) { const el = $(id); if (el) el.classList.remove('open'); }
 
@@ -85,6 +185,9 @@ function carregarDeJSON(txt) {
     state.rotinas  = Array.isArray(d.rotinas)  ? d.rotinas  : [];
     if (d.config) {
       state.config = Object.assign({}, state.config, d.config);
+      _tiposUC = d.tiposUc || [];
+      renderTiposUC();
+      atualizarSelectTipoUC();
       if (!Array.isArray(state.config.checklistPreventiva)) state.config.checklistPreventiva = [];
       state.config.cicloFiltroDias = state.config.cicloFiltroDias || 90;
       state.config.alertaPreventivaDias = state.config.alertaPreventivaDias || 7;
@@ -1660,6 +1763,9 @@ document.addEventListener('DOMContentLoaded', () => {
     agendarSalvamento();
     renderConfiguracoes();
   });
+  $('btn-add-tipo-uc')?.addEventListener('click', () => abrirModalTipoUC());
+  $('btn-salvar-tipo-uc')?.addEventListener('click', salvarTipoUC);
+  $('tipo-uc-novo-item')?.addEventListener('keydown', e => { if(e.key==='Enter') adicionarItemTipoUC(); });
   setTimeout(tentarCarregar, 300);
 });
 
@@ -1725,3 +1831,7 @@ window.abrirModalManutencao = abrirModalManutencao;
 window.abrirAgendaSlot = abrirAgendaSlot;
 window.state = state;
 window.agendarSalvamento = agendarSalvamento;
+window.editarTipoUC = editarTipoUC;
+window.excluirTipoUC = excluirTipoUC;
+window.adicionarItemTipoUC = adicionarItemTipoUC;
+window.salvarTipoUC = salvarTipoUC;

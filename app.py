@@ -570,13 +570,22 @@ def _load_conforto():
     rot_rows = run_query(f"SELECT * FROM {S_CONFORTO}.rotinas ORDER BY nome")
     rot_dias = run_query(f"SELECT rotina_id, dia_semana FROM {S_CONFORTO}.rotina_dias")
     rotinas = _transformar_rotinas(rot_rows, rot_dias)
+    try:
+        tipos_uc_rows = run_query(f"SELECT * FROM {S_CONFORTO}.tipos_uc ORDER BY ordem ASC")
+        for r in tipos_uc_rows:
+            try: r["checklist"] = json.loads(r.get("checklist") or "[]")
+            except: r["checklist"] = []
+        tipos_uc = tipos_uc_rows
+    except Exception as e:
+        print(f"[conforto] erro ao carregar tipos_uc: {e}")
+        tipos_uc = []
 
     payload = {
         "modulo": "conforto", "versao": "2.0",
         "ordens": ordens, "ucs": ucs, "preventivas": preventivas,
         "manutencoes": manutencoes, "pecas": pecas, "requisicoes": requisicoes,
         "areas": areas, "fornecedores": fornecedores, "tecnicos": tecnicos,
-        "rotinas": rotinas, "config": config,
+        "rotinas": rotinas, "config": config, "tiposuc": tipos_uc,
     }
     cache_set("conforto", payload)
     return payload
@@ -667,6 +676,15 @@ async def prefetch():
     except Exception as e:
         print(f"[startup] etapas_avancos: {e}")
     print("[startup] aquecendo cache...")
+    try:
+        await arun_exec_retry(f"""
+            CREATE TABLE IF NOT EXISTS {S_CONFORTO}.tipos_uc (
+                id STRING, nome STRING, checklist STRING,
+                ordem INT, atualizado_por STRING, atualizado_em TIMESTAMP
+            )
+        """)
+    except Exception as e:
+        print(f"[startup] tipos_uc: {e}")
     for nome, fn in LOADERS.items():
         try:
             print(f"[startup] carregando {nome}...")
@@ -2224,6 +2242,15 @@ async def prev_page(uc_id: str, request: Request):
             except:
                 checklist_global = []
         checklist = (uc.get("checklistProprio") or []) if uc else []
+        if not checklist and uc:
+            uc_tipo = uc.get("tipo")
+            if uc_tipo:
+                tipo_rows = await arun_query(
+                    f"SELECT checklist FROM {S_CONFORTO}.tipos_uc WHERE nome=? LIMIT 1", [uc_tipo]
+                )
+                if tipo_rows and tipo_rows[0].get("checklist"):
+                    try: checklist = json.loads(tipo_rows[0]["checklist"])
+                    except: checklist = []
         if not checklist:
             checklist = checklist_global
     except Exception as e:
@@ -2579,5 +2606,54 @@ async def deletar_preventiva(pid: str, request: Request):
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+@app.get("/api/conforto/tipos-uc")
+async def listar_tipos_uc():
+    rows = run_query(f"SELECT * FROM {S_CONFORTO}.tipos_uc ORDER BY ordem ASC")
+    for r in rows:
+        try: r["checklist"] = json.loads(r.get("checklist") or "[]")
+        except: r["checklist"] = []
+    return JSONResponse(rows)
 
+@app.post("/api/conforto/tipos-uc")
+async def salvar_tipo_uc(request: Request):
+    body = await request.json()
+    u = get_usuario(request)
+    tipos = body if isinstance(body, list) else [body]
+    if not tipos:
+        return JSONResponse({"ok": True})
+    selects, params = [], []
+    for i, t in enumerate(tipos):
+        tid = t.get("id") or f"tipo_{i}_{int(time.time())}"
+        selects.append("SELECT ? AS id, ? AS nome, ? AS checklist, ? AS ordem, ? AS atualizado_por")
+        params += [tid, t.get("nome"), json.dumps(t.get("checklist", [])), t.get("ordem", i), u]
+    origem = " UNION ALL ".join(selects)
+    await arun_exec_retry(f"""
+        MERGE INTO {S_CONFORTO}.tipos_uc AS t
+        USING ({origem}) AS s ON t.id = s.id
+        WHEN MATCHED THEN UPDATE SET
+            nome=s.nome, checklist=s.checklist, ordem=s.ordem,
+            atualizado_por=s.atualizado_por, atualizado_em=current_timestamp()
+        WHEN NOT MATCHED THEN INSERT (id, nome, checklist, ordem, atualizado_por, atualizado_em)
+            VALUES (s.id, s.nome, s.checklist, s.ordem, s.atualizado_por, current_timestamp())
+    """, params)
+    payload = cache_get("conforto")
+    if payload is not None:
+        try:
+            rows = run_query(f"SELECT * FROM {S_CONFORTO}.tipos_uc ORDER BY ordem ASC")
+            for r in rows:
+                try: r["checklist"] = json.loads(r.get("checklist") or "[]")
+                except: r["checklist"] = []
+            payload["tiposUc"] = rows
+            cache_set("conforto", payload)
+        except: pass
+    return JSONResponse({"ok": True})
+
+@app.delete("/api/conforto/tipos-uc/{tid}")
+async def deletar_tipo_uc(tid: str):
+    await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.tipos_uc WHERE id=?", [tid])
+    payload = cache_get("conforto")
+    if payload is not None:
+        payload["tiposUc"] = [t for t in payload.get("tiposUc", []) if t.get("id") != tid]
+        cache_set("conforto", payload)
+    return JSONResponse({"ok": True})
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")

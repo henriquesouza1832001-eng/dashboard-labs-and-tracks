@@ -427,6 +427,17 @@
         </div>
 
         <div class="modulo-section">
+  <div class="modulo-section-title">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Tipos de Unidade de Climatização
+  </div>
+  <div id="tipos-uc-list"></div>
+  <button class="btn btn-secondary btn-sm" id="btn-add-tipo-uc" style="margin-top:8px">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Novo Tipo
+  </button>
+</div>
+        <div class="modulo-section">
           <div class="modulo-section-title">
             <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Alertas Gerais
@@ -468,7 +479,7 @@
     <div class="modal-header"><span class="modal-title" id="modal-uc-title">Nova Unidade de Climatização</span><button class="modal-close" id="modal-uc-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
       <div class="form-row"><div class="field"><label>Categoria *</label><select id="uc-categoria"><option>Ar-Condicionado</option><option>Bebedouro</option><option>Climatizador</option></select></div><div class="field"><label>Código (gerado automaticamente)</label><input type="text" id="uc-codigo-display" readonly style="background:var(--bg);color:var(--text2);cursor:default" placeholder="Gerado ao salvar"></div></div>
-      <div class="form-row"><div class="field"><label>Tipo</label><select id="uc-tipo"><option>Split</option><option>Cassete</option><option>Chiller</option><option>Fan Coil</option><option>Central</option><option>Bebedouro Pressão</option><option>Bebedouro Refrigerado</option><option>Climatizador Evaporativo</option><option>Climatizador Industrial</option></select></div><div class="field"><label>Capacidade (BTU / L/h)</label><input type="number" id="uc-btu" min="0"></div></div>
+      <div class="form-row"><div class="field"><label>Tipo</label><select id="uc-tipo"></select><option>Split</option><option>Cassete</option><option>Chiller</option><option>Fan Coil</option><option>Central</option><option>Bebedouro Pressão</option><option>Bebedouro Refrigerado</option><option>Climatizador Evaporativo</option><option>Climatizador Industrial</option></select></div><div class="field"><label>Capacidade (BTU / L/h)</label><input type="number" id="uc-btu" min="0"></div></div>
       <div class="form-row full"><div class="field"><label>Nome / Local *</label><input type="text" id="uc-nome"></div></div>
       <div class="form-row full"><div class="field"><label>Modelo / Marca</label><input type="text" id="uc-modelo"></div></div>
       <div class="form-row"><div class="field"><label>Data de Instalação</label><input type="date" id="uc-data-inst"></div><div class="field"><label>Ciclo do Filtro (dias)</label><input type="number" id="uc-ciclo-filtro" min="1"></div></div>
@@ -712,7 +723,31 @@
     </div>
   </div>
 </div>
-
+<div class="modal-overlay" id="modal-tipo-uc">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span id="modal-tipo-uc-title">Novo Tipo de UC</span>
+      <button class="modal-close" onclick="fecharModal('modal-tipo-uc')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Nome do tipo *</label><input type="text" id="tipo-uc-nome" placeholder="Ex: Split, Cassete, Chiller..."></div>
+      <div class="field" style="margin-top:12px">
+        <label>Checklist de preventiva deste tipo</label>
+        <div class="config-sub" style="margin-bottom:8px">Deixe vazio para usar o checklist global</div>
+        <div id="tipo-uc-checklist-list"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="text" id="tipo-uc-novo-item" placeholder="Novo item..." style="flex:1">
+          <button class="btn btn-secondary btn-sm" onclick="adicionarItemTipoUC()">+ Adicionar</button>
+        </div>
+      </div>
+      <div id="tipo-uc-err" style="color:var(--vermelho);font-size:12px;margin-top:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-tipo-uc')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-tipo-uc">Salvar</button>
+    </div>
+  </div>
+</div>
 <script src="/qr/qrcode.min.js"></script>
 <script src="/hub/pwa.js"></script>
 <script src="../hub/auth.js"></script>
