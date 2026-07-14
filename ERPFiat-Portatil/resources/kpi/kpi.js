@@ -1211,7 +1211,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.stroke();
   if (obra && obra.cod === 'OB-007' && modo === 'fisico') {
     const dtIniCrono = new Date('2025-12-10').getTime();
-    const dtFimCrono = new Date('2026-04-30').getTime();
+    const dtFimCrono = new Date('2026-03-30').getTime();
     const idxFim = meses.findIndex(mes => new Date(mes+'-28').getTime() >= dtFimCrono);
     const idxFimReal = idxFim === -1 ? meses.length - 1 : idxFim;
     const cronoItens = [];
