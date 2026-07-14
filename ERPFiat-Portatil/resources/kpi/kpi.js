@@ -1212,28 +1212,54 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   if (obra && obra.cod === 'OB-007' && modo === 'fisico') {
     const dtIniCrono = new Date('2025-12-10').getTime();
     const dtFimCrono = new Date('2026-04-30').getTime();
-    const cronoPlan = meses.map(mes => {
+    const idxFim = meses.findIndex(mes => new Date(mes+'-28').getTime() >= dtFimCrono);
+    const idxFimReal = idxFim === -1 ? meses.length - 1 : idxFim;
+    const cronoItens = [];
+    meses.forEach((mes, i) => {
       const mesMs = new Date(mes+'-28').getTime();
-      if (mesMs < dtIniCrono) return 0;
-      if (mesMs >= dtFimCrono) return 100;
-      return Math.min(((mesMs - dtIniCrono) / (dtFimCrono - dtIniCrono)) * 100, 100);
+      if (mesMs < dtIniCrono || i > idxFimReal) return;
+      const v = Math.min(((mesMs - dtIniCrono) / (dtFimCrono - dtIniCrono)) * 100, 100);
+      cronoItens.push({i, v});
     });
-    ctx.beginPath();
-    ctx.strokeStyle = '#2ea043';
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.setLineDash([5, 3]);
-    cronoPlan.forEach((v, i) => {
-      const x = xPos(i), y = yPos(v);
-      if (i === 0) ctx.moveTo(x, y);
-      else {
-        const xPrev = xPos(i-1), yPrev = yPos(cronoPlan[i-1]);
-        ctx.quadraticCurveTo((xPrev+x)/2, yPrev, x, y);
-      }
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
+    if (cronoItens.length) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#2ea043';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.setLineDash([5, 3]);
+      cronoItens.forEach(({i, v}, idx) => {
+        const x = xPos(i), y = yPos(v);
+        if (idx === 0) ctx.moveTo(x, y);
+        else {
+          const prev = cronoItens[idx-1];
+          const xPrev = xPos(prev.i), yPrev = yPos(prev.v);
+          ctx.quadraticCurveTo((xPrev+x)/2, yPrev, x, y);
+        }
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const ultimo = cronoItens[cronoItens.length-1];
+      const xFim = xPos(ultimo.i), yFim = yPos(ultimo.v);
+      ctx.beginPath();
+      ctx.arc(xFim, yFim, 5, 0, Math.PI*2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(xFim, yFim, 5, 0, Math.PI*2);
+      ctx.strokeStyle = '#2ea043';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.font = '700 10px var(--mono,monospace)';
+      const txt = '100%';
+      const tw = ctx.measureText(txt).width;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillRect(xFim - tw/2 - 4, yFim - 22, tw + 8, 14);
+      ctx.fillStyle = '#2ea043';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(txt, xFim, yFim - 10);
+    }
   }
 
   function desenharPontoRotulado(idx, valor, cor, evitarY) {
