@@ -2189,10 +2189,14 @@ async def admin_page(request: Request):
 async def login_page(request: Request):
     email = request.headers.get("X-Forwarded-Email", "").strip().lower()
     if email:
-        rows = run_query(
-            "SELECT nome,email,role,ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email=? LIMIT 1",
-            [email]
-        )
+        try:
+            rows = await arun_query(
+                "SELECT nome,email,role,ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email=? LIMIT 1",
+                [email]
+            )
+        except Exception as e:
+            print(f"[login_page] erro ao buscar usuario: {e}")
+            rows = []
         if rows and rows[0]["ativo"]:
             r = rows[0]
             token = jwt.encode({
