@@ -6,6 +6,7 @@
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload.exp && Date.now() / 1000 > payload.exp) {
       localStorage.removeItem('ctrl-token');
+      document.cookie = 'ctrl-token=; path=/; max-age=0; SameSite=None; Secure';
       window.location.href = '/login';
       return;
     }
@@ -22,6 +23,7 @@
     };
   } catch {
     localStorage.removeItem('ctrl-token');
+    document.cookie = 'ctrl-token=; path=/; max-age=0; SameSite=None; Secure';
     window.location.href = '/login';
   }
 })();
