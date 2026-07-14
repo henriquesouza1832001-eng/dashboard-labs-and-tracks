@@ -685,6 +685,28 @@ async def prefetch():
         """)
     except Exception as e:
         print(f"[startup] tipos_uc: {e}")
+    try:
+        existe = run_query(f"SELECT id FROM {S_CONFORTO}.tipos_uc LIMIT 1")
+        if not existe:
+            tipos_padrao = [
+                'Split','Cassete','Chiller','Fan Coil','Central',
+                'Bebedouro Pressão','Bebedouro Refrigerado',
+                'Climatizador Evaporativo','Climatizador Industrial'
+            ]
+            selects = []
+            params = []
+            for i, nome in enumerate(tipos_padrao):
+                selects.append("SELECT ? AS id, ? AS nome, ? AS checklist, ? AS ordem, ? AS atualizado_por")
+                params += [f"tipo_padrao_{i}", nome, "[]", i, "system"]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
+                INSERT INTO {S_CONFORTO}.tipos_uc (id, nome, checklist, ordem, atualizado_por, atualizado_em)
+                SELECT id, nome, checklist, ordem, atualizado_por, current_timestamp()
+                FROM ({origem})
+            """, params)
+            print("[startup] tipos_uc populados com padrão")
+    except Exception as e:
+        print(f"[startup] tipos_uc seed: {e}")
     for nome, fn in LOADERS.items():
         try:
             print(f"[startup] carregando {nome}...")

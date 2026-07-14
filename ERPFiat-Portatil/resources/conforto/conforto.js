@@ -90,12 +90,15 @@ function renderTiposUC() {
   `).join('');
 }
 
+const _TIPOS_UC_PADRAO = ['Split','Cassete','Chiller','Fan Coil','Central','Bebedouro Pressão','Bebedouro Refrigerado','Climatizador Evaporativo','Climatizador Industrial'];
+
 function atualizarSelectTipoUC() {
   const sel = $('uc-tipo');
   if (!sel) return;
   const val = sel.value;
-  sel.innerHTML = _tiposUC.map(t => `<option value="${t.nome}">${t.nome}</option>`).join('');
-  if (_tiposUC.find(t => t.nome === val)) sel.value = val;
+  const fonte = _tiposUC.length ? _tiposUC.map(t => t.nome) : _TIPOS_UC_PADRAO;
+  sel.innerHTML = fonte.map(nome => `<option value="${nome}">${nome}</option>`).join('');
+  if (fonte.includes(val)) sel.value = val;
 }
 
 function abrirModalTipoUC(idx = -1) {
