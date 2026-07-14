@@ -6,6 +6,34 @@ Aqui vai o histórico de mudanças, bugs e decisões que foram tomadas ao longo 
 
 ---
 
+## Credenciais removidas do repositório de verdade
+
+A entrada anterior deste changelog fala que eu tinha revogado e trocado os valores. O que faltou contar ali é que só trocar o valor não resolve: o `app.yaml` continuava versionado, com o `DATABRICKS_TOKEN` e o `JWT_SECRET` em texto puro desde o primeiro commit que criou o arquivo. O repositório sempre foi privado, então não houve exposição pública nesse tempo todo, mas pra poder abrir o repo (ou só dormir tranquilo sabendo que qualquer colaborador futuro não esbarra num token válido no histórico) não dava pra deixar assim.
+
+Revoguei os dois tokens de novo, dessa vez de verdade na origem, e reescrevi o histórico do Git com `git filter-repo` pra tirar o `app.yaml` de todos os commits, não só do atual. Depois disso, `app.yaml` foi pro `.gitignore`, e as quatro variáveis (`DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABRICKS_WAREHOUSE_ID`, `JWT_SECRET`) passaram a viver nos secrets/variáveis de ambiente do Databricks Apps em produção, e num `app.yaml` local que nunca sai da máquina de quem tá desenvolvendo. O `deploy.yml` já usava `secrets.DATABRICKS_TOKEN` do GitHub, então essa parte não precisou mudar.
+
+---
+
+## Tipos de UC e checklist por tipo, no Conforto
+
+O problema era simples de descrever e chato de resolver: toda preventiva usava o mesmo checklist global, mas um Split tem uma lista de verificação completamente diferente de um Bebedouro Refrigerado, e forçar os dois pelo mesmo checklist significava ou item demais irrelevante ou item de menos.
+
+Criei uma tabela `tipos_uc` no banco, com CRUD próprio em Configurações, onde cada tipo pode ter seu checklist específico. No portal QR, a escolha de qual checklist mostrar pro técnico segue uma hierarquia: primeiro o checklist da própria UC, se ela tiver um customizado; senão o checklist do tipo daquela UC; senão o checklist global, como fallback final. Os 9 tipos que antes estavam hardcoded direto no HTML foram migrados: na primeira inicialização depois dessa mudança, eles são inseridos automaticamente na tabela nova, então nenhuma UC existente ficou sem tipo.
+
+---
+
+## Avanço físico batendo diferente entre o KPI e Obras
+
+Achei um bug incômodo: a curva S do gráfico no KPI e o card de percentual de avanço físico, na mesma obra, mostravam números diferentes. Óbvio que algo tava calculando errado em algum dos dois lados, a questão era achar onde.
+
+A causa era uma divergência entre as duas implementações do mesmo cálculo. No KPI, `calcAvFis` simplesmente pulava (com um `return` antecipado) qualquer item de checklist sem data cadastrada. Já no `obras.js`, a lógica tinha um fallback: item sem data entrava no cálculo com peso igual entre os itens da mesma sub-tarefa, em vez de ser descartado. Duas fórmulas ligeiramente diferentes pro mesmo número, cada uma escrita num momento diferente do projeto sem eu perceber que tinham desalinhado.
+
+Corrigi alinhando as duas pela lógica do `obras.js`, que é a mais correta: item sem data não desaparece do cálculo, ele entra com peso igual dividido entre os itens da sub-tarefa que não têm data.
+
+Isso resolveu o cálculo daqui pra frente, mas não os dados que já estavam errados no banco. Como `avanco_fisico` só era recalculado quando alguém abria e salvava a sub-tarefa manualmente, um bocado de sub-tarefa antiga ficou com o campo zerado ou desatualizado, sem ninguém ter mexido nela de novo. Pra não depender de reabrir e resalvar uma por uma, criei `POST /api/admin/recalcular-avanco-obras`, uma rota de manutenção que passa por todas as sub-tarefas e etapas do banco e recalcula o avanço a partir dos itens de checklist já salvos. É rota de uso pontual, não pra ficar exposta depois de rodar uma vez.
+
+---
+
 ## Por que salvar em Obras demorava 17 a 50 segundos
 
 Essa foi a investigação mais longa até agora. Salvar qualquer coisa em Obras, mesmo só 1 campo de budget, demorava um absurdo, e se duas pessoas tentassem salvar coisas diferentes ao mesmo tempo, uma delas quebrava.
