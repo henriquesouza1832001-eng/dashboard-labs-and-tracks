@@ -1209,7 +1209,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     }
   });
   ctx.stroke();
-  if (cod === 'OB-007' && modo === 'fisico') {
+  if (obra && obra.cod === 'OB-007' && modo === 'fisico') {
     const dtIniCrono = new Date('2025-12-10').getTime();
     const dtFimCrono = new Date('2026-04-30').getTime();
     const cronoPlan = meses.map(mes => {
