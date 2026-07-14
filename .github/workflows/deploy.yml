@@ -11,7 +11,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,10 +19,10 @@ jobs:
       - name: Install Databricks CLI
         run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
-      - name: Deploy app from Git
+      - name: Deploy via bundle (envia arquivos locais)
         env:
           DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          databricks apps deploy dashboard-labs-and-tracks \
-            --json '{"git_source": {"branch": "main"}}'
+          databricks bundle deploy --target prod
+          databricks apps start dashboard-labs-and-tracks
