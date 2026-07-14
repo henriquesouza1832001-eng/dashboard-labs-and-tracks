@@ -2187,9 +2187,28 @@ async def admin_page(request: Request):
 
 @app.get("/login")
 async def login_page(request: Request):
+    email = request.headers.get("X-Forwarded-Email", "").strip().lower()
+    if email:
+        rows = run_query(
+            "SELECT nome,email,role,ativo FROM eng_lab.`dashboard-labs-and-tracks`.usuarios WHERE email=? LIMIT 1",
+            [email]
+        )
+        if rows and rows[0]["ativo"]:
+            r = rows[0]
+            token = jwt.encode({
+                "nome": r["nome"], "email": r["email"], "role": r["role"],
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=12)
+            }, JWT_SECRET, algorithm="HS256")
+            resp = RedirectResponse(url="/kpi")
+            resp.set_cookie(key="ctrl-token", value=token,
+                httponly=True, secure=True, samesite="none",
+                max_age=12*3600, path="/")
+            return resp
+    # fallback: mostra o formulário só se não vier header do Databricks
     if usuario_autenticado(request):
         return RedirectResponse(url="/kpi")
-    return HTMLResponse(open(f"{BASE}/login/login.html", encoding="utf-8").read(), headers={"Cache-Control": "no-store"})
+    return HTMLResponse(open(f"{BASE}/login/login.html", encoding="utf-8").read(),
+                        headers={"Cache-Control": "no-store"})
 
 @app.get("/app.webmanifest")
 async def webmanifest():
