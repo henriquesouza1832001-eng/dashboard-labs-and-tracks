@@ -14,7 +14,11 @@ async function req(endpoint, opts = {}, ttl = 0, _retry = false) {
   });
   if (res.status === 302 || res.status === 303 || res.redirected) {
     if (!_retry) return req(endpoint, opts, ttl, true);
-    window.location.reload();
+    window.location.href = '/login';
+    return;
+  }
+  if (res.status === 401 || res.status === 403) {
+    window.location.href = '/login';
     return;
   }
   if (!res.ok) {

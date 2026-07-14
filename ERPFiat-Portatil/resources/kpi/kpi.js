@@ -35,7 +35,7 @@ function budgRealSemConcluidas(obras, budget, lanc){
   return {budgTotal, real};
 }
 async function preencherMicroCards(){
-  const d=window.__DADOS__||await(await fetch('/api/kpi/dados')).json();
+  const d=window.__DADOS__||await(await fetch('/api/kpi/dados',{credentials:'include',headers:{'x-ctrl-token':localstorage.getitem('ctrl-token')||''}})).json();
   window._kpiDados_obras    = d.obras    || null;
 window._kpiDados_chamados = d.chamados || null;
 window._kpiDados_codin    = d.codin    || null;
