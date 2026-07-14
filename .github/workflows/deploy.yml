@@ -23,7 +23,9 @@ jobs:
         env:
           DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-        run: databricks apps delete dashboard-labs-and-tracks || true
+        run: |
+          databricks apps delete dashboard-labs-and-tracks || true
+          sleep 15
 
       - name: Deploy bundle
         env:
