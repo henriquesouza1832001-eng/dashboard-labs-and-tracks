@@ -23,3 +23,4 @@ targets:
     mode: production
     workspace:
       host: https://adb-5678659344564033.13.azuredatabricks.net
+      root_path: /Workspace/Users/ta51230@stellantis.com/.bundle/${bundle.name}/${bundle.target}
