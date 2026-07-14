@@ -26,6 +26,7 @@ HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
 WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "d523a4cf58739a90")
 BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ERPFiat-Portatil/resources")
+IS_PROD      = os.getenv("ENV", "prod") == "prod"
 
 # ─── Schemas ──────────────────────────────────────────────────────────────────
 S_CHAMADOS   = "eng_lab.dashboard_labs_and_tracks_chamados"
@@ -866,7 +867,7 @@ async def login(request: Request):
         resp = JSONResponse({"token": token})
         resp.set_cookie(
             key="ctrl-token", value=token,
-            httponly=True, secure=True, samesite="lax",
+            httponly=True, secure=IS_PROD, samesite="none" if IS_PROD else "lax",
             max_age=12 * 3600, path="/"
         )
         return resp

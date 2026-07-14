@@ -1,7 +1,6 @@
 'use strict';
-const CACHE_NAME = 'controler-v1.2.79';
+const CACHE_NAME = 'controler-v1.2.93';
 const SHELL = [
-  '/',
   '/hub/hub.html', '/hub/hub.css', '/hub/hub.js',
   '/hub/auth.js', '/hub/api.js', '/hub/cache.js', '/hub/pwa.js',
   '/chamados/chamados.html', '/chamados/chamados.css',
@@ -15,6 +14,7 @@ const SHELL = [
   '/atividades/atividades.html',
   '/app.webmanifest',
 ];
+
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
@@ -22,51 +22,64 @@ self.addEventListener('install', e => {
       .then(() => self.skipWaiting())
   );
 });
+
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ type: 'window' }))
-      .then(clients => clients.forEach(client => client.navigate(client.url)))
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
 });
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
- if (url.pathname.startsWith('/api/')) {
-  e.respondWith(fetch(e.request));
-  return;
-}
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname === '/login' ||
+    url.pathname === '/kpi' ||
+    url.pathname === '/hub' ||
+    url.pathname === '/chamados' ||
+    url.pathname === '/obras' ||
+    url.pathname === '/codin' ||
+    url.pathname === '/conforto' ||
+    url.pathname === '/atividades' ||
+    url.pathname === '/admin' ||
+    url.pathname === '/'
+  ) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     e.respondWith(
-  caches.match(e.request).then(cached => {
-    if (cached) return cached;
-    return fetch(e.request).then(res => {
-      if (res && res.ok && res.status < 400) {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-      }
-      return res;
-    });
-  }).catch(() => caches.match('/'))
-);
+      caches.match(e.request).then(cached => {
+        if (cached) return cached;
+        return fetch(e.request).then(res => {
+          if (res && res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          }
+          return res;
+        });
+      })
+    );
     return;
   }
   e.respondWith(
-  caches.match(e.request)
-    .then(cached => {
-      if (cached && !e.request.url.includes('.html') && e.request.destination !== 'document') return cached;
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
       return fetch(e.request).then(res => {
-        if (res.ok && e.request.destination !== 'document') {
+        if (res.ok) {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return res;
       });
     })
-    .catch(() => caches.match('/'))
-);
+  );
 });
+
 self.addEventListener('push', e => {
   let data = { title: 'Controler', body: 'Nova notificação', icon: '/icons/icon-192.png' };
   try { data = { ...data, ...e.data.json() }; } catch {}
