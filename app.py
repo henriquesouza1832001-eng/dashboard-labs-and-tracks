@@ -703,7 +703,94 @@ async def debug_conforto():
         "checklist": dados.get("config", {}).get("checklistPreventiva", []),
     })
 
+@app.post("/api/admin/recalcular-avanco-obras")
+async def recalcular_avanco_obras(request: Request):
+    if not verificar_admin(request):
+        return JSONResponse({"erro": "sem permissao"}, status_code=403)
 
+    def dias_entre(dt_ini, dt_fim):
+        if not dt_ini or not dt_fim:
+            return 0
+        try:
+            a = datetime.date.fromisoformat(str(dt_ini)[:10])
+            b = datetime.date.fromisoformat(str(dt_fim)[:10])
+            dias = (b - a).days
+            return dias if dias > 0 else 0
+        except Exception:
+            return 0
+
+    def calcular_avanco_itens(itens):
+        if not itens:
+            return 0
+        total_dias = sum(dias_entre(it.get("dtInicio"), it.get("dtFim")) for it in itens)
+        if total_dias == 0:
+            peso_igual = 1 / len(itens)
+            return round(sum(peso_igual for it in itens if it.get("concluido")) * 100)
+        soma = 0
+        for it in itens:
+            peso = dias_entre(it.get("dtInicio"), it.get("dtFim")) / total_dias
+            if it.get("concluido"):
+                soma += peso
+        return round(soma * 100)
+
+    subtarefas = run_query(f"SELECT id, itens FROM {S_OBRAS}.etapa_subtarefas")
+    sub_novo_avanco = {}
+    for s in subtarefas:
+        try:
+            itens = json.loads(s.get("itens") or "[]")
+        except Exception:
+            itens = []
+        sub_novo_avanco[s["id"]] = calcular_avanco_itens(itens)
+
+    if sub_novo_avanco:
+        selects, params = [], []
+        for sid, av in sub_novo_avanco.items():
+            selects.append("SELECT ? AS id, ? AS avanco_fisico")
+            params += [sid, av]
+        origem = " UNION ALL ".join(selects)
+        await arun_exec_retry(f"""
+            MERGE INTO {S_OBRAS}.etapa_subtarefas AS t
+            USING ({origem}) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET avanco_fisico = s.avanco_fisico
+        """, params)
+
+    etapas = run_query(f"SELECT id FROM {S_OBRAS}.etapas")
+    subtarefas_por_etapa = run_query(f"SELECT id, etapa_id, peso FROM {S_OBRAS}.etapa_subtarefas")
+    subs_map = {}
+    for s in subtarefas_por_etapa:
+        subs_map.setdefault(s["etapa_id"], []).append(s)
+
+    etapa_novo_avanco = {}
+    for e in etapas:
+        subs = subs_map.get(e["id"], [])
+        if not subs:
+            etapa_novo_avanco[e["id"]] = 0
+            continue
+        peso_total = sum((s.get("peso") or 1) for s in subs)
+        if peso_total == 0:
+            etapa_novo_avanco[e["id"]] = 0
+            continue
+        soma = sum((s.get("peso") or 1) * sub_novo_avanco.get(s["id"], 0) for s in subs)
+        etapa_novo_avanco[e["id"]] = soma / peso_total
+
+    if etapa_novo_avanco:
+        selects, params = [], []
+        for eid, av in etapa_novo_avanco.items():
+            selects.append("SELECT ? AS id, ? AS avanco_fisico")
+            params += [eid, av]
+        origem = " UNION ALL ".join(selects)
+        await arun_exec_retry(f"""
+            MERGE INTO {S_OBRAS}.etapas AS t
+            USING ({origem}) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET avanco_fisico = s.avanco_fisico
+        """, params)
+
+    await asyncio.to_thread(_load_obras)
+    return JSONResponse({
+        "ok": True,
+        "subtarefas_recalculadas": len(sub_novo_avanco),
+        "etapas_recalculadas": len(etapa_novo_avanco)
+    })
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/login")
