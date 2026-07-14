@@ -960,7 +960,7 @@ function barrasHTML(items, opts={}){
   return items.map(x=>{
     const pct=Math.round((x.val/max)*100);
     const cor=x.cor||'#2E5FA3';
-    const txt=x.val>999?fmtRK(x.val):typeof x.val==='number'&&x.val%1===0?x.val+'%':fmtRK(x.val);
+    const txt=opts.fmt==='pct'?fmt(x.val,1)+'%':(x.val>999?fmtRK(x.val):typeof x.val==='number'&&x.val%1===0?x.val+'%':fmtRK(x.val));
     return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <div style="width:${opts.labelW||100}px;font-size:11px;color:var(--text-muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${x.label}</div>
       <div style="flex:1;position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
@@ -1303,7 +1303,7 @@ function drawOverlayCharts(tipo,d){
     const avTop=lista.slice(0,8).map(o=>({nome:tnome(o.nome),av:calcAvFis(o)})).filter(x=>x.av>=0&&x.av<=100);
     const fins=lista.slice(0,8).map(o=>{const b=budgObra(o.cod),r=realObra(o.cod);return{nome:tnome(o.nome),pct:b>0?Math.round(r/b*100):0};}).filter(x=>x.pct>=0);
     const src=avTop.length?avTop.map((x,i)=>({label:x.nome,val:x.av,cor:['#2E5FA3','#3fb950','#e3711a','#d29922','#a371f7','#58a6ff','#f85149','#8b949e'][i%8]})):fins.map(x=>({label:x.nome,val:x.pct,cor:x.pct>100?'#f85149':x.pct>80?'#3fb950':'#2E5FA3'}));
-    wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px" id="cv-ov-pizza1-titulo">Avanço por Obras em Andamento</div>`+(src.length?barrasHTML(src,{labelW:90}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem dados</div>');
+    wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px" id="cv-ov-pizza1-titulo">Avanço por Obras em Andamento</div>`+(src.length?barrasHTML(src,{labelW:90,fmt:'pct'}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem dados</div>');
   }
 
   // Previsto × Realizado
