@@ -36,6 +36,7 @@ btn.addEventListener('click', async () => {
       return;
     }
 
+    localStorage.setItem('ctrl-token', d.token);
     err.textContent = '';
     window.location.href = '/kpi';
   } catch (e) {
