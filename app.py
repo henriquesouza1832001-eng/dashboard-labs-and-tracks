@@ -2189,7 +2189,7 @@ async def admin_page(request: Request):
 async def login_page(request: Request):
     if usuario_autenticado(request):
         return RedirectResponse(url="/kpi")
-    return FileResponse(f"{BASE}/login/login.html")
+    return HTMLResponse(open(f"{BASE}/login/login.html", encoding="utf-8").read(), headers={"Cache-Control": "no-store"})
 
 @app.get("/app.webmanifest")
 async def webmanifest():
