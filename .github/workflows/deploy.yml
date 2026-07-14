@@ -28,8 +28,10 @@ jobs:
             /Workspace/Users/ta51230@stellantis.com/dashboard-labs-and-tracks \
             --overwrite
 
-      - name: Restart app
+      - name: Deploy app
         env:
           DATABRICKS_HOST: https://adb-5678659344564033.13.azuredatabricks.net
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-        run: databricks apps restart dashboard-labs-and-tracks
+        run: |
+          databricks apps deploy dashboard-labs-and-tracks \
+            --source-code-path /Workspace/Users/ta51230@stellantis.com/dashboard-labs-and-tracks
