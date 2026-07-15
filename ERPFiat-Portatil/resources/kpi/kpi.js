@@ -1209,9 +1209,9 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     }
   });
   ctx.stroke();
-  if (obra && obra.cod === 'OB-007' && modo === 'fisico') {
-    const dtIniCrono = new Date('2025-12-10').getTime();
-    const dtFimCrono = new Date('2026-03-30').getTime();
+  if (obra && obra.cronogramaIniData && obra.cronogramaFimData && modo === 'fisico') {
+    const dtIniCrono = new Date(obra.cronogramaIniData).getTime();
+    const dtFimCrono = new Date(obra.cronogramaFimData).getTime();
     const idxFim = meses.findIndex(mes => new Date(mes+'-28').getTime() >= dtFimCrono);
     const idxFimReal = idxFim === -1 ? meses.length - 1 : idxFim;
     const cronoItens = [];
@@ -1471,7 +1471,7 @@ function abrirDetalheObra(cod){
       <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--text-muted)">
         <span><span style="display:inline-block;width:12px;height:3px;background:#58a6ff;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Planejado</span>
         <span><span style="display:inline-block;width:12px;height:3px;background:#e3711a;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Realizado</span>
-        ${o && o.cod==='OB-007'?'<span><span style="display:inline-block;width:12px;height:3px;background:#2ea043;border-radius:2px;vertical-align:middle;margin-right:4px;border-top:2px dashed #2ea043;height:0"></span>Cronograma Inicial</span>':''}
+        ${o && o.cronogramaIniData && o.cronogramaFimData?'<span><span style="display:inline-block;width:12px;height:3px;background:#2ea043;border-radius:2px;vertical-align:middle;margin-right:4px;border-top:2px dashed #2ea043;height:0"></span>Cronograma Inicial</span>':''}
       </div>
     </div>
     <div class="ob-ov-cbox" style="flex:1">

@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse, Response
 from databricks import sql
-import os, json, asyncio, hashlib, jwt, datetime, threading, time
+import os, json, asyncio, hashlib, jwt, datetime, threading, time, traceback
 def to_date_or_none(v):
     if not v or not str(v).strip():
         return None
@@ -12,20 +12,20 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+APP_ORIGIN = os.getenv("APP_ORIGIN", "")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[APP_ORIGIN] if APP_ORIGIN else [],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "X-Ctrl-Token"],
 )
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 JWT_SECRET   = os.getenv("JWT_SECRET")
 HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
-WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "d523a4cf58739a90")
-print(f"[boot] HOST={HOST!r}  TOKEN={'SET' if TOKEN else 'VAZIO'}  WAREHOUSE={WAREHOUSE_ID!r}")
+WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "")
 BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ERPFiat-Portatil/resources")
 IS_PROD      = os.getenv("ENV", "prod") == "prod"
 
@@ -42,10 +42,6 @@ _conn_lock = threading.Lock()
 _local = threading.local()
 
 def get_conn():
-    if not TOKEN:
-        raise RuntimeError("DATABRICKS_TOKEN não encontrado no ambiente — verifique os secrets do app")
-    if not HOST:
-        raise RuntimeError("DATABRICKS_HOST não encontrado no ambiente")
     conn = getattr(_local, "conn", None)
     for _ in range(2):
         try:
@@ -62,12 +58,11 @@ def get_conn():
                 server_hostname=HOST,
                 http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
                 access_token=TOKEN,
-                auth_type="pat",
                 _socket_timeout=30,
             )
             _local.conn = conn
-        except Exception as e:
-            print(f"[get_conn] falha ao conectar: {e}")
+        except:
+            pass
     return conn
 
 # ─── Helpers SQL síncronos (uso interno e em threads) ─────────────────────────
@@ -137,6 +132,12 @@ def usuario_autenticado(request: Request):
         return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
     except Exception:
         return None
+
+def exigir_auth(request: Request):
+    payload = usuario_autenticado(request)
+    if not payload:
+        raise HTTPException(status_code=401, detail="nao autenticado")
+    return payload
 
 def verificar_admin(request: Request):
     token = request.headers.get("X-Ctrl-Token", "")
@@ -687,6 +688,13 @@ async def _prefetch_body():
                 avanco_fisico DOUBLE, registrado_em TIMESTAMP, registrado_por STRING
             )
         """)
+        try:
+            await arun_exec_retry(f"""
+                ALTER TABLE {S_OBRAS}.obras
+                ADD COLUMNS (cronogramaIniData STRING, cronogramaFimData STRING)
+            """)
+        except Exception:
+            pass
     except Exception as e:
         print(f"[startup] etapas_avancos: {e}")
     print("[startup] aquecendo cache...")
@@ -734,12 +742,11 @@ async def _prefetch_body():
 # ─── Health ───────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
-    with _cache_lock:
-        keys = list(_cache.keys())
-    return {"status": "ok", "cache": keys}
+    return {"status": "ok"}
 
 @app.get("/api/admin/refresh-cache")
-async def refresh_cache():
+async def refresh_cache(request: Request):
+    exigir_auth(request)
     loop = asyncio.get_event_loop()
     for nome, fn in LOADERS.items():
         try:
@@ -749,7 +756,8 @@ async def refresh_cache():
     return {"ok": True, "recarregados": list(LOADERS.keys())}
 
 @app.get("/api/admin/debug-conforto")
-async def debug_conforto():
+async def debug_conforto(request: Request):
+    exigir_auth(request)
     dados = get_cached("conforto")
     return JSONResponse({
         "ucs_count": len(dados.get("ucs", [])),
@@ -926,11 +934,13 @@ async def admin_reset_senha(uid: int, request: Request):
 
 # ─── Chamados ─────────────────────────────────────────────────────────────────
 @app.get("/api/chamados")
-async def get_chamados():
+async def get_chamados(request: Request):
+    exigir_auth(request)
     return JSONResponse(get_cached("chamados"))
 
 @app.post("/api/chamados")
 async def create_chamado(request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     try:
@@ -960,6 +970,7 @@ async def create_chamado(request: Request):
 
 @app.put("/api/chamados/{cid}")
 async def update_chamado(cid: str, request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     try:
@@ -990,7 +1001,8 @@ async def update_chamado(cid: str, request: Request):
     return JSONResponse({"ok": True})
 
 @app.delete("/api/chamados/{cid}")
-async def delete_chamado(cid: str):
+async def delete_chamado(cid: str, request: Request):
+    exigir_auth(request)
     try:
         await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.chamados WHERE id = ?", [cid])
     except Exception as e:
@@ -1003,7 +1015,8 @@ async def delete_chamado(cid: str):
     return JSONResponse({"ok": True})
 
 @app.get("/api/chamados/por-email/{email}")
-async def chamados_por_email(email: str):
+async def chamados_por_email(email: str, request: Request):
+    exigir_auth(request)
     todos = get_cached("chamados").get("chamados", [])
     email = email.strip().lower()
     filtrados = [c for c in todos if (c.get("solicitante") or "").strip().lower() == email]
@@ -1014,24 +1027,28 @@ async def meus_chamados_page():
     return FileResponse(f"{BASE}/meuschamados/meuschamados.html")
 
 @app.get("/api/chamados/areas-qr")
-async def get_areas_qr():
+async def get_areas_qr(request: Request):
+    exigir_auth(request)
     rows = await arun_query(f"SELECT * FROM {S_CHAMADOS}.areas_qr")
     return JSONResponse(rows)
 
 @app.post("/api/chamados/areas-qr")
 async def add_area_qr(request: Request):
+    exigir_auth(request)
     body = await request.json()
     await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.areas_qr (id, nome, slug) VALUES (?,?,?)",
         [body["id"], body["nome"], body["slug"]])
     return JSONResponse({"ok": True})
 
 @app.delete("/api/chamados/areas-qr/{aid}")
-async def delete_area_qr(aid: str):
+async def delete_area_qr(aid: str, request: Request):
+    exigir_auth(request)
     await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.areas_qr WHERE id=?", [aid])
     return JSONResponse({"ok": True})
 
 @app.get("/api/chamados/sla")
-async def get_sla():
+async def get_sla(request: Request):
+    exigir_auth(request)
     v = cache_get("sla")
     if v:
         return JSONResponse(v)
@@ -1047,6 +1064,7 @@ async def get_sla():
 
 @app.post("/api/chamados/sla")
 async def save_sla(request: Request):
+    exigir_auth(request)
     cfg = await request.json()
     u = get_usuario(request)
     try:
@@ -1070,11 +1088,13 @@ async def save_sla(request: Request):
 
 # ─── Obras ────────────────────────────────────────────────────────────────────
 @app.get("/api/obras")
-async def get_obras():
+async def get_obras(request: Request):
+    exigir_auth(request)
     return JSONResponse(get_cached("obras"))
 
 @app.post("/api/obras")
 async def save_obras(request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     try:
@@ -1085,12 +1105,13 @@ async def save_obras(request: Request):
                 selects.append(
                     "SELECT ? AS cod, ? AS nome, ? AS tipo, ? AS local, ? AS responsavel, "
                     "? AS respNome, ? AS cresp, ? AS status, ? AS dtInicioPrev, ? AS dtFimPrev, "
-                    "? AS dtInicioReal, ? AS dtFimReal, ? AS obs, ? AS atualizado_por"
+                    "? AS dtInicioReal, ? AS dtFimReal, ? AS cronogramaIniData, ? AS cronogramaFimData, ? AS obs, ? AS atualizado_por"
                 )
                 params += [
                     o["cod"], o.get("nome"), o.get("tipo"), o.get("local"), o.get("responsavel"),
                     o.get("respNome"), o.get("cresp"), o.get("status"), o.get("dtInicioPrev"),
-                    o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"), o.get("obs"), u
+                    o.get("dtFimPrev"), o.get("dtInicioReal"), o.get("dtFimReal"),
+                    o.get("cronogramaIniData"), o.get("cronogramaFimData"), o.get("obs"), u
                 ]
             origem = " UNION ALL ".join(selects)
             await arun_exec_retry(f"""
@@ -1100,13 +1121,15 @@ async def save_obras(request: Request):
                     nome=s.nome,tipo=s.tipo,local=s.local,responsavel=s.responsavel,
                     respNome=s.respNome,cresp=s.cresp,status=s.status,
                     dtInicioPrev=s.dtInicioPrev,dtFimPrev=s.dtFimPrev,
-                    dtInicioReal=s.dtInicioReal,dtFimReal=s.dtFimReal,obs=s.obs,
+                    dtInicioReal=s.dtInicioReal,dtFimReal=s.dtFimReal,
+                    cronogramaIniData=s.cronogramaIniData,cronogramaFimData=s.cronogramaFimData,obs=s.obs,
                     atualizado_em=current_timestamp(),atualizado_por=s.atualizado_por
                 WHEN NOT MATCHED THEN INSERT
                     (cod,nome,tipo,local,responsavel,respNome,cresp,status,
-                     dtInicioPrev,dtFimPrev,dtInicioReal,dtFimReal,obs,atualizado_por)
+                     dtInicioPrev,dtFimPrev,dtInicioReal,dtFimReal,cronogramaIniData,cronogramaFimData,obs,atualizado_por)
                 VALUES (s.cod,s.nome,s.tipo,s.local,s.responsavel,s.respNome,s.cresp,s.status,
-                        s.dtInicioPrev,s.dtFimPrev,s.dtInicioReal,s.dtFimReal,s.obs,s.atualizado_por)
+                        s.dtInicioPrev,s.dtFimPrev,s.dtInicioReal,s.dtFimReal,
+                        s.cronogramaIniData,s.cronogramaFimData,s.obs,s.atualizado_por)
             """, params)
 
         cods = [o["cod"] for o in obras]
@@ -1235,7 +1258,8 @@ async def save_obras(request: Request):
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/{cod}/etapas/{etapa_id}")
-async def deletar_etapa(cod: str, etapa_id: str):
+async def deletar_etapa(cod: str, etapa_id: str, request: Request):
+    exigir_auth(request)
     try:
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=? AND id=?", [cod, etapa_id])
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapa_subtarefas WHERE etapa_id=?", [etapa_id])
@@ -1246,7 +1270,8 @@ async def deletar_etapa(cod: str, etapa_id: str):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.delete("/api/obras/{cod}")
-async def delete_obra(cod: str):
+async def delete_obra(cod: str, request: Request):
+    exigir_auth(request)
     try:
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.obras WHERE cod=?", [cod])
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.etapas WHERE obra_cod=?", [cod])
@@ -1259,7 +1284,8 @@ async def delete_obra(cod: str):
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/budget/{bid}")
-async def delete_budget(bid: str):
+async def delete_budget(bid: str, request: Request):
+    exigir_auth(request)
     try:
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.budget WHERE id=?", [bid])
     except Exception as e:
@@ -1271,7 +1297,8 @@ async def delete_budget(bid: str):
     return JSONResponse({"ok": True})
 
 @app.delete("/api/obras/lancamento/{lid}")
-async def delete_lancamento(lid: str):
+async def delete_lancamento(lid: str, request: Request):
+    exigir_auth(request)
     try:
         await arun_exec_retry(f"DELETE FROM {S_OBRAS}.lancamentos WHERE id=?", [lid])
     except Exception as e:
@@ -1284,6 +1311,7 @@ async def delete_lancamento(lid: str):
 
 @app.post("/api/obras/{cod}/etapas/{etapa_id}/avanco")
 async def registrar_avanco(cod: str, etapa_id: str, request: Request):
+    exigir_auth(request)
     u = getattr(request.state, "usuario", "sistema")
     body = await request.json()
     avanco = float(body.get("avancoFisico", 0))
@@ -1311,7 +1339,8 @@ async def registrar_avanco(cod: str, etapa_id: str, request: Request):
     return JSONResponse({"ok": True})
 
 @app.get("/api/obras/{cod}/avancos")
-async def get_avancos_obra(cod: str):
+async def get_avancos_obra(cod: str, request: Request):
+    exigir_auth(request)
     try:
         rows = await arun_query(f"""
             SELECT * FROM {S_OBRAS}.etapas_avancos WHERE obra_cod=? ORDER BY registrado_em ASC
@@ -1324,11 +1353,13 @@ async def get_avancos_obra(cod: str):
 
 # ─── CODIN ────────────────────────────────────────────────────────────────────
 @app.get("/api/codin")
-async def get_codin():
+async def get_codin(request: Request):
+    exigir_auth(request)
     return JSONResponse(get_cached("codin"))
 
 @app.post("/api/codin")
 async def save_codin(request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     try:
@@ -1409,7 +1440,8 @@ async def codin_qr_page(codin_id: str):
     return FileResponse(f"{BASE}/codinqr/codinqr.html")
 
 @app.get("/api/codin/solicitacoes")
-async def listar_solicitacoes_codin():
+async def listar_solicitacoes_codin(request: Request):
+    exigir_auth(request)
     rows = await arun_query(f"SELECT * FROM {S_CODIN}.solicitacoes ORDER BY data DESC")
     return JSONResponse({"solicitacoes": rows})
 
@@ -1450,7 +1482,8 @@ async def atualizar_solicitacao_codin(sid: str, request: Request):
 # ─── Conforto ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/conforto")
-async def get_conforto():
+async def get_conforto(request: Request):
+    exigir_auth(request)
     return JSONResponse(get_cached("conforto"))
 
 # ─── Conforto ─────────────────────────────────────────────────────────────────
@@ -1830,6 +1863,7 @@ async def _salvar_rotinas(body, u):
 
 @app.post("/api/conforto")
 async def save_conforto(request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     try:
@@ -1894,18 +1928,19 @@ async def save_conforto(request: Request):
                 await asyncio.to_thread(_load_conforto)
         return JSONResponse({"ok": True})
     except Exception as e:
-        import traceback
         print(f"[save_conforto] erro: {e}")
         print(traceback.format_exc())
         return JSONResponse({"erro": str(e)}, status_code=500)
 
 # ─── Atividades ───────────────────────────────────────────────────────────────
 @app.get("/api/atividades")
-async def get_atividades():
+async def get_atividades(request: Request):
+    exigir_auth(request)
     return JSONResponse(get_cached("atividades"))
 
 @app.post("/api/atividades")
 async def save_atividades(request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     try:
@@ -1947,7 +1982,8 @@ async def save_atividades(request: Request):
     return JSONResponse({"ok": True})
 
 @app.delete("/api/atividades/{aid}")
-async def delete_atividade(aid: str):
+async def delete_atividade(aid: str, request: Request):
+    exigir_auth(request)
     try:
         await arun_exec_retry(f"DELETE FROM {S_ATIVIDADES}.atividades WHERE id=?", [aid])
         await arun_exec_retry(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [aid])
@@ -1959,6 +1995,7 @@ async def delete_atividade(aid: str):
 
 @app.post("/api/atividades/{aid}/comentarios")
 async def add_comentario(aid: str, request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     try:
@@ -1974,6 +2011,7 @@ async def add_comentario(aid: str, request: Request):
 
 @app.post("/api/atividades/{aid}/comentarios/rewrite")
 async def rewrite_comentarios(aid: str, request: Request):
+    exigir_auth(request)
     body = await request.json()
     try:
         await arun_exec_retry(f"DELETE FROM {S_ATIVIDADES}.comentarios WHERE atividade_id=?", [aid])
@@ -1996,6 +2034,7 @@ async def rewrite_comentarios(aid: str, request: Request):
 # ─── Hub ──────────────────────────────────────────────────────────────────────
 @app.get("/api/hub/config")
 async def get_hub_config(request: Request):
+    exigir_auth(request)
     usuario = get_usuario(request)
     key = f"hub_config_{usuario}"
     v = cache_get(key)
@@ -2022,6 +2061,7 @@ async def get_hub_config(request: Request):
 
 @app.post("/api/hub/config")
 async def save_hub_config(request: Request):
+    exigir_auth(request)
     dados   = await request.json()
     usuario = get_usuario(request)
     try:
@@ -2076,7 +2116,8 @@ async def save_hub_config(request: Request):
     return JSONResponse({"ok": True})
 
 @app.get("/api/hub/dados")
-async def get_hub_dados():
+async def get_hub_dados(request: Request):
+    exigir_auth(request)
     ch = get_cached("chamados")
     ob = get_cached("obras")
     c  = ch.get("chamados", [])
@@ -2100,7 +2141,8 @@ async def get_hub_dados():
     })
 
 @app.get("/api/kpi/dados")
-async def get_kpi():
+async def get_kpi(request: Request):
+    exigir_auth(request)
     return JSONResponse({
         "chamados":   get_cached("chamados"),
         "obras":      get_cached("obras"),
@@ -2168,7 +2210,9 @@ async def qr_abrir_chamado(area: str):
     return FileResponse(f"{BASE}/qr/qr.html")
 
 @app.get("/servicedesk")
-async def servicedesk_page():
+async def servicedesk_page(request: Request):
+    if not usuario_autenticado(request):
+        return RedirectResponse(url="/login")
     return inject(f"{BASE}/servicedesk/servicedesk.html", get_cached("chamados"))
 
 @app.get("/kpi")
@@ -2238,7 +2282,6 @@ async def favicon():
     path = f"{BASE}/icons/icon-192.png"
     if os.path.exists(path):
         return FileResponse(path, media_type="image/png")
-    from fastapi.responses import Response
     return Response(status_code=204)
 
 @app.get("/icons/icon-192.png")
@@ -2246,7 +2289,6 @@ async def icon192():
     path = f"{BASE}/icons/icon-192.png"
     if os.path.exists(path):
         return FileResponse(path, media_type="image/png")
-    from fastapi.responses import Response
     return Response(status_code=204)
 
 @app.get("/conforto-prev/prev.css")
@@ -2313,12 +2355,10 @@ async def prev_page(uc_id: str, request: Request):
         if not checklist:
             checklist = checklist_global
     except Exception as e:
-        import traceback
         print(f"[prev_page] erro ao buscar UC {uc_id}: {e}")
         print(traceback.format_exc())
         uc = None
         checklist = []
-    from fastapi.responses import HTMLResponse
     tec_rows = await arun_query(f"SELECT nome FROM {S_CONFORTO}.tecnicos ORDER BY nome")
     tecnicos_nomes = [t["nome"] for t in tec_rows] if tec_rows else []
     html = inject(f"{BASE}/confortoprev/prev.html", {
@@ -2329,7 +2369,8 @@ async def prev_page(uc_id: str, request: Request):
     return html
 
 @app.get("/api/conforto/manutencoes/{mid}/custo-pecas")
-async def custo_pecas_manutencao(mid: str):
+async def custo_pecas_manutencao(mid: str, request: Request):
+    exigir_auth(request)
     rows = await arun_query(f"""
         SELECT mp.peca_id, mp.qtd, p.custo_unitario, p.descricao,
                (mp.qtd * COALESCE(p.custo_unitario, 0)) AS custo_total
@@ -2384,7 +2425,6 @@ async def criar_preventiva_qr(request: Request):
                 values {','.join(rows)}
             """, params)
     except Exception as e:
-        import traceback
         print(f"[conforto] erro ao criar preventiva qr: {e}")
         print(traceback.format_exc())
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -2444,13 +2484,13 @@ async def criar_manutencao_qr(request: Request):
         await asyncio.to_thread(_atualizar_cache_conforto_manutencoes, [mid])
         return JSONResponse({"ok": True})
     except Exception as e:
-        import traceback
         print(f"[manutencao_qr] erro: {e}")
         print(traceback.format_exc())
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.put("/api/conforto/manutencoes/{mid}")
 async def atualizar_manutencao(mid: str, request: Request):
+    exigir_auth(request)
     body = await request.json()
     try:
         sets = []
@@ -2487,6 +2527,7 @@ async def atualizar_manutencao(mid: str, request: Request):
     
 @app.get("/api/conforto/manutencoes/{mid}")
 async def get_manutencao(mid: str, request: Request):
+    exigir_auth(request)
     try:
         rows = await arun_query(
             f"SELECT * FROM {S_CONFORTO}.manutencoes WHERE id=? LIMIT 1", [mid]
@@ -2525,6 +2566,7 @@ async def get_manutencao(mid: str, request: Request):
 
 @app.post("/api/conforto/manutencoes/{mid}/concluir")
 async def concluir_manutencao(mid: str, request: Request):
+    exigir_auth(request)
     body = await request.json()
     try:
         duracao_atual = body.get("duracaoMin", 0) or 0
@@ -2564,7 +2606,6 @@ async def concluir_manutencao(mid: str, request: Request):
         await asyncio.to_thread(_atualizar_cache_conforto_manutencoes, [mid])
         return JSONResponse({"ok": True, "duracaoTotal": duracao_total})
     except Exception as e:
-        import traceback
         print(f"[concluir_manutencao] erro: {e}")
         print(traceback.format_exc())
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -2666,7 +2707,8 @@ async def deletar_preventiva(pid: str, request: Request):
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 @app.get("/api/conforto/tipos-uc")
-async def listar_tipos_uc():
+async def listar_tipos_uc(request: Request):
+    exigir_auth(request)
     rows = run_query(f"SELECT * FROM {S_CONFORTO}.tipos_uc ORDER BY ordem ASC")
     for r in rows:
         try: r["checklist"] = json.loads(r.get("checklist") or "[]")
@@ -2675,6 +2717,7 @@ async def listar_tipos_uc():
 
 @app.post("/api/conforto/tipos-uc")
 async def salvar_tipo_uc(request: Request):
+    exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
     tipos = body if isinstance(body, list) else [body]
@@ -2708,7 +2751,8 @@ async def salvar_tipo_uc(request: Request):
     return JSONResponse({"ok": True})
 
 @app.delete("/api/conforto/tipos-uc/{tid}")
-async def deletar_tipo_uc(tid: str):
+async def deletar_tipo_uc(tid: str, request: Request):
+    exigir_auth(request)
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.tipos_uc WHERE id=?", [tid])
     payload = cache_get("conforto")
     if payload is not None:
