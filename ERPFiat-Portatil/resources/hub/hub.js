@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 const user = window.__authUser || { nome: '—', role: '—', avatar: '?' };
 const $=id=>document.getElementById(id);
 const fmtRK=v=>{if(!v&&v!==0)return'—';const n=+v;if(Math.abs(n)>=1e6)return'R$'+(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return'R$'+(n/1e3).toFixed(1)+'k';return'R$'+Math.round(n);};
@@ -19,7 +19,6 @@ const DEFAULT = {
 
 let CFG=JSON.parse(JSON.stringify(DEFAULT));
 
-// ── LOGOS ──
 function buildLogos(){
   const wrap=$('logos-wrap');
   const logos=CFG.logos||['','','',''];
@@ -45,7 +44,6 @@ function buildLogos(){
   });
 }
 
-// ── CLOCK ──
 function tick(){
   const n=new Date();
   $('el-clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
@@ -54,7 +52,6 @@ function tick(){
 }
 tick();setInterval(tick,1000);
 
-// ── IDENTIDADE ──
 function applyIdent(){
   const id=CFG.identidade||{};
   if(id.brand)$('el-brand').textContent=id.brand;
@@ -64,7 +61,6 @@ function applyIdent(){
   if(id.instBadge)$('el-inst-badge').textContent=id.instBadge;
 }
 
-// ── ATIVIDADES ──
 function buildActs(){}
 function updateActPct(){}
 
@@ -112,7 +108,6 @@ function renderAlertas(kpiDados){
       <span class="sb-alerta-txt">${a.txt}</span>
     </a>`).join('');
 }
-// ── KPI MINI (top-left) ──
 function buildKpiMini(){
   const kpis=CFG.kpisMini||[];
   $('el-kpi-mini').innerHTML=kpis.map((k,i)=>`
@@ -125,7 +120,6 @@ function buildKpiMini(){
 }
 function buildVidKpis(){}
 
-// ── AÇÕES FUTURAS ──
 function buildAcoes(){
   const acoes=(CFG.acoes||[]).filter(a=>a.visivel!==false);
   $('el-acoes-count').textContent=acoes.length+' planejadas';
@@ -142,7 +136,6 @@ function buildAcoes(){
     </div>`).join('');
 }
 
-// ── VAL/OBJ/MISSÃO/METAS ──
 function buildVMO(){
   const pe=CFG.painelEsq||{};
   const prog=pe.objProg||0;
@@ -170,7 +163,6 @@ function buildVMO(){
   setTimeout(()=>{const f=$('obj-fill');if(f){f.style.transition='width 1.2s ease';f.style.width=prog+'%';}},400);
 }
 
-// ── PAINEL DE MÓDULOS ──
 let _painelDados = null;
 let _painelMod = 'obras';
 

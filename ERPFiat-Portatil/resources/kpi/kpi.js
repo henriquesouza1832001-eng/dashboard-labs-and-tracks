@@ -1,4 +1,4 @@
-const CACHES = {obras:'obras',capex:'obras',chamados:'chamados',codin:'codin',conforto:'conforto',ergonomia:null,acesso:'codin'};
+﻿const CACHES = {obras:'obras',capex:'obras',chamados:'chamados',codin:'codin',conforto:'conforto',ergonomia:null,acesso:'codin'};
 function lerCache(mod){
   if(!mod)return null;
   if(window['_kpiDados_'+mod])return window['_kpiDados_'+mod];
@@ -2594,7 +2594,6 @@ function dtRenderPane(id){
   else if(id==='dt-estado')dtRenderEstado(el);
 }
 
-// ── MAPA ──
 function dtRenderMapa(el){
   const tipos=['render','canvas','nav','helper','calc','util','init','ui'];
   const coresTipo={render:'#79c0ff',canvas:'#d2a8ff',nav:'#ffa657',helper:'#7ee787',calc:'#e3b341',util:'#8b949e',init:'#58a6ff',ui:'#ff7b72'};
@@ -2644,7 +2643,6 @@ function dtRenderMapa(el){
   },50);
 }
 
-// ── CACHE ──
 function dtRenderCache(el){
   const loaded=DT_CACHES.filter(c=>localStorage.getItem(c.key)).length;
   el.innerHTML=`
@@ -2729,7 +2727,6 @@ function dtColorirJSON(txt){
 function dtLimparCache(key){if(!confirm('Limpar "'+key+'"?'))return;localStorage.removeItem(key);dtRenderCacheLista(document.getElementById('dt-cache-search')?.value||'');}
 function dtLimparTodoCache(){if(!confirm('Limpar TODOS os caches do ERP?'))return;DT_CACHES.forEach(c=>localStorage.removeItem(c.key));dtRenderCacheLista('');}
 
-// ── ERROS ──
 function dtRenderErros(el){
   const filtros=['tudo','err','warn','log','info'];
   el.innerHTML=`
@@ -2785,7 +2782,6 @@ function dtRenderPerf(el){
     </div>`;
 }
 
-// ── ESTADO ──
 function dtRenderEstado(el){
   const dados=DT_CACHES.map(c=>{
     const raw=localStorage.getItem(c.key);
@@ -2829,7 +2825,6 @@ function dtRenderEstado(el){
     </div>`;
 }
 
-// ── CONSOLE ──
 function dtConsoleRun(){
   const inp=document.getElementById('dt-console-input');
   const out=document.getElementById('dt-console-output');
@@ -2857,7 +2852,6 @@ function dtConsoleLinha(prompt,msg,cls,out){
   out.appendChild(div);
 }
 
-// ── IR PARA LINHA ──
 function dtIrParaLinha(linha){
   const ref=`kpi.js:${linha}`;
   if(navigator.clipboard){
@@ -2868,7 +2862,6 @@ function dtIrParaLinha(linha){
   }
 }
 
-// ── MEDIR RENDER ──
 function dtMedirRender(nome,fn){
   const r=fn();
   if(r&&typeof r.then==='function'){

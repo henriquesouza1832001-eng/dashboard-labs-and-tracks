@@ -1,4 +1,4 @@
-const CATS = {
+﻿const CATS = {
   INF: 'Infraestrutura',
   ELE: 'Elétrica',
   HID: 'Hidráulica',
@@ -9,7 +9,6 @@ const CATS = {
 let fotos = [];
 let catSelecionada = '';
 
-// ── Ler parâmetros da URL ──────────────────────────────────────
 const params = new URLSearchParams(location.search);
 const localParam = params.get('local') || '';
 const catParam   = params.get('cat')   || '';
@@ -23,7 +22,6 @@ if (catParam && CATS[catParam]) {
   selecionarCat(catParam);
 }
 
-// ── Categoria pills ────────────────────────────────────────────
 document.querySelectorAll('.cat-pill').forEach(pill => {
   pill.addEventListener('click', () => selecionarCat(pill.dataset.cat));
 });
@@ -37,7 +35,6 @@ function selecionarCat(cat) {
   if (radio) radio.checked = true;
 }
 
-// ── Fotos ──────────────────────────────────────────────────────
 document.getElementById('foto-input').addEventListener('change', e => {
   const files = Array.from(e.target.files);
   let loaded = 0;
@@ -155,7 +152,6 @@ function reiniciar() {
   document.getElementById('tela-form').style.display = 'block';
 }
 
-// ── Toast ─────────────────────────────────────────────────────
 let _toastT;
 function toast(msg, err) {
   const el = document.getElementById('toast');

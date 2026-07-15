@@ -1,4 +1,4 @@
-const CATS = {
+﻿const CATS = {
   INF: { label: 'Infraestrutura', color: '#58a6ff' },
   ELE: { label: 'Elétrica',       color: '#d29922' },
   HID: { label: 'Hidráulica',     color: '#3fb950' },
@@ -47,7 +47,6 @@ function showToast(msg, type='ok') {
   _toastT = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── CONTADORES / FILTROS ─────────────────────────────────────────
 function atualizarContadores() {
   const hoje = new Date().toDateString();
   $('cnt-todos').textContent     = allChamados.length;
@@ -93,7 +92,6 @@ function aplicarFiltros() {
   renderTabela();
 }
 
-// ── RENDER TABELA ────────────────────────────────────────────────
 function renderTabela() {
   const tbody = $('chamados-tbody');
   if (!filteredList.length) {
@@ -157,7 +155,6 @@ function renderTabela() {
   });
 }
 
-// ── MODAL ────────────────────────────────────────────────────────
 function abrirModal(id) {
   const c = allChamados.find(x => x.id === id);
   if (!c) return;
@@ -371,7 +368,6 @@ $('search-input').addEventListener('input', aplicarFiltros);
 $('filtro-data').addEventListener('change', aplicarFiltros);
 $('ordenar-por').addEventListener('change', renderTabela);
 
-// ── MODAL EVENTOS ────────────────────────────────────────────────
 $('mv-close').addEventListener('click', fecharModal);
 $('mv-cancelar').addEventListener('click', fecharModal);
 $('mv-salvar').addEventListener('click', salvarModal);

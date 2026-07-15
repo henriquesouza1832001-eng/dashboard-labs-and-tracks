@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException
+﻿from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse, Response
 from databricks import sql
@@ -21,7 +21,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Ctrl-Token"],
 )
 
-# ─── Config ───────────────────────────────────────────────────────────────────
 JWT_SECRET   = os.getenv("JWT_SECRET")
 HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
@@ -29,7 +28,6 @@ WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "")
 BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ERPFiat-Portatil/resources")
 IS_PROD      = os.getenv("ENV", "prod") == "prod"
 
-# ─── Schemas ──────────────────────────────────────────────────────────────────
 S_CHAMADOS   = "eng_lab.dashboard_labs_and_tracks_chamados"
 S_OBRAS      = "eng_lab.dashboard_labs_and_tracks_obras"
 S_CODIN      = "eng_lab.dashboard_labs_and_tracks_codin"
@@ -37,7 +35,6 @@ S_CONFORTO   = "eng_lab.dashboard_labs_and_tracks_conforto"
 S_ATIVIDADES = "eng_lab.dashboard_labs_and_tracks_atividades"
 S_HUB        = "eng_lab.dashboard_labs_and_tracks_hub"
 
-# ─── Conexão Databricks (thread-safe, reconecta automaticamente) ───────────────
 _conn_lock = threading.Lock()
 _local = threading.local()
 
@@ -65,7 +62,6 @@ def get_conn():
             pass
     return conn
 
-# ─── Helpers SQL síncronos (uso interno e em threads) ─────────────────────────
 def run_query(sql_str, params=None):
     conn = get_conn()
     with conn.cursor() as cur:
@@ -78,7 +74,6 @@ def run_exec(sql_str, params=None):
     with conn.cursor() as cur:
         cur.execute(sql_str, params or [])
 
-# ─── Wrappers async (SEMPRE usar estes dentro de endpoints async) ──────────────
 async def arun_query(sql_str, params=None):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, run_query, sql_str, params)
@@ -99,7 +94,6 @@ async def arun_exec_retry(sql_str, params=None, tentativas=3):
                     continue
             raise
 
-# ─── Cache RAM ─────────────────────────────────────────────────────────────────
 _cache      = {}
 _cache_lock = threading.Lock()
 
@@ -192,7 +186,6 @@ def _transformar_chamados(rows, fotos, historico):
             r[f] = _ts(r.get(f))
     return rows
 
-# ─── Loaders (síncronos — rodam em thread pool no startup e no refresh) ────────
 def _load_chamados():
     rows = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados ORDER BY dataAbertura DESC")
     ids = [r["id"] for r in rows]
@@ -659,7 +652,6 @@ def get_cached(modulo):
         return v
     return LOADERS[modulo]()
 
-# ─── Startup: aquece cache + inicia refresh em background ─────────────────────
 def _background_refresh(intervalo=300):
     while True:
         time.sleep(intervalo)
@@ -673,10 +665,6 @@ def _background_refresh(intervalo=300):
 
 @app.on_event("startup")
 async def prefetch():
-    # Dispara o aquecimento de cache em background e retorna na hora.
-    # O Uvicorn só emite "Application startup complete" depois que essa
-    # função termina, e o proxy do Databricks só libera a URL pública
-    # depois disso — por isso não podemos esperar o SQL Warehouse aqui.
     asyncio.create_task(_prefetch_body())
 
 async def _prefetch_body():
@@ -739,7 +727,6 @@ async def _prefetch_body():
     print("[startup] cache aquecido.")
     threading.Thread(target=_background_refresh, args=(300,), daemon=True).start()
 
-# ─── Health ───────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -854,7 +841,6 @@ async def recalcular_avanco_obras(request: Request):
         "etapas_recalculadas": len(etapa_novo_avanco)
     })
 
-# ─── Auth ─────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/login")
 async def login(request: Request):
     try:
@@ -889,7 +875,6 @@ async def login(request: Request):
         print(f"[login] erro: {e}")
         return JSONResponse({"erro": "erro interno"}, status_code=500)
 
-# ─── Admin ────────────────────────────────────────────────────────────────────
 @app.get("/api/admin/usuarios")
 async def admin_listar(request: Request):
     if not verificar_admin(request):
@@ -932,7 +917,6 @@ async def admin_reset_senha(uid: int, request: Request):
     )
     return JSONResponse({"ok": True})
 
-# ─── Chamados ─────────────────────────────────────────────────────────────────
 @app.get("/api/chamados")
 async def get_chamados(request: Request):
     exigir_auth(request)
@@ -1086,7 +1070,6 @@ async def save_sla(request: Request):
     cache_set("sla", cfg)
     return JSONResponse({"ok": True})
 
-# ─── Obras ────────────────────────────────────────────────────────────────────
 @app.get("/api/obras")
 async def get_obras(request: Request):
     exigir_auth(request)
@@ -1351,7 +1334,6 @@ async def get_avancos_obra(cod: str, request: Request):
     except Exception as e:
         return JSONResponse({"avancos": []})
 
-# ─── CODIN ────────────────────────────────────────────────────────────────────
 @app.get("/api/codin")
 async def get_codin(request: Request):
     exigir_auth(request)
@@ -1479,14 +1461,12 @@ async def atualizar_solicitacao_codin(sid: str, request: Request):
         return JSONResponse({"erro": str(e)}, status_code=500)
     return JSONResponse({"ok": True})
 
-# ─── Conforto ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/conforto")
 async def get_conforto(request: Request):
     exigir_auth(request)
     return JSONResponse(get_cached("conforto"))
 
-# ─── Conforto ─────────────────────────────────────────────────────────────────
 
 async def _salvar_ucs(body, u):
     ids_front = [uc["id"] for uc in body.get("ucs", [])]
@@ -1932,7 +1912,6 @@ async def save_conforto(request: Request):
         print(traceback.format_exc())
         return JSONResponse({"erro": str(e)}, status_code=500)
 
-# ─── Atividades ───────────────────────────────────────────────────────────────
 @app.get("/api/atividades")
 async def get_atividades(request: Request):
     exigir_auth(request)
@@ -2031,7 +2010,6 @@ async def rewrite_comentarios(aid: str, request: Request):
     await asyncio.to_thread(_atualizar_cache_atividades_parcial, [aid])
     return JSONResponse({"ok": True})
 
-# ─── Hub ──────────────────────────────────────────────────────────────────────
 @app.get("/api/hub/config")
 async def get_hub_config(request: Request):
     exigir_auth(request)
@@ -2150,7 +2128,6 @@ async def get_kpi(request: Request):
         "conforto":   get_cached("conforto"),
     })
 
-# ─── Páginas HTML ─────────────────────────────────────────────────────────────
 @app.get("/")
 async def root(request: Request):
     if not usuario_autenticado(request):

@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 window.onerror = (msg, src, line, col, err) => {
   const bar = document.getElementById('debug-bar');
@@ -279,11 +279,9 @@ function badgeEstoque(atual, minimo) {
   return '<span class="badge badge-green">OK</span>';
 }
 
-// ── SVGS ──
 const SVG_EDIT = `<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const SVG_TRASH = `<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
 
-// ── POPULAR SELECTS ──
 function popularSelects() {
   // os-area
   const osArea = $('os-area');
@@ -366,7 +364,6 @@ function popularSelects() {
   });
 }
 
-// ── RENDER HELPERS ──
 function nomeTec(id) { const t = state.tecnicos.find(x => x.id === id); return t ? t.nome : id || '—'; }
 function nomeArea(id) { const a = state.areas.find(x => x.id === id); return a ? a.nome : id || '—'; }
 function nomeUC(id) { const u = state.ucs.find(x => x.id === id); return u ? `${u.codigo} — ${u.nome}` : id || '—'; }
@@ -380,7 +377,6 @@ function proximaPreventiva(ucId) {
   return prevs.length ? fmtD(prevs[0].dataPrevista) : '—';
 }
 
-// ── RENDER DASHBOARD ──
 function renderDashboard() {
   const hoje_d = hoje();
   const mes = hoje_d.slice(0, 7);
@@ -496,7 +492,6 @@ function renderDashboard() {
   }
 }
 
-// ── RENDER ORDENS ──
 function renderOrdens(tipo) {
   const prefix = tipo === 'civil' ? 'civil' : 'tec';
   const tbodyId = tipo === 'civil' ? 'civil-os-tbody' : 'tec-os-tbody';
@@ -539,7 +534,6 @@ function renderOrdens(tipo) {
     : '<tr class="empty-row"><td colspan="8">Nenhuma OS encontrada</td></tr>';
 }
 
-// ── RENDER AC ──
 function renderAC() {
   renderUCGrid();
   renderPreventivas();
@@ -656,7 +650,6 @@ function renderManutencoesAbertas() {
       }).join('')
     : '<tr class="empty-row"><td colspan="9">Nenhuma manutenção aberta 🎉</td></tr>';
 }
-// ── RENDER PEÇAS ──
 function renderPecas() {
   const tbody = $('pecas-tbody');
   if (tbody) {
@@ -729,7 +722,6 @@ function renderPecas() {
   }
 }
 
-// ── RENDER CADASTROS ──
 function renderCadastros() {
   // Áreas — grid de cards
   const areasGrid = $('areas-grid');
@@ -793,7 +785,6 @@ function renderCadastros() {
   }
 }
 
-// ── RENDER CONFIGURAÇÕES ──
 function renderConfiguracoes() {
   const c = state.config;
   if ($('cfg-ciclo-filtro')) $('cfg-ciclo-filtro').value = c.cicloFiltroDias;
@@ -811,7 +802,6 @@ function renderConfiguracoes() {
   }
 }
 
-// ── RENDER AGENDA ──
 const HORAS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
 
 function renderAgenda(tipo) {
@@ -1105,7 +1095,6 @@ function renderTudo() {
   renderConfiguracoes();
 }
 
-// ── MODAIS — OS ──
 function abrirModalOS(idx = -1) {
   state.editIdx.os = idx;
   const o = idx >= 0 ? state.ordens[idx] : null;
@@ -1155,7 +1144,6 @@ function salvarOS() {
 function editarOS(idx) { abrirModalOS(idx); }
 function excluirOS(idx) { if (confirm('Excluir esta OS?')) { state.ordens.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
 
-// ── MODAIS — UC ──
 function abrirModalUC(idx = -1) {
   state.editIdx.uc = idx;
   const u = idx >= 0 ? state.ucs[idx] : null;
@@ -1255,7 +1243,6 @@ function salvarUC() {
 function editarUC(idx) { abrirModalUC(idx); }
 function excluirUC(idx) { if (confirm('Excluir esta UC?')) { state.ucs.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
 
-// ── MODAIS — PREVENTIVA ──
 function abrirModalPreventiva(idx = -1) {
   state.editIdx.preventiva = idx;
   const p = idx >= 0 ? state.preventivas[idx] : null;
@@ -1325,7 +1312,6 @@ function excluirPreventiva(idx) {
   renderTudo();
 }
 
-// ── MODAIS — MANUTENÇÃO ──
 function abrirModalManutencao(idx = -1) {
   state.editIdx.manutencao = idx;
   const m = idx >= 0 ? state.manutencoes[idx] : null;
@@ -1383,7 +1369,6 @@ function abrirModalFecharManutencao(idx) {
   abrirModal('modal-fechar-man');
 }
 
-// ── MODAIS — PEÇA ──
 function abrirModalPeca(idx = -1) {
   state.editIdx.peca = idx;
   const p = idx >= 0 ? state.pecas[idx] : null;
@@ -1431,7 +1416,6 @@ function salvarPeca() {
 function editarPeca(idx) { abrirModalPeca(idx); }
 function excluirPeca(idx) { if (confirm('Excluir esta peça?')) { state.pecas.splice(idx, 1); agendarSalvamento(); popularSelects(); renderTudo(); } }
 
-// ── MODAIS — REQUISIÇÃO ──
 function abrirModalRequisicao(idx = -1) {
   state.editIdx.requisicao = idx;
   const r = idx >= 0 ? state.requisicoes[idx] : null;
@@ -1475,7 +1459,6 @@ function salvarRequisicao() {
 function editarRequisicao(idx) { abrirModalRequisicao(idx); }
 function excluirRequisicao(idx) { if (confirm('Excluir esta requisição?')) { state.requisicoes.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
 
-// ── MODAIS — ÁREA ──
 function abrirModalArea(idx = -1) {
   state.editIdx.area = idx;
   const a = idx >= 0 ? state.areas[idx] : null;
@@ -1521,7 +1504,6 @@ function salvarArea() {
 function editarArea(idx) { abrirModalArea(idx); }
 function excluirArea(idx) { if (confirm('Excluir esta área?')) { state.areas.splice(idx, 1); agendarSalvamento(); popularSelects(); renderTudo(); } }
 
-// ── MODAIS — FORNECEDOR ──
 function abrirModalFornecedor(idx = -1) {
   state.editIdx.fornecedor = idx;
   const f = idx >= 0 ? state.fornecedores[idx] : null;
@@ -1563,7 +1545,6 @@ function salvarFornecedor() {
 function editarFornecedor(idx) { abrirModalFornecedor(idx); }
 function excluirFornecedor(idx) { if (confirm('Excluir este fornecedor?')) { state.fornecedores.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
 
-// ── MODAIS — TÉCNICO ──
 function abrirModalTecnico(idx = -1) {
   state.editIdx.tecnico = idx;
   const t = idx >= 0 ? state.tecnicos[idx] : null;
