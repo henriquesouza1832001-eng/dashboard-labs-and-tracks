@@ -68,7 +68,7 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
       mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')");
     const pctGasto = budgTotal>0?Math.round(real/budgTotal*100):0;
     const concluidasQtd = obras.filter(o=>o.status==='Concluído').length;
-    document.getElementById('mfoot-obras').textContent = fmtRK(real)+' faturado de '+fmtRK(budgTotal)+' ('+pctGasto+'%) · exclui '+concluidasQtd+' obra(s) concluída(s)';
+    
     setTimeout(()=>desenharMicroBullet('mcv-obras', budgTotal, real),80);
   }
   if(dCod){
@@ -81,7 +81,7 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
 mkMicro(ativos,'Ativas','c-verde',"abrirModuloComDrill('codin','cd-total')")+
 mkMicro(semPonto,'Sem ponto',semPonto>0?'c-amarelo':'c-verde',"abrirModuloComDrill('codin','cd-ponto')")+
 mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
-    document.getElementById('mfoot-codin').textContent=Math.round(ativos/Math.max(pessoas.length,1)*100)+'% ativos · '+semPonto+' sem ponto';
+    
     setTimeout(()=>desenharMicroBarras('mcv-codin',[{label:'Ativos',val:ativos||0,cor:'#3fb950'},{label:'Inativos',val:(pessoas.length-ativos)||0,cor:'#f85149'}]),80);
   }
   if(dCnf){
@@ -106,7 +106,7 @@ mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
       mkMicro(vencendo,`Vencendo em 14d (${totalUcs>0?Math.round(vencendo/totalUcs*100):0}%)`,vencendo>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('conforto','cf-temp')")+
       mkMicro(prevs.length,'Total preventivas','c-azul',"abrirModuloComDrill('conforto','cf-areas')");
     const manutAberto = (dCnf.manutencoes||[]).filter(m=>['Em Aberto','Em Andamento','Aguardando Peça'].includes(m.status)).length;
-    document.getElementById('mfoot-conforto').textContent = totalUcs+' UCs · '+realizadas+' realizadas'+(manutAberto>0?' · '+manutAberto+' manutenções em aberto':'');
+    
     const coresTipo=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7'];
     setTimeout(()=>desenharMicroBarras('mcv-conforto',topTipos.length?topTipos.map((x,i)=>({label:x[0],val:x[1],cor:coresTipo[i%5]})):[{label:'Sem UCs',val:1,cor:'#d0d8e8'}]),80);
   }
@@ -121,7 +121,7 @@ mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
 mkMicro(ok,'Aprovadas','c-verde',"abrirModuloComDrill('ergonomia','erg-ok')")+
 mkMicro(nok,'Reprovadas',nok>0?'c-vermelho':'c-verde',"abrirModuloComDrill('ergonomia','erg-nok')")+
 mkMicro(postos,'Postos','c-azul',"abrirModuloComDrill('ergonomia','erg-postos')")
-    document.getElementById('mfoot-ergonomia').textContent=avs.length>0?Math.round(ok/avs.length*100)+'% aprovadas · '+pend+' pendentes':'—';
+    
     setTimeout(()=>desenharMicroDonut('mcv-ergonomia',['Aprovadas','Reprovadas','Pendentes'],[ok||1,nok||1,pend||1],['#3fb950','#f85149','#d29922']),80);
   }
 if(dCh){
@@ -143,7 +143,7 @@ if(dCh){
     const tempoMedioMs = cham.filter(c=>c.dataFechamento&&c.dataAbertura).reduce((s,c)=>s+(new Date(c.dataFechamento)-new Date(c.dataAbertura)),0);
     const qtdFechados = cham.filter(c=>c.dataFechamento&&c.dataAbertura).length;
     const tmedDias = qtdFechados>0?Math.round(tempoMedioMs/qtdFechados/86400000):null;
-    document.getElementById('mfoot-chamados').textContent = pctRes+'% resolvidos' + (tmedDias!==null?' · TMR: '+tmedDias+'d':'') + (criticos>0?' · ⚠ '+criticos+' críticos':'');
+    
     setTimeout(()=>{
       const cv=document.getElementById('mcv-chamados');
       if(!cv)return;
