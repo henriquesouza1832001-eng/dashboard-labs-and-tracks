@@ -19,6 +19,9 @@ jobs:
       - name: Install Databricks CLI
         run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
+      - name: Remove app.yaml before upload
+        run: rm -f app.yaml
+
       - name: Upload source files
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
@@ -27,8 +30,7 @@ jobs:
           rm -rf .databricks
           databricks workspace import-dir . \
             /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks \
-            --overwrite \
-            --exclude app.yaml
+            --overwrite
 
       - name: Deploy app
         env:
