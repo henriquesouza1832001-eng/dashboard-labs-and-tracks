@@ -30,7 +30,8 @@ jobs:
           rm -rf .databricks
           databricks workspace import-dir . \
             /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks \
-            --overwrite
+            --overwrite \
+            --exclude app.yaml
 
       - name: Deploy app
         env:

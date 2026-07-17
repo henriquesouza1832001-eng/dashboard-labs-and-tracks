@@ -1010,11 +1010,19 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.clearRect(0, 0, W, H);
   ctx.imageSmoothingEnabled = true;
   const etapas = (obra.etapas || []).filter(e => e.dtInicio && e.dtFim);
-  if (!etapas.length && !lancs.length) {
+  const etapasSemData = (obra.etapas || []).filter(e => !e.dtInicio || !e.dtFim);
+  if (!etapas.length && !lancs.length && !etapasSemData.length) {
     ctx.fillStyle = 'var(--text-dim, #8b949e)';
     ctx.font = '12px var(--font, sans-serif)';
     ctx.textAlign = 'center';
     ctx.fillText('Nenhuma etapa cadastrada', W/2, H/2);
+    return;
+  }
+  if (!etapas.length && !lancs.length) {
+    ctx.fillStyle = 'var(--text-dim, #8b949e)';
+    ctx.font = '12px var(--font, sans-serif)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sem datas cadastradas nas etapas', W/2, H/2);
     return;
   }
   const toMs = d => new Date(d).getTime();
@@ -1278,10 +1286,10 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     const rotuloTxt = `${valor.toFixed(1)}%`;
     const larguraRotulo = ctx.measureText(rotuloTxt).width;
     let yFinal = y - 12;
-    if (evitarY != null && Math.abs(yFinal - evitarY) < 14) {
-      yFinal = evitarY < y ? evitarY - 14 : yFinal - 10;
+    if (evitarY != null && Math.abs(yFinal - evitarY) < 18) {
+      yFinal = evitarY < yFinal ? evitarY - 18 : yFinal + 18;
     }
-    if (yFinal - 10 < m.t) yFinal = m.t + 10; 
+    if (yFinal - 10 < m.t) yFinal = m.t + 12; 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
     const padX = 4, padY = 2;

@@ -2736,4 +2736,9 @@ async def deletar_tipo_uc(tid: str, request: Request):
         payload["tiposUc"] = [t for t in payload.get("tiposUc", []) if t.get("id") != tid]
         cache_set("conforto", payload)
     return JSONResponse({"ok": True})
+@app.get("/login")
+async def login_redirect(request: Request):
+    next_url = request.query_params.get("next", "/")
+    return RedirectResponse(url=next_url, status_code=302)
+
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")

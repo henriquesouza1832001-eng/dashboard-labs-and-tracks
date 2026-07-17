@@ -1,5 +1,6 @@
 ERPFiat-Portatil/.tmp/
 *.pyc
 __pycache__/
+app.yaml
 .env
 idapp
