@@ -1314,7 +1314,8 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.stroke();
   ctx.restore();
 
-  const yPlanDesenhado = desenharPontoRotulado(idxUltimoReal, valorPlanNoIdx, '#58a6ff', null);
+  const yRealBase = yPos(valorRealNoIdx);
+  const yPlanDesenhado = desenharPontoRotulado(idxUltimoReal, valorPlanNoIdx, '#58a6ff', yRealBase);
   desenharPontoRotulado(idxUltimoReal, valorRealNoIdx, '#e3711a', yPlanDesenhado);
   const idxFimObra = curvaPlan.length - 1;
   if (idxFimObra > idxUltimoReal) {
