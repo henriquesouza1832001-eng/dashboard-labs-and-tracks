@@ -1301,7 +1301,8 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.textBaseline = 'alphabetic';
     return yFinal;
   }
-  const valorRealNoIdx = curvaReal[idxUltimoReal];
+  const avFisReal = obra ? calcAvFis(obra) : 0;
+  const valorRealNoIdx = curvaReal[idxUltimoReal] > 0 ? curvaReal[idxUltimoReal] : avFisReal;
   const valorPlanNoIdx = curvaPlan[idxUltimoReal];
   ctx.save();
   ctx.strokeStyle = 'rgba(139,148,158,0.3)';
