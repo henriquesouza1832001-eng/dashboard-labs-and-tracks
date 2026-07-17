@@ -1271,7 +1271,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     }
   }
 
-  function desenharPontoRotulado(idx, valor, cor, evitarY) {
+  function desenharPontoRotulado(idx, valor, cor, abaixo) {
     const x = xPos(idx);
     const y = yPos(valor);
     ctx.beginPath();
@@ -1286,11 +1286,9 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.font = '700 10px var(--mono,monospace)';
     const rotuloTxt = `${valor.toFixed(1)}%`;
     const larguraRotulo = ctx.measureText(rotuloTxt).width;
-    let yFinal = y - 12;
-    if (evitarY != null && Math.abs(yFinal - evitarY) < 18) {
-      yFinal = evitarY < yFinal ? evitarY - 18 : yFinal + 18;
-    }
-    if (yFinal - 10 < m.t) yFinal = m.t + 12; 
+    let yFinal = abaixo ? y + 18 : y - 12;
+    if (yFinal - 10 < m.t) yFinal = m.t + 12;
+    if (yFinal > m.t + ch - 4) yFinal = m.t + ch - 4;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
     const padX = 4, padY = 2;
@@ -1314,9 +1312,8 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.stroke();
   ctx.restore();
 
-  const yRealBase = yPos(valorRealNoIdx);
-  const yPlanDesenhado = desenharPontoRotulado(idxUltimoReal, valorPlanNoIdx, '#58a6ff', yRealBase);
-  desenharPontoRotulado(idxUltimoReal, valorRealNoIdx, '#e3711a', yPlanDesenhado);
+  desenharPontoRotulado(idxUltimoReal, valorPlanNoIdx, '#58a6ff', false);
+  desenharPontoRotulado(idxUltimoReal, valorRealNoIdx, '#e3711a', true);
   const idxFimObra = curvaPlan.length - 1;
   if (idxFimObra > idxUltimoReal) {
     const ultPlanFinal = curvaPlan[idxFimObra];
