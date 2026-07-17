@@ -24,6 +24,7 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
+          rm -rf .databricks
           databricks workspace import-dir . \
             /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks \
             --overwrite
@@ -33,5 +34,6 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
+          rm -rf .databricks
           databricks apps deploy dashboard-labs-and-tracks \
             --source-code-path /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks

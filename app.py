@@ -55,6 +55,7 @@ def get_conn():
                 server_hostname=HOST,
                 http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
                 access_token=TOKEN,
+                auth_type="pat",
                 _socket_timeout=30,
             )
             _local.conn = conn
@@ -2235,7 +2236,6 @@ async def login_page(request: Request):
                 httponly=True, secure=True, samesite="none",
                 max_age=12*3600, path="/")
             return resp
-    # fallback: mostra o formulário só se não vier header do Databricks
     if usuario_autenticado(request):
         return RedirectResponse(url="/kpi")
     return HTMLResponse(open(f"{BASE}/login/login.html", encoding="utf-8").read(),
@@ -2736,4 +2736,8 @@ async def deletar_tipo_uc(tid: str, request: Request):
         payload["tiposUc"] = [t for t in payload.get("tiposUc", []) if t.get("id") != tid]
         cache_set("conforto", payload)
     return JSONResponse({"ok": True})
+@app.get("/login")
+async def login_callback(request: Request):
+    return RedirectResponse(url="/", status_code=302)
+
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")
