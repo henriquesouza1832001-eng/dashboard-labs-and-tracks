@@ -25,6 +25,9 @@ JWT_SECRET   = os.getenv("JWT_SECRET")
 HOST         = os.getenv("DATABRICKS_HOST", "")
 TOKEN        = os.getenv("DATABRICKS_TOKEN", "")
 WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "")
+print(f"[startup] HOST={'OK' if HOST else 'VAZIO'}")
+print(f"[startup] TOKEN={'OK' if TOKEN else 'VAZIO'}")
+print(f"[startup] WAREHOUSE_ID={'OK' if WAREHOUSE_ID else 'VAZIO'}")
 BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ERPFiat-Portatil/resources")
 IS_PROD      = os.getenv("ENV", "prod") == "prod"
 
@@ -59,8 +62,8 @@ def get_conn():
                 _socket_timeout=30,
             )
             _local.conn = conn
-        except:
-            pass
+        except Exception as e:
+            print(f"[get_conn] falha ao conectar ao Databricks: {e}")
     return conn
 
 def run_query(sql_str, params=None):
