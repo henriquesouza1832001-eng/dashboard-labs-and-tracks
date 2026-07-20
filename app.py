@@ -55,9 +55,9 @@ def get_conn():
             _local.conn = None
         try:
             conn = sql.connect(
-                server_hostname=HOST,
+                server_hostname=os.getenv("DATABRICKS_HOST"),
                 http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-                credentials_provider=None,
+                access_token=os.getenv("DATABRICKS_TOKEN"),
             )
             _local.conn = conn
         except Exception as e:
