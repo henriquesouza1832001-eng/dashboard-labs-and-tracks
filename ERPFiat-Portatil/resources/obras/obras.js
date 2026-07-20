@@ -153,7 +153,7 @@ function renderDashboard(){
     <div class="kpi-card"><div class="kpi-label">TOTAL OBRAS</div><div class="kpi-val blue">${state.obras.length}</div></div>
     <div class="kpi-card"><div class="kpi-label">EM ANDAMENTO</div><div class="kpi-val orange">${andamento}</div></div>
     <div class="kpi-card"><div class="kpi-label">CONCLUÍDAS</div><div class="kpi-val green">${state.obras.filter(o=>o.status==='Concluído').length}</div></div>
-    <div class="kpi-card"><div class="kpi-label">BUDGET APROVADO</div><div class="kpi-val blue">${fmtR(totalB)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">BUDGET</div><div class="kpi-val blue">${fmtR(totalB)}</div></div>
     <div class="kpi-card"><div class="kpi-label">TOTAL FATURADO</div><div class="kpi-val yellow">${fmtR(totalR)}</div></div>
     <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${saldo<0?'red':'green'}">${fmtR(saldo)}</div></div>`;
   const tbody=$('dash-tbody');
