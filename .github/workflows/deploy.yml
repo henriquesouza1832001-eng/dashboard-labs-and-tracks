@@ -35,8 +35,9 @@ jobs:
           git diff --name-only $BEFORE $AFTER | grep -v '^app\.yaml$' | while read file; do
             if [ -f "$file" ]; then
               echo "Enviando: $file"
-              databricks workspace import "$file" \
+              databricks workspace import \
                 /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks/"$file" \
+                --file "$file" \
                 --overwrite
             fi
           done
