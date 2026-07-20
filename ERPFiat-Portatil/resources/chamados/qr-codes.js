@@ -116,40 +116,44 @@ async function baixarQR(areaId) {
   doc.setFont('helvetica','bold');
   doc.setTextColor(255,255,255);
   const nomeLinhas = doc.splitTextToSize(nomeArea, W - 40);
-  const nomeY = nomeLinhas.length > 1 ? 100 : 108;
+  const alturaLinha = nomeFontSize * 0.4;
+  const blocoNomeAltura = nomeLinhas.length * alturaLinha;
+  const nomeY = 80;
   doc.text(nomeLinhas, W/2, nomeY, { align:'center' });
 
+  const linhaAposNomeY = nomeY + blocoNomeAltura + 6;
   doc.setDrawColor(255,255,255);
   doc.setLineWidth(0.5);
-  doc.line(55,115,W-55,115);
+  doc.line(55, linhaAposNomeY, W-55, linhaAposNomeY);
 
   const qrSize = 104;
   const qrX = (W-qrSize)/2;
-  const qrY = 124;
+  const qrY = linhaAposNomeY + 8;
   doc.setFillColor(255,255,255);
   doc.roundedRect(qrX-7, qrY-7, qrSize+14, qrSize+14, 5, 5, 'F');
   doc.addImage(qrDataUrl,'PNG', qrX, qrY, qrSize, qrSize);
 
+  const instrucaoY = qrY + qrSize + 18;
   doc.setFontSize(14);
   doc.setFont('helvetica','bold');
   doc.setTextColor(255,255,255);
-  doc.text(instrucao, W/2, 250, { align:'center' });
+  doc.text(instrucao, W/2, instrucaoY, { align:'center' });
 
   doc.setFontSize(11);
   doc.setFont('helvetica','normal');
   doc.setTextColor(200,200,255);
-  doc.text('Aponte a câmera do celular para o QR Code acima', W/2, 260, { align:'center' });
-  doc.text('e preencha o formulário em segundos.', W/2, 268, { align:'center' });
+  doc.text('Aponte a câmera do celular para o QR Code acima', W/2, instrucaoY+10, { align:'center' });
+  doc.text('e preencha o formulário em segundos.', W/2, instrucaoY+18, { align:'center' });
 
+  const caixaY = instrucaoY + 26;
   doc.setFillColor(Rd,Gd,Bd);
   doc.setDrawColor(150,150,230);
   doc.setLineWidth(0.4);
-  doc.roundedRect(18,276,W-36,14,3,3,'FD');
-
+  doc.roundedRect(18, caixaY, W-36, 14, 3, 3, 'FD');
   doc.setFontSize(8);
   doc.setFont('helvetica','bold');
   doc.setTextColor(255,255,255);
-  doc.text('A localização já será preenchida automaticamente. Descreva o problema e informe seu e-mail para retorno.', W/2, 284, { align:'center' });
+  doc.text('A localização já será preenchida automaticamente. Descreva o problema e informe seu e-mail para retorno.', W/2, caixaY+6, { align:'center' });
 
   doc.save(`QRCode_${area.slug}.pdf`);
 }
