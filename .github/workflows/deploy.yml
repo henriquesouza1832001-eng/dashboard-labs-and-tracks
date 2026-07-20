@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Databricks CLI
         run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -22,15 +24,22 @@ jobs:
       - name: Remove app.yaml before upload
         run: rm -f app.yaml
 
-      - name: Upload source files
+      - name: Upload changed files
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           rm -rf .databricks
-          databricks workspace import-dir . \
-            /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks \
-            --overwrite
+          BEFORE=${{ github.event.before }}
+          AFTER=${{ github.event.after }}
+          git diff --name-only $BEFORE $AFTER | grep -v '^app\.yaml$' | while read file; do
+            if [ -f "$file" ]; then
+              echo "Enviando: $file"
+              databricks workspace import "$file" \
+                /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks/"$file" \
+                --overwrite
+            fi
+          done
 
       - name: Deploy app
         env:
