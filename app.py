@@ -975,7 +975,7 @@ async def update_chamado(cid: str, request: Request):
             body.get("solicitante"), body.get("dataDesejada") or None,
             body.get("descricao"), body.get("status"), body.get("responsavel"),
             body.get("idExterno"), body.get("dataConclusao") or None,
-            u.get("email") if u else None,
+            u if u else None,
             cid
         ])
         await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [cid])
@@ -992,7 +992,7 @@ async def update_chamado(cid: str, request: Request):
             rows, params = [], []
             for h in historico:
                 rows.append("(?,?,?,?)")
-                params += [cid, u.get("email") if u else None, h.get("acao"), h.get("data")]
+                params += [cid, u if u else None, h.get("acao"), h.get("data")]
             await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES {','.join(rows)}", params)
     except Exception as e:
         print(f"[chamados] erro ao atualizar {cid}: {e}")
