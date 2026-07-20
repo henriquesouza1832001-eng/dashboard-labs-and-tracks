@@ -964,8 +964,20 @@ async def update_chamado(cid: str, request: Request):
     u = get_usuario(request)
     try:
         await arun_exec_retry(f"""
-            UPDATE {S_CHAMADOS}.chamados SET ...
-        """, [...])
+            UPDATE {S_CHAMADOS}.chamados SET
+                titulo=?, categoria=?, tipo=?, prioridade=?, local=?, setor=?,
+                solicitante=?, dataDesejada=?, descricao=?, status=?, responsavel=?,
+                idExterno=?, dataConclusao=?, atualizado_em=current_timestamp(), atualizado_por=?
+            WHERE id=?
+        """, [
+            body.get("titulo"), body.get("categoria"), body.get("tipo"),
+            body.get("prioridade"), body.get("local"), body.get("setor"),
+            body.get("solicitante"), body.get("dataDesejada") or None,
+            body.get("descricao"), body.get("status"), body.get("responsavel"),
+            body.get("idExterno"), body.get("dataConclusao") or None,
+            u.get("email") if u else None,
+            cid
+        ])
         await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.fotos WHERE chamado_id=?", [cid])
         fotos = body.get("fotos", [])
         if fotos:
@@ -974,15 +986,14 @@ async def update_chamado(cid: str, request: Request):
                 rows.append("(?,?)")
                 params += [cid, foto]
             await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES {','.join(rows)}", params)
-
         await arun_exec_retry(f"DELETE FROM {S_CHAMADOS}.historico WHERE chamado_id=?", [cid])
         historico = body.get("historico", [])
         if historico:
             rows, params = [], []
             for h in historico:
-                rows.append("(?,?,?)")
-                params += [cid, h.get("usuario"), h.get("acao")]
-            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES {','.join(rows)}", params)
+                rows.append("(?,?,?,?)")
+                params += [cid, u.get("email") if u else None, h.get("acao"), h.get("data")]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES {','.join(rows)}", params)
     except Exception as e:
         print(f"[chamados] erro ao atualizar {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
