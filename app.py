@@ -55,13 +55,15 @@ def get_conn():
             _local.conn = None
         try:
             conn = sql.connect(
-                server_hostname=os.getenv("DATABRICKS_HOST"),
+                server_hostname=HOST,
                 http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
-                access_token=os.getenv("DATABRICKS_TOKEN"),
+                access_token=TOKEN,
+                auth_type="pat",
+                _socket_timeout=30,
             )
             _local.conn = conn
         except Exception as e:
-            print(f"[get_conn] falha ao conectar: {type(e).__name__}: {e}")
+            print(f"[get_conn] falha ao conectar ao Databricks: {e}")
             print(traceback.format_exc())
     return conn
 
