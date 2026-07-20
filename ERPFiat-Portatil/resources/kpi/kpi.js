@@ -61,7 +61,7 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
     const estudo=obras.filter(o=>o.status==='Em Estudo').length;
     document.getElementById('mkpis-obras').innerHTML=
-      `<div class="mod-micro-kpi" onclick="abrirModuloComDrill('conforto','cf-total')" style="cursor:pointer" title="Abrir Total UCs"><div class="mod-micro-lbl">Total UCs</div><div class="mod-micro-val c-azul">${totalUcs}</div></div>`+
+      `<div class="mod-micro-kpi" onclick="abrirModuloComDrill('obras','total')" style="cursor:pointer" title="Abrir Total obras"><div class="mod-micro-lbl">Total obras</div><div class="mod-micro-val c-azul">${obras.length}</div></div>`+
       mkMicro(emAnd,'Em andamento','c-laranja',"abrirModuloComDrill('obras','andamento')")+
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
