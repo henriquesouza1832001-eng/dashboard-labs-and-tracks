@@ -64,6 +64,7 @@ def get_conn():
             _local.conn = conn
         except Exception as e:
             print(f"[get_conn] falha ao conectar ao Databricks: {e}")
+            print(traceback.format_exc())
     return conn
 
 def run_query(sql_str, params=None):
