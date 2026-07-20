@@ -61,7 +61,7 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
     const estudo=obras.filter(o=>o.status==='Em Estudo').length;
     document.getElementById('mkpis-obras').innerHTML=
-      `<div class="mod-obras-total-fixo">${obras.length} <span>obras</span></div>`+
+      `<div class="mod-micro-kpi" onclick="abrirmodulocomdrill('obras','total')"><div class="mod-micro-lbl">total</div><div class="mod-micro-val c-azul">${obras.length} obras</div></div>`+
       mkMicro(emAnd,'Em andamento','c-laranja',"abrirModuloComDrill('obras','andamento')")+
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
@@ -100,7 +100,7 @@ mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
     const ucsPorTipo={};ucs.forEach(u=>{const t=u.categoria||'Ar-Condicionado';ucsPorTipo[t]=(ucsPorTipo[t]||0)+1;});
     const topTipos=Object.entries(ucsPorTipo).sort((a,b)=>b[1]-a[1]).slice(0,5);
     document.getElementById('mkpis-conforto').innerHTML=
-      `<div class="mod-obras-total-fixo">${totalUcs} <span>UCs</span></div>`+
+      `<div class="mod-micro-kpi" onclick="abrirModuloComDrill('conforto','cf-total')"><div class="mod-micro-lbl">Total</div><div class="mod-micro-val c-azul">${totalUcs} UCs</div></div>`+
       mkMicro(realizadas,'Preventivas realizadas','c-verde',"abrirModuloComDrill('conforto','cf-total')")+
       mkMicro(pendentes,'Pendentes',pendentes>0?'c-laranja':'c-cinza',"abrirModuloComDrill('conforto','cf-conf')")+
       mkMicro(vencendo,`Vencendo em 14d (${totalUcs>0?Math.round(vencendo/totalUcs*100):0}%)`,vencendo>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('conforto','cf-temp')")+
@@ -135,7 +135,7 @@ if(dCh){
     const catM={};cham.forEach(c=>{const cat=c.categoria||'Outros';catM[cat]=(catM[cat]||0)+1;});
     const topCat=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,5);
     document.getElementById('mkpis-chamados').innerHTML=
-      `<div class="mod-obras-total-fixo">${total} <span>chamados</span></div>`+
+      `<div class="mod-micro-kpi" onclick="abrirmodulocomdrill('chamados','ch-total')"><div class="mod-micro-lbl">total</div><div class="mod-micro-val c-azul">${total} chamados</div></div>`+
       mkMicro(abertos,'Abertos',abertos>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('chamados','ch-alta')")+
       mkMicro(andamento,'Em andamento',andamento>0?'c-laranja':'c-cinza',"abrirModuloComDrill('chamados','ch-sem')")+
       mkMicro(concluidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-resol')")+
@@ -1578,7 +1578,6 @@ function abrirDetalheObra(cod){
       renderPagLanc();
     };
     renderPagLanc();
-    // botão editar obs
     const btnObs=document.getElementById('btn-obs-edit');
     const taObs=document.getElementById('obs-det-obra');
     if(btnObs&&taObs){
@@ -1620,8 +1619,6 @@ function renderAtividades(container,d){
   const topResp=Object.entries(respMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const mensal={};ativs.forEach(a=>{const m=(a.criadoEm||a.createdAt||'').slice(0,7);if(m)mensal[m]=(mensal[m]||0)+1;});
   const mKeys=Object.keys(mensal).sort().slice(-6);
-
-  // guarda dados globais para o overlay
   window._ativsData={ativs,statusMap,prioMap,topResp,mensal,mKeys,hoje};
   window._ativDrill=null;
 
