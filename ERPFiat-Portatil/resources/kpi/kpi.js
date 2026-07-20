@@ -61,7 +61,7 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
     const estudo=obras.filter(o=>o.status==='Em Estudo').length;
     document.getElementById('mkpis-obras').innerHTML=
-      `<div class="mod-obras-total-fixo" style="cursor:pointer" onclick="abrirmodulocomdrill('obras','total')">${obras.length} <span>obras</span></div>`+
+      `<div class="mod-micro-kpi" onclick="abrirModuloComDrill('conforto','cf-total')" style="cursor:pointer" title="Abrir Total UCs"><div class="mod-micro-lbl">Total UCs</div><div class="mod-micro-val c-azul">${totalUcs}</div></div>`+
       mkMicro(emAnd,'Em andamento','c-laranja',"abrirModuloComDrill('obras','andamento')")+
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
@@ -100,7 +100,7 @@ mkMicro(perfis,'Perfis','c-azul',"abrirModuloComDrill('codin','cd-perfis')")
     const ucsPorTipo={};ucs.forEach(u=>{const t=u.categoria||'Ar-Condicionado';ucsPorTipo[t]=(ucsPorTipo[t]||0)+1;});
     const topTipos=Object.entries(ucsPorTipo).sort((a,b)=>b[1]-a[1]).slice(0,5);
     document.getElementById('mkpis-conforto').innerHTML=
-      mkMicro(totalUcs,'Total UCs','c-azul',"abrirModuloComDrill('conforto','cf-total')")+
+      `<div class="mod-micro-kpi" onclick="abrirModuloComDrill('conforto','cf-total')" style="cursor:pointer" title="Abrir Total UCs"><div class="mod-micro-lbl">Total UCs</div><div class="mod-micro-val c-azul">${totalUcs}</div></div>`+
       mkMicro(realizadas,'Preventivas realizadas','c-verde',"abrirModuloComDrill('conforto','cf-total')")+
       mkMicro(pendentes,'Pendentes',pendentes>0?'c-laranja':'c-cinza',"abrirModuloComDrill('conforto','cf-conf')")+
       mkMicro(vencendo,`Vencendo em 14d (${totalUcs>0?Math.round(vencendo/totalUcs*100):0}%)`,vencendo>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('conforto','cf-temp')")+
@@ -135,7 +135,7 @@ if(dCh){
     const catM={};cham.forEach(c=>{const cat=c.categoria||'Outros';catM[cat]=(catM[cat]||0)+1;});
     const topCat=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,5);
     document.getElementById('mkpis-chamados').innerHTML=
-      mkmicro(total,'total chamados','c-azul',"abrirmodulocomdrill('chamados','ch-total')")+
+      `<div class="mod-micro-kpi" onclick="abrirModuloComDrill('chamados','ch-total')" style="cursor:pointer" title="Abrir Total chamados"><div class="mod-micro-lbl">Total chamados</div><div class="mod-micro-val c-azul">${total}</div></div>`+
       mkMicro(abertos,'Abertos',abertos>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('chamados','ch-alta')")+
       mkMicro(andamento,'Em andamento',andamento>0?'c-laranja':'c-cinza',"abrirModuloComDrill('chamados','ch-sem')")+
       mkMicro(concluidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-resol')")+
