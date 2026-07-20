@@ -824,6 +824,8 @@ function recalcularPesosEtapas(obra) {
 function recalcularDatasEtapa(etapa) {
   const todasDatas = [];
   (etapa.subtarefas || []).forEach(sub => {
+    if (sub.dtInicio) todasDatas.push(sub.dtInicio);
+    if (sub.dtFim) todasDatas.push(sub.dtFim);
     (sub.itens || []).forEach(it => {
       if (it.dtInicio) todasDatas.push(it.dtInicio);
       if (it.dtFim) todasDatas.push(it.dtFim);
