@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="/qr/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="/chamados/chamados.css" rel="stylesheet"></style>
 <link rel="manifest" href="/app.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#161b22">
@@ -236,7 +237,22 @@
         <input type="text" id="qr-area-nome" placeholder="Nome da área (ex: Vestiário Norte)">
         <button class="btn btn-primary" id="btn-add-area">Adicionar</button>
       </div>
+    </div><div id="qr-config-global" style="padding:20px 28px 0">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:20px">
+    <div style="flex:2;min-width:180px">
+      <label style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:6px">Subtítulo do cartaz</label>
+      <input type="text" id="qr-cfg-subtitulo" class="form-control" value="Eng. Services, Labs &amp; Office Maintenance" placeholder="Ex: Eng. Services, Labs & Office Maintenance">
     </div>
+    <div style="flex:2;min-width:180px">
+      <label style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:6px">Instrução principal</label>
+      <input type="text" id="qr-cfg-instrucao" class="form-control" value="Encontrou um problema neste local?" placeholder="Texto de instrução">
+    </div>
+    <div>
+      <label style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:6px">Cor de fundo</label>
+      <input type="color" id="qr-cfg-cor" value="#1010cc" style="width:48px;height:36px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;padding:2px">
+    </div>
+  </div>
+</div>
     <div class="qr-lista" id="qr-areas-lista"></div>
   </div>
 </div>
