@@ -110,10 +110,14 @@ async function baixarQR(areaId) {
   doc.setLineWidth(0.8);
   doc.line(55,65,W-55,65);
 
-  doc.setFontSize(52);
+  const nomeArea = area.nome;
+  const nomeFontSize = nomeArea.length > 20 ? (nomeArea.length > 35 ? 28 : 38) : 52;
+  doc.setFontSize(nomeFontSize);
   doc.setFont('helvetica','bold');
   doc.setTextColor(255,255,255);
-  doc.text(area.nome, W/2, 108, { align:'center' });
+  const nomeLinhas = doc.splitTextToSize(nomeArea, W - 40);
+  const nomeY = nomeLinhas.length > 1 ? 100 : 108;
+  doc.text(nomeLinhas, W/2, nomeY, { align:'center' });
 
   doc.setDrawColor(255,255,255);
   doc.setLineWidth(0.5);
