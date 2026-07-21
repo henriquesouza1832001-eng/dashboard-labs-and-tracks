@@ -1396,6 +1396,11 @@ function drawOverlayCharts(tipo,d){
     const pctTxt=totalB>0?((totalR/totalB)*100).toFixed(1)+'%':'0%';
     const cor=estourou?'#f85149':pct>=0.8?'#e3711a':'#2E5FA3';
     const disponivel=Math.max(totalB-totalR,0);
+    const budgetArrDraw=(d.obras&&d.obras.budget)?d.obras.budget:(d.budget||[]);
+    const codsDraw=new Set(lista.map(o=>o.cod));
+    const budgetFiltradoDraw=budgetArrDraw.filter(b=>codsDraw.has(b.obraCod));
+    const bgtAprovDraw=budgetFiltradoDraw.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
+    const bgtAprovarDraw=budgetFiltradoDraw.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
     bulletWrap.innerHTML=`
       <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">A Faturar × Faturado</div>
       <div style="position:relative;height:18px;background:#e8edf5;border-radius:9px;overflow:hidden;margin-bottom:12px">
@@ -1406,6 +1411,8 @@ function drawOverlayCharts(tipo,d){
         <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span><span style="color:var(--text-muted)">Faturado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b></div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#e8edf5;border:1px solid #8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">${estourou?'Excedente':'A Faturar'}</span><b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'var(--text)'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b></div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">Uso do budget</span><b style="margin-left:auto;font-family:var(--mono);color:${cor}">${pctTxt}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#1a7f4b;flex-shrink:0"></span><span style="color:var(--text-muted)">Budget aprovado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(bgtAprovDraw)}</b></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#d29922;flex-shrink:0"></span><span style="color:var(--text-muted)">A aprovar</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(bgtAprovarDraw)}</b></div>
       </div>`;
   }
 
