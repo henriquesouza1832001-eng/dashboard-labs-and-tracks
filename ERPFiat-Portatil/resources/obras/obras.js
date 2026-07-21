@@ -154,7 +154,7 @@ function popularSelects(){
   };
 }
 function renderDashboard(){
-  const totalB=totalBudget(),totalR=totalRealizado(),saldo=totalB-totalR,pct=totalB>0?(totalR/totalB)*100:0;
+  const totalB=totalBudget(),totalR=totalRealizado(),totalAFaturar=totalB-totalR,pct=totalB>0?(totalR/totalB)*100:0;
   const andamento=state.obras.filter(o=>o.status==='Em Andamento').length;
   const avgFisico=state.obras.length?state.obras.reduce((s,o)=>s+avancFisico(o.cod),0)/state.obras.length:0;
   const bgtAprovado = state.budget.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
@@ -169,7 +169,7 @@ function renderDashboard(){
     <div class="kpi-card"><div class="kpi-label">CONCLUÍDAS</div><div class="kpi-val green">${state.obras.filter(o=>o.status==='Concluído').length}</div></div>
     <div class="kpi-card"><div class="kpi-label">BUDGET</div><div class="kpi-val blue">${fmtRCard(totalB)}</div></div>
     <div class="kpi-card"><div class="kpi-label">TOTAL FATURADO</div><div class="kpi-val yellow">${fmtRCard(totalR)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${saldo<0?'red':'green'}">${fmtRCard(saldo)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${totalAFaturar<0?'red':'green'}">${fmtRCard(totalAFaturar)}</div></div>
     <div class="kpi-card"><div class="kpi-label">BUDGET APROVADO</div><div class="kpi-val green">${fmtRCard(bgtAprovado)}</div></div>
     <div class="kpi-card"><div class="kpi-label">BUDGET A APROVAR</div><div class="kpi-val yellow">${fmtRCard(bgtAprovar)}</div></div>
     <div class="kpi-card"><div class="kpi-label">R$ PLANEJADAS (${obrasPlanj.length})</div><div class="kpi-val blue">${fmtRCard(bgtPlanj)}</div></div>
