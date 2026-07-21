@@ -850,7 +850,7 @@ function _obOvBase(d,tipo){
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
     `:tipo==='total'?`
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">avanço físico médio</div><div class="ob-ov-kpi-val ${avgfis>70?'c-verde':avgfis>40?'c-amarelo':'c-laranja'}">${fmt(avgfis,1)}%</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">avanço físico médio</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
     `:''}
   </div>
   <div class="ob-ov-tbox" style="margin-bottom:16px">
@@ -1417,6 +1417,15 @@ function drawOverlayCharts(tipo,d){
     const wrap=cvb.parentElement;
     const cores=['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7','#58a6ff','#f85149','#8b949e'];
     wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Faturado por Categoria</div>`+(top.length?barrasHTML(top.map((x,i)=>({label:x[0],val:x[1],cor:cores[i%8]})),{labelW:100}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem lançamentos</div>');
+  }
+  const obsEl=document.getElementById('obs-concluidas-lista');
+  if(obsEl){
+    const concl=obras.filter(o=>o.status==='Concluído');
+    obsEl.innerHTML=concl.length?concl.map(o=>`
+      <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start">
+        <span style="font-size:12px;font-weight:600;min-width:120px;color:var(--blue-light)">${tnome(o.nome)}</span>
+        <span style="font-size:12px;color:var(--text-muted);flex:1">${o.obs||'—'}</span>
+      </div>`).join(''):'<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Nenhuma observação cadastrada.</div>';
   }
 }
 (function preencherUsuario(){
