@@ -799,8 +799,10 @@ function _obOvBase(d,tipo){
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
   const A_Faturar=totalB-totalR;
   const budgetArr=(d.obras&&d.obras.budget)?d.obras.budget:(d.budget||[]);
-  const bgtAprov=budgetArr.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
-  const bgtAprovar=budgetArr.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const codsDaLista=new Set(lista.map(o=>o.cod));
+  const budgetFiltrado=budgetArr.filter(b=>codsDaLista.has(b.obraCod));
+  const bgtAprov=budgetFiltrado.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const bgtAprovar=budgetFiltrado.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
   const avgFis=lista.length?lista.reduce((s,o)=>s+calcAvFis(o),0)/lista.length:0;
   const pb=(v,c)=>`<div class="ob-mini-prog"><div class="ob-mbar"><div class="ob-mfill" style="width:${Math.min(v,100)}%;background:${c}"></div></div><span style="font-size:9px;font-family:var(--mono);color:var(--text-muted);min-width:30px">${fmt(v,1)}%</span></div>`;
   const badgeSt=s=>{const m={'Em Andamento':'badge-and','Concluído':'badge-conc','Planejado':'badge-plan','Suspenso':'badge-susp','Em Estudo':'badge-muted'};return`<span class="badge-sm ${m[s]||'badge-plan'}">${s}</span>`;};
@@ -842,9 +844,20 @@ function _obOvBase(d,tipo){
   </div>
   <div class="ob-ov-kpis">
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget</div><div class="ob-ov-kpi-val c-azul">${fmtRK(totalB)}</div></div>
+    ${tipo==='andamento'||tipo==='concluidas'?`
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(totalR)}</div></div>
+    `:`
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget Aprovado</div><div class="ob-ov-kpi-val c-verde">${fmtRK(bgtAprov)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Aprovar</div><div class="ob-ov-kpi-val c-amarelo">${fmtRK(bgtAprovar)}</div></div>
+    `}
+    ${tipo==='concluidas'?`
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Saldo</div><div class="ob-ov-kpi-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</div></div>
+    `:tipo==='andamento'?`
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
+    `:`
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
+    `}
   </div>
   <div class="ob-ov-tbox" style="margin-bottom:16px">
     <div class="ob-ov-ctit" style="margin-bottom:8px">Detalhamento das ${lista.length} obra(s)</div>
