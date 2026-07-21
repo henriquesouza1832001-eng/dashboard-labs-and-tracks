@@ -74,7 +74,7 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const pctGasto = budgTotal>0?Math.round(real/budgTotal*100):0;
     const concluidasQtd = obras.filter(o=>o.status==='Concluído').length;
     
-    setTimeout(()=>desenharMicroBullet('mcv-obras', budgTotal, real),80);
+    setTimeout(()=>desenharMicroBullet('mcv-obras', budgTotal, real, bgtAprov, bgtAprovar),80);
   }
   if(dCod){
     const pessoas=dCod.pessoas||[];
@@ -191,7 +191,7 @@ function desenharMicroDonut(id,labels,vals,cores){
   desenharDonutSVG(pai.id,labels,vals,cores);
 }
 
-function desenharMicroBullet(id, orcado, gasto){
+function desenharMicroBullet(id, orcado, gasto, aprovado, aAprovar){
   const cv=document.getElementById(id);if(!cv)return;
   const pai=cv.parentElement;
   const pct=orcado>0?Math.min(gasto/orcado,1):0;
@@ -207,6 +207,8 @@ function desenharMicroBullet(id, orcado, gasto){
       <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Faturado: ${fmtRK(gasto)}</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>A Faturar: ${fmtRK(disponivel)}</span>
+        ${aprovado!==undefined?`<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#2E5FA3;margin-right:3px;vertical-align:middle"></span>Aprov: ${fmtRK(aprovado)}</span>`:''}
+        ${aAprovar!==undefined?`<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#d29922;margin-right:3px;vertical-align:middle"></span>A apr: ${fmtRK(aAprovar)}</span>`:''}
       </div>
     </div>`;
 }
