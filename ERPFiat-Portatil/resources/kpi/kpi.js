@@ -816,7 +816,6 @@ function _obOvBase(d,tipo){
       <td>${pb(pf,pf>85?'#f85149':pf>60?'#d29922':'#3fb950')}</td>
       <td style="font-family:var(--mono);font-size:10px;color:${b-r<0?'var(--red)':'var(--green)'}">${fmtRK(b-r)}</td>
       <td style="font-family:var(--mono);font-size:10px;color:${corP}">${prazo===null?'—':prazo<0?'Atrasado':prazo+'d'}</td>
-      ${tipo==='concluidas'?`<td style="font-size:11px;color:var(--text-muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.obs||'—'}</td>`:''}
       <td style="color:var(--blue-light);font-size:11px">›</td>
     </tr>`;
   }).join('');
@@ -850,12 +849,14 @@ function _obOvBase(d,tipo){
     `:tipo==='andamento'?`
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
+    `:tipo==='total'?`
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">avanço físico médio</div><div class="ob-ov-kpi-val ${avgfis>70?'c-verde':avgfis>40?'c-amarelo':'c-laranja'}">${fmt(avgfis,1)}%</div></div>
     `:''}
   </div>
   <div class="ob-ov-tbox" style="margin-bottom:16px">
     <div class="ob-ov-ctit" style="margin-bottom:8px">Detalhamento das ${lista.length} obra(s)</div>
     <table class="ob-ov-table">
-      <thead><tr><th>Obra</th><th>Status</th><th>% Físico</th><th>% Financeiro</th><th>A Faturar</th><th>Prazo</th>${tipo==='concluidas'?'<th>Obs</th>':''}<th></th></tr></thead>
+      <thead><tr><th>Obra</th><th>Status</th><th>% Físico</th><th>% Financeiro</th><th>A Faturar</th><th>Prazo</th><th></th></tr></thead>
       <tbody>${linhas||'<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:16px">Nenhuma obra</td></tr>'}</tbody>
     </table>
     <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;flex-wrap:wrap">${_pagHtml}</div>
