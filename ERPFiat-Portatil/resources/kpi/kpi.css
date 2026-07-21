@@ -199,7 +199,7 @@
 .ob-ov-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--blue-mid);border-radius:2px}
 .ob-ov-close{font-size:10px;color:var(--text-muted);cursor:pointer;padding:5px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--font);transition:all .15s;font-weight:600}
 .ob-ov-close:hover{color:var(--blue-mid);border-color:var(--blue-mid);background:var(--blue-pale)}
-.ob-ov-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.ob-ov-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:14px}
 .ob-ov-kpi{background:var(--blue-pale);border:1px solid #c5d4f0;border-radius:10px;padding:12px 14px}
 .ob-ov-kpi-lbl{font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:4px;font-weight:700}
 .ob-ov-kpi-val{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--text)}

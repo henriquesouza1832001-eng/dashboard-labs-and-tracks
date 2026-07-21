@@ -782,13 +782,7 @@ function buildOverlayHTML(tipo,d){
 }
 function buildOverlayEstudo(d){
   const {header}=_obOvBase(d,'estudo');
-  return header+`
-  <div style="display:flex;gap:10px;margin-bottom:14px">
-    <div class="ob-ov-cbox" style="flex:1;min-width:0">
-      <div class="ob-ov-ctit">A Faturar por obra</div>
-      <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
-    </div>
-  </div>`;
+  return header;
 }
 function _obOvBase(d,tipo){
   const obras=(d.obras&&d.obras.obras)?d.obras.obras:(Array.isArray(d.obras)?d.obras:[]);const hoje=new Date();
@@ -906,6 +900,10 @@ function buildOverlayAndamento(d){
 function buildOverlayConcluidas(d){
   const {header}=_obOvBase(d,'concluidas');
   return header+`
+  <div class="ob-ov-cbox" style="margin-bottom:14px">
+    <div class="ob-ov-ctit" style="margin-bottom:8px">Observações por obra</div>
+    <div id="obs-concluidas-lista"></div>
+  </div>
   <div style="display:flex;gap:10px;margin-bottom:14px">
     <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
