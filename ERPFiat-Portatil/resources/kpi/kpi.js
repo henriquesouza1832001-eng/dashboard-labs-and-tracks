@@ -60,12 +60,17 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
     const conc=obras.filter(o=>o.status==='Concluído').length;
     const plan=obras.filter(o=>o.status==='Planejado'||o.status==='Planejada').length;
     const estudo=obras.filter(o=>o.status==='Em Estudo').length;
+    const bgtAprov = budget.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
+    const bgtAprovar = budget.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
+    const fmtM = v => v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+v.toFixed(0);
     document.getElementById('mkpis-obras').innerHTML=
       `<div class="mod-micro-kpi" onclick="abrirModuloComDrill('obras','total')" style="cursor:pointer" title="Abrir Total obras"><div class="mod-micro-lbl">Total obras</div><div class="mod-micro-val c-azul">${obras.length}</div></div>`+
       mkMicro(emAnd,'Em andamento','c-laranja',"abrirModuloComDrill('obras','andamento')")+
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
-      mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')");
+      mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')")+
+      `<div class="mod-micro-kpi"><div class="mod-micro-lbl">Budget aprovado</div><div class="mod-micro-val c-verde">${fmtM(bgtAprov)}</div></div>`+
+      `<div class="mod-micro-kpi"><div class="mod-micro-lbl">A aprovar</div><div class="mod-micro-val c-amarelo">${fmtM(bgtAprovar)}</div></div>`;
     const pctGasto = budgTotal>0?Math.round(real/budgTotal*100):0;
     const concluidasQtd = obras.filter(o=>o.status==='Concluído').length;
     
