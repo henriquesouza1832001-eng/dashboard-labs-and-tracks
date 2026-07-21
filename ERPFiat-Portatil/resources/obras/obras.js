@@ -149,13 +149,23 @@ function renderDashboard(){
   const totalB=totalBudget(),totalR=totalRealizado(),saldo=totalB-totalR,pct=totalB>0?(totalR/totalB)*100:0;
   const andamento=state.obras.filter(o=>o.status==='Em Andamento').length;
   const avgFisico=state.obras.length?state.obras.reduce((s,o)=>s+avancFisico(o.cod),0)/state.obras.length:0;
+  const bgtAprovado = state.budget.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const bgtAprovar  = state.budget.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const obrasPlanj  = state.obras.filter(o=>o.status==='Planejado');
+  const obrasEstudo = state.obras.filter(o=>o.status==='Em Estudo');
+  const bgtPlanj    = obrasPlanj.reduce((s,o)=>s+budgetObra(o.cod),0);
+  const bgtEstudo   = obrasEstudo.reduce((s,o)=>s+budgetObra(o.cod),0);
   $('kpi-grid').innerHTML=`
     <div class="kpi-card"><div class="kpi-label">TOTAL OBRAS</div><div class="kpi-val blue">${state.obras.length}</div></div>
     <div class="kpi-card"><div class="kpi-label">EM ANDAMENTO</div><div class="kpi-val orange">${andamento}</div></div>
     <div class="kpi-card"><div class="kpi-label">CONCLUÍDAS</div><div class="kpi-val green">${state.obras.filter(o=>o.status==='Concluído').length}</div></div>
     <div class="kpi-card"><div class="kpi-label">BUDGET</div><div class="kpi-val blue">${fmtR(totalB)}</div></div>
     <div class="kpi-card"><div class="kpi-label">TOTAL FATURADO</div><div class="kpi-val yellow">${fmtR(totalR)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${saldo<0?'red':'green'}">${fmtR(saldo)}</div></div>`;
+    <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${saldo<0?'red':'green'}">${fmtR(saldo)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">BUDGET APROVADO</div><div class="kpi-val green">${fmtR(bgtAprovado)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">BUDGET A APROVAR</div><div class="kpi-val yellow">${fmtR(bgtAprovar)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">R$ PLANEJADAS (${obrasPlanj.length})</div><div class="kpi-val blue">${fmtR(bgtPlanj)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">R$ EM ESTUDO (${obrasEstudo.length})</div><div class="kpi-val" style="color:var(--text-muted)">${fmtR(bgtEstudo)}</div></div>`;
   const tbody=$('dash-tbody');
   if(!state.obras.length){tbody.innerHTML='<tr class="empty-row"><td colspan="10">nenhuma obra cadastrada</td></tr>';$('dash-tfoot').innerHTML='';return;}
   let tB=0,tR=0;
@@ -259,6 +269,7 @@ function renderDetalheBudget(cod){
     return `<tr>
       <td><span class="badge badge-blue">${b.cresp}</span></td>
       <td><span class="badge ${b.tipoVerba==='CAPEX'?'badge-yellow':'badge-blue'}">${b.tipoVerba}</span></td>
+      <td><span class="badge ${b.statusBudget==='A Aprovar'?'badge-yellow':'badge-green'}">${b.statusBudget||'Aprovado'}</span></td>
       <td style="font-family:var(--mono);font-size:12px">${fmtR(b.budgetAprov)}</td>
       <td style="font-family:var(--mono);font-size:12px">${fmtR(b.contingencia||0)}</td>
       <td style="font-family:var(--mono);font-size:12px">${fmtR(totalDisp)}</td>
@@ -889,7 +900,7 @@ async function excluirLanc(idx){
   if(state.obraAtiva) renderDetalheLancamentos(state.obraAtiva);
   try{ await API.obras.excluirLanc(l.id); }
   catch(e){ console.error('Erro ao excluir lançamento:', e); }
-}function editarBudget(idx){ const b=state.budget[idx]; state.editIdx.budget=idx; $('modal-budget-title').textContent='Editar Budget'; $('bgt-obra').value=b.obraCod; $('bgt-cresp').value=b.cresp; $('bgt-tipo').value=b.tipoVerba; $('bgt-aprov').value=b.budgetAprov; $('bgt-capex').value=b.capex||''; $('bgt-opex').value=b.opex||''; $('bgt-cont').value=b.contingencia||''; $('bgt-obs').value=b.obs||''; $('bgt-err').textContent=''; abrirModal('modal-budget'); }
+}function editarBudget(idx){ const b=state.budget[idx]; state.editIdx.budget=idx; $('modal-budget-title').textContent='Editar Budget'; $('bgt-obra').value=b.obraCod; $('bgt-cresp').value=b.cresp; $('bgt-tipo').value=b.tipoVerba;$('bgt-status').value = b.statusBudget || 'Aprovado'; $('bgt-aprov').value=b.budgetAprov; $('bgt-capex').value=b.capex||''; $('bgt-opex').value=b.opex||''; $('bgt-cont').value=b.contingencia||''; $('bgt-obs').value=b.obs||''; $('bgt-err').textContent=''; abrirModal('modal-budget'); }
 async function excluirBudget(idx){
   if(!confirm('Excluir este budget?'))return;
   const b=state.budget[idx];
@@ -1045,7 +1056,7 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
   $('btn-salvar-lanc').addEventListener('click', () => { const obra=$('lanc-obra').value,cresp=$('lanc-cresp').value,desc=$('lanc-desc').value.trim(),qtd=parseFloat($('lanc-qtd').value),preco=parseFloat($('lanc-preco').value); if(!obra||!cresp||!desc||isNaN(qtd)||isNaN(preco)){$('lanc-err').textContent='Preencha todos os campos obrigatórios.';return;} const idx=state.editIdx.lanc; const obj={id:idx===-1?gerarId('L',state.lancamentos,'id'):state.lancamentos[idx].id,obraCod:obra,cresp,categoria:$('lanc-cat').value,subcategoria:$('lanc-subcat').value,descricao:desc,unid:$('lanc-unid').value.trim(),qtd,precoUnit:preco,nfDoc:$('lanc-nf').value.trim(),dtLanc:$('lanc-data').value,fornecedor:$('lanc-forn').value.trim(),obs:$('lanc-obs').value.trim()}; if(idx===-1)state.lancamentos.push(obj);else state.lancamentos[idx]=obj; fecharModal('modal-lanc');marcarSujo('lancamentos',obj.id);agendarSalvamento();renderTudo(); if(state.obraAtiva)renderDetalheLancamentos(state.obraAtiva); });
   ['modal-lanc-close','modal-lanc-cancel'].forEach(id=>$(id).addEventListener('click',()=>fecharModal('modal-lanc')));
   $('btn-novo-budget').addEventListener('click', () => { state.editIdx.budget=-1; $('modal-budget-title').textContent='Novo Budget'; ['bgt-aprov','bgt-capex','bgt-opex','bgt-cont','bgt-obs'].forEach(id=>$(id).value=''); $('bgt-obra').value=state.obraAtiva||'';$('bgt-cresp').value='';$('bgt-tipo').value='CAPEX';$('bgt-err').textContent=''; abrirModal('modal-budget'); });
-  $('btn-salvar-budget').addEventListener('click', () => { const obra=$('bgt-obra').value,cresp=$('bgt-cresp').value,aprov=parseFloat($('bgt-aprov').value); if(!obra||!cresp||isNaN(aprov)){$('bgt-err').textContent='Obra, CRESP e budget obrigatórios.';return;} const idx=state.editIdx.budget; const obj={id:idx===-1?Date.now():state.budget[idx].id,obraCod:obra,cresp,tipoVerba:$('bgt-tipo').value,budgetAprov:aprov,capex:parseFloat($('bgt-capex').value)||0,opex:parseFloat($('bgt-opex').value)||0,contingencia:parseFloat($('bgt-cont').value)||0,obs:$('bgt-obs').value.trim()}; if(idx===-1)state.budget.push(obj);else state.budget[idx]=obj; fecharModal('modal-budget');marcarSujo('budget',obj.id);agendarSalvamento();renderTudo(); if(state.obraAtiva)renderDetalheBudget(state.obraAtiva); });
+  $('btn-salvar-budget').addEventListener('click', () => { const obra=$('bgt-obra').value,cresp=$('bgt-cresp').value,aprov=parseFloat($('bgt-aprov').value); if(!obra||!cresp||isNaN(aprov)){$('bgt-err').textContent='Obra, CRESP e budget obrigatórios.';return;} const idx=state.editIdx.budget; const obj={id:idx===-1?Date.now():state.budget[idx].id,obraCod:obra,cresp,tipoVerba:$('bgt-tipo').value,budgetAprov:aprov,capex:parseFloat($('bgt-capex').value)||0,opex:parseFloat($('bgt-opex').value)||0,contingencia:parseFloat($('bgt-cont').value)||0,statusBudget: $('bgt-status').value || 'Aprovado',obs:$('bgt-obs').value.trim()}; if(idx===-1)state.budget.push(obj);else state.budget[idx]=obj; fecharModal('modal-budget');marcarSujo('budget',obj.id);agendarSalvamento();renderTudo(); if(state.obraAtiva)renderDetalheBudget(state.obraAtiva); });
   ['modal-budget-close','modal-budget-cancel'].forEach(id=>$(id).addEventListener('click',()=>fecharModal('modal-budget')));
   $('btn-nova-revisao').addEventListener('click', () => { state.editIdx.rev=-1; ['rev-ant','rev-adit','rev-motivo','rev-aprov'].forEach(id=>$(id).value=''); $('rev-data').value=hoje();$('rev-obra').value=state.obraAtiva||'';$('rev-cresp').value='';$('rev-err').textContent=''; abrirModal('modal-rev'); });
   $('btn-salvar-rev').addEventListener('click', () => { const obra=$('rev-obra').value,cresp=$('rev-cresp').value,adit=parseFloat($('rev-adit').value),motivo=$('rev-motivo').value.trim(); if(!obra||!cresp||isNaN(adit)||!motivo){$('rev-err').textContent='Obra, CRESP, aditivo e motivo obrigatórios.';return;} const nRev=state.revisoes.filter(r=>r.obraCod===obra).length+1; const obj={id:gerarId('R',state.revisoes,'id'),nRev,obraCod:obra,cresp,dataRevisao:$('rev-data').value,budgetAnterior:parseFloat($('rev-ant').value)||0,valorAditivo:adit,motivo,aprovadoPor:$('rev-aprov').value.trim()}; state.revisoes.push(obj);fecharModal('modal-rev');agendarSalvamento();renderRevisoes();renderDashboard(); if(state.obraAtiva)renderDetalheRevisoes(state.obraAtiva); });
