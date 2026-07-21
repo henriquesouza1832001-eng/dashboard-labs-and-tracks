@@ -218,7 +218,7 @@ function renderDetalheObra(){
   $('detalhe-kpis').innerHTML=`
     <div class="kpi-card"><div class="kpi-label">BUDGET</div><div class="kpi-val blue">${fmtR(b)}</div></div>
     <div class="kpi-card"><div class="kpi-label">REALIZADO</div><div class="kpi-val yellow">${fmtR(r)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">SALDO</div><div class="kpi-val ${sal<0?'red':'green'}">${fmtR(sal)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">A FATURAR</div><div class="kpi-val ${sal<0?'red':'green'}">${fmtR(sal)}</div></div>
     <div class="kpi-card"><div class="kpi-label">% FINANCEIRO</div><div class="kpi-val ${pct>=100?'red':pct>=85?'yellow':'green'}">${fmt(pct,1)}%</div></div>
     <div class="kpi-card"><div class="kpi-label">AVANÇO FÍSICO</div><div class="kpi-val blue">${fmt(af,1)}%</div></div>
     <div class="kpi-card"><div class="kpi-label">RESPONSÁVEL</div><div class="kpi-val" style="font-size:13px">${resp?resp.nome:(o.respNome||'—')}</div></div>`;
@@ -273,7 +273,7 @@ function renderDetalheBudget(cod){
   tbody.innerHTML=budgets.map((b,i)=>{
     const idx=state.budget.indexOf(b);
     const real=state.lancamentos.filter(l=>l.obraCod===cod&&l.cresp===b.cresp).reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-    const totalDisp=(b.budgetAprov||0)+(b.contingencia||0),saldo=totalDisp-real,pct=totalDisp>0?(real/totalDisp)*100:0;
+    const totalDisp=(b.budgetAprov||0)+(b.contingencia||0),aFaturar=totalDisp-real,pct=totalDisp>0?(real/totalDisp)*100:0;
     return `<tr>
       <td><span class="badge badge-blue">${b.cresp}</span></td>
       <td><span class="badge ${b.tipoVerba==='CAPEX'?'badge-yellow':'badge-blue'}">${b.tipoVerba}</span></td>
@@ -283,7 +283,7 @@ function renderDetalheBudget(cod){
       <td style="font-family:var(--mono);font-size:12px">${fmtR(totalDisp)}</td>
       <td style="font-family:var(--mono);font-size:12px">${fmtR(real)}</td>
       <td>${progressBar(pct)}</td>
-      <td style="font-family:var(--mono);font-size:12px;color:${saldo<0?'var(--red)':'var(--green)'}">${fmtR(saldo)}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:${aFaturar<0?'var(--red)':'var(--green)'}>${fmtR(aFaturar)}</td>
       <td><span class="badge ${badgeBudget(pct)}">${pct>=100?'ESTOURADO':pct>=85?'ATENÇÃO':'OK'}</span></td>
       <td><div class="row-actions">
         <button class="action-btn" onclick="editarBudget(${idx})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -483,7 +483,7 @@ function renderBudget(){
   const tbody=$('budget-tbody');
   if(!state.budget.length){tbody.innerHTML='<tr class="empty-row"><td colspan="13">nenhum budget</td></tr>';$('budget-tfoot').innerHTML='';return;}
   let tB=0,tC=0,tO=0,tCont=0,tR=0;
-  tbody.innerHTML=state.budget.map((b,idx)=>{ const real=state.lancamentos.filter(l=>l.obraCod===b.obraCod&&l.cresp===b.cresp).reduce((s,l)=>s+l.qtd*l.precoUnit,0); const totalDisp=(b.budgetAprov||0)+(b.contingencia||0),saldo=totalDisp-real,pct=totalDisp>0?(real/totalDisp)*100:0; tB+=b.budgetAprov||0;tC+=b.capex||0;tO+=b.opex||0;tCont+=b.contingencia||0;tR+=real; return `<tr><td><span class="badge badge-muted">${b.obraCod}</span></td><td><span class="badge badge-blue">${b.cresp}</span></td><td><span class="badge ${b.tipoVerba==='CAPEX'?'badge-yellow':'badge-blue'}">${b.tipoVerba}</span></td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.budgetAprov)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.capex)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.opex)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.contingencia)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(totalDisp)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(real)}</td><td>${progressBar(pct)}</td><td style="font-family:var(--mono);font-size:12px;color:${saldo<0?'var(--red)':'var(--green)'}">${fmtR(saldo)}</td><td><span class="badge ${badgeBudget(pct)}">${pct>=100?'ESTOURADO':pct>=85?'ATENÇÃO':'OK'}</span></td><td style="position:sticky;right:0;background:#0d1117;z-index:1"><div class="row-actions"><button class="action-btn" onclick="editarBudget(${idx})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="action-btn danger" onclick="excluirBudget(${idx})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></td></tr>`; }).join('');
+  tbody.innerHTML=state.budget.map((b,idx)=>{ const real=state.lancamentos.filter(l=>l.obraCod===b.obraCod&&l.cresp===b.cresp).reduce((s,l)=>s+l.qtd*l.precoUnit,0); const totalDisp=(b.budgetAprov||0)+(b.contingencia||0),aFaturar=totalDisp-real,pct=totalDisp>0?(real/totalDisp)*100:0; tB+=b.budgetAprov||0;tC+=b.capex||0;tO+=b.opex||0;tCont+=b.contingencia||0;tR+=real; return `<tr><td><span class="badge badge-muted">${b.obraCod}</span></td><td><span class="badge badge-blue">${b.cresp}</span></td><td><span class="badge ${b.tipoVerba==='CAPEX'?'badge-yellow':'badge-blue'}">${b.tipoVerba}</span></td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.budgetAprov)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.capex)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.opex)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(b.contingencia)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(totalDisp)}</td><td style="font-family:var(--mono);font-size:12px">${fmtR(real)}</td><td>${progressBar(pct)}</td><td style="font-family:var(--mono);font-size:12px;color:${saldo<0?'var(--red)':'var(--green)'}">${fmtR(saldo)}</td><td><span class="badge ${badgeBudget(pct)}">${pct>=100?'ESTOURADO':pct>=85?'ATENÇÃO':'OK'}</span></td><td style="position:sticky;right:0;background:#0d1117;z-index:1"><div class="row-actions"><button class="action-btn" onclick="editarBudget(${idx})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="action-btn danger" onclick="excluirBudget(${idx})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></td></tr>`; }).join('');
   const tDisp=tB+tCont,tSaldo=tDisp-tR;
   $('budget-tfoot').innerHTML=`<td colspan="3">TOTAL</td><td>${fmtR(tB)}</td><td>${fmtR(tC)}</td><td>${fmtR(tO)}</td><td>${fmtR(tCont)}</td><td>${fmtR(tDisp)}</td><td>${fmtR(tR)}</td><td>${progressBar(tDisp>0?(tR/tDisp)*100:0)}</td><td style="color:${tSaldo<0?'var(--red)':'var(--green)'}">${fmtR(tSaldo)}</td><td colspan="2"></td>`;
 }
