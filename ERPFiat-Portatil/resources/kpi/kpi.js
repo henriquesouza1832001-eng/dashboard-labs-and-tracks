@@ -203,7 +203,7 @@ function desenharMicroBullet(id, orcado, gasto, aprovado, aAprovar){
       <div style="position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:7px;transition:width 0.4s"></div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px 8px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
+      <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Faturado: ${fmtRK(gasto)}</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>A Faturar: ${fmtRK(disponivel)}</span>
         ${aprovado!==undefined?`<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#2E5FA3;margin-right:3px;vertical-align:middle"></span>Aprov: ${fmtRK(aprovado)}</span>`:''}
@@ -797,7 +797,9 @@ function _obOvBase(d,tipo){
   const lista=filtros[tipo]||[];
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
-  const A_Faturar=totalB-totalR;
+  const budgetArr=(d.obras&&d.obras.budget)?d.obras.budget:[];
+  const bgtAprov=budgetArr.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
+  const bgtAprovar=budgetArr.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
   const avgFis=lista.length?lista.reduce((s,o)=>s+calcAvFis(o),0)/lista.length:0;
   const pb=(v,c)=>`<div class="ob-mini-prog"><div class="ob-mbar"><div class="ob-mfill" style="width:${Math.min(v,100)}%;background:${c}"></div></div><span style="font-size:9px;font-family:var(--mono);color:var(--text-muted);min-width:30px">${fmt(v,1)}%</span></div>`;
   const badgeSt=s=>{const m={'Em Andamento':'badge-and','Concluído':'badge-conc','Planejado':'badge-plan','Suspenso':'badge-susp','Em Estudo':'badge-muted'};return`<span class="badge-sm ${m[s]||'badge-plan'}">${s}</span>`;};
@@ -839,9 +841,9 @@ function _obOvBase(d,tipo){
   </div>
   <div class="ob-ov-kpis">
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget</div><div class="ob-ov-kpi-val c-azul">${fmtRK(totalB)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(totalR)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio - Obras em andamento</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget Aprovado</div><div class="ob-ov-kpi-val c-verde">${fmtRK(bgtAprov)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Aprovar</div><div class="ob-ov-kpi-val c-amarelo">${fmtRK(bgtAprovar)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico Médio</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
   </div>
   <div class="ob-ov-tbox" style="margin-bottom:16px">
     <div class="ob-ov-ctit" style="margin-bottom:8px">Detalhamento das ${lista.length} obra(s)</div>
