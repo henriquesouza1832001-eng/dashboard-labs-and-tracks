@@ -12,6 +12,14 @@ function marcarSujo(tipo, id) { sujos[tipo].add(id); }
 const $ = id => document.getElementById(id);
 const fmt = (v, dec=0) => (v||0).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
 const fmtR = v => 'R$ '+fmt(v,2);
+const fmtRCard = v => {
+  if (!v) return 'R$ 0';
+  const abs = Math.abs(v);
+  if (abs >= 1e9) return 'R$ ' + (v/1e9).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'B';
+  if (abs >= 1e6) return 'R$ ' + (v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'M';
+  if (abs >= 1e3) return 'R$ ' + (v/1e3).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'k';
+  return 'R$ ' + fmt(v,0);
+};
 const fmtD = s => s ? s.split('-').reverse().join('/') : '—';
 const hoje = () => new Date().toISOString().slice(0,10);
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
@@ -159,13 +167,13 @@ function renderDashboard(){
     <div class="kpi-card"><div class="kpi-label">TOTAL OBRAS</div><div class="kpi-val blue">${state.obras.length}</div></div>
     <div class="kpi-card"><div class="kpi-label">EM ANDAMENTO</div><div class="kpi-val orange">${andamento}</div></div>
     <div class="kpi-card"><div class="kpi-label">CONCLUÍDAS</div><div class="kpi-val green">${state.obras.filter(o=>o.status==='Concluído').length}</div></div>
-    <div class="kpi-card"><div class="kpi-label">BUDGET</div><div class="kpi-val blue">${fmtR(totalB)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">TOTAL FATURADO</div><div class="kpi-val yellow">${fmtR(totalR)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${saldo<0?'red':'green'}">${fmtR(saldo)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">BUDGET APROVADO</div><div class="kpi-val green">${fmtR(bgtAprovado)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">BUDGET A APROVAR</div><div class="kpi-val yellow">${fmtR(bgtAprovar)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">R$ PLANEJADAS (${obrasPlanj.length})</div><div class="kpi-val blue">${fmtR(bgtPlanj)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">R$ EM ESTUDO (${obrasEstudo.length})</div><div class="kpi-val" style="color:var(--text-muted)">${fmtR(bgtEstudo)}</div></div>`;
+    <div class="kpi-card"><div class="kpi-label">BUDGET</div><div class="kpi-val blue">${fmtRCard(totalB)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">TOTAL FATURADO</div><div class="kpi-val yellow">${fmtRCard(totalR)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${saldo<0?'red':'green'}">${fmtRCard(saldo)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">BUDGET APROVADO</div><div class="kpi-val green">${fmtRCard(bgtAprovado)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">BUDGET A APROVAR</div><div class="kpi-val yellow">${fmtRCard(bgtAprovar)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">R$ PLANEJADAS (${obrasPlanj.length})</div><div class="kpi-val blue">${fmtRCard(bgtPlanj)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">R$ EM ESTUDO (${obrasEstudo.length})</div><div class="kpi-val" style="color:var(--text-muted)">${fmtRCard(bgtEstudo)}</div></div>`;
   const tbody=$('dash-tbody');
   if(!state.obras.length){tbody.innerHTML='<tr class="empty-row"><td colspan="10">nenhuma obra cadastrada</td></tr>';$('dash-tfoot').innerHTML='';return;}
   let tB=0,tR=0;
