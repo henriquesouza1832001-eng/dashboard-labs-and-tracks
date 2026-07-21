@@ -797,6 +797,7 @@ function _obOvBase(d,tipo){
   const lista=filtros[tipo]||[];
   const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
   const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
+  const A_Faturar=totalB-totalR;
   const budgetArr=(d.obras&&d.obras.budget)?d.obras.budget:[];
   const bgtAprov=budgetArr.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
   const bgtAprovar=budgetArr.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
