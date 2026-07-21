@@ -199,9 +199,7 @@ function desenharMicroBullet(id, orcado, gasto, aprovado, aAprovar){
   const disponivel=Math.max(orcado-gasto,0);
   pai.innerHTML=`
     <div style="width:100%;display:flex;flex-direction:column;gap:6px;padding:4px 0">
-      <div style="position:relative;height:8px;background:#e8edf5;border-radius:4px;overflow:hidden">
-        <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:4px;transition:width 0.4s"></div>
-      </div>
+      
       ${aprovado!==undefined&&aprovado>0?`
       <div style="margin-top:4px;background:#f0f4f8;border:1px solid #c5d4f0;border-radius:6px;padding:6px 8px">
         <div style="font-size:9px;font-weight:700;color:#1a7f4b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Budget Aprovado: ${fmtRK(aprovado)}</div>
