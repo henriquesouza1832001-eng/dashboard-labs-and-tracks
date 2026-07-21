@@ -1228,12 +1228,12 @@ async def save_obras(request: Request):
             selects, params = [], []
             for b in budgets:
                 selects.append(
-                    "SELECT ? AS id, ? AS obraCod, ? AS cresp, ? AS tipoVerba, ? AS budgetAprov, "
+                    "SELECT ? AS id, ? AS obraCod, ? AS cresp, ? AS tipoVerba, ? AS statusBudget, ? AS budgetAprov, "
                     "? AS capex, ? AS opex, ? AS contingencia, ? AS obs, ? AS atualizado_por"
                 )
                 params += [
                     b.get("id"), b.get("obraCod"), b.get("cresp"), b.get("tipoVerba"),
-                    b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
+                    b.get("statusBudget","Aprovado"), b.get("budgetAprov"), b.get("capex",0), b.get("opex",0),
                     b.get("contingencia",0), b.get("obs"), u
                 ]
             origem = " UNION ALL ".join(selects)
@@ -1241,12 +1241,12 @@ async def save_obras(request: Request):
                 MERGE INTO {S_OBRAS}.budget AS t
                 USING ({origem}) AS s ON t.id = s.id
                 WHEN MATCHED THEN UPDATE SET
-                    obraCod=s.obraCod,cresp=s.cresp,tipoVerba=s.tipoVerba,budgetAprov=s.budgetAprov,
+                    obraCod=s.obraCod,cresp=s.cresp,tipoVerba=s.tipoVerba,statusBudget=s.statusBudget,budgetAprov=s.budgetAprov,
                     capex=s.capex,opex=s.opex,contingencia=s.contingencia,obs=s.obs,
                     atualizado_em=current_timestamp(),atualizado_por=s.atualizado_por
                 WHEN NOT MATCHED THEN INSERT
-                    (id,obraCod,cresp,tipoVerba,budgetAprov,capex,opex,contingencia,obs,atualizado_por)
-                VALUES (s.id,s.obraCod,s.cresp,s.tipoVerba,s.budgetAprov,s.capex,s.opex,s.contingencia,s.obs,s.atualizado_por)
+                    (id,obraCod,cresp,tipoVerba,statusBudget,budgetAprov,capex,opex,contingencia,obs,atualizado_por)
+                VALUES (s.id,s.obraCod,s.cresp,s.tipoVerba,s.statusBudget,s.budgetAprov,s.capex,s.opex,s.contingencia,s.obs,s.atualizado_por)
             """, params)
 
     except Exception as e:
