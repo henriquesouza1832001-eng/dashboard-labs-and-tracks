@@ -68,9 +68,8 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
       mkMicro(emAnd,'Em andamento','c-laranja',"abrirModuloComDrill('obras','andamento')")+
       mkMicro(conc,'Concluídas','c-verde',"abrirModuloComDrill('obras','concluidas')")+
       mkMicro(plan,'Planejadas','c-azul',"abrirModuloComDrill('obras','planejadas')")+
-      mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')")+
-      `<div class="mod-micro-kpi"><div class="mod-micro-lbl">Budget aprovado</div><div class="mod-micro-val c-verde">${fmtM(bgtAprov)}</div></div>`+
-      `<div class="mod-micro-kpi"><div class="mod-micro-lbl">A aprovar</div><div class="mod-micro-val c-amarelo">${fmtM(bgtAprovar)}</div></div>`;
+      mkMicro(estudo,'Em estudo','c-cinza',"abrirModuloComDrill('obras','estudo')");
+      
     const pctGasto = budgTotal>0?Math.round(real/budgTotal*100):0;
     const concluidasQtd = obras.filter(o=>o.status==='Concluído').length;
     
@@ -204,7 +203,7 @@ function desenharMicroBullet(id, orcado, gasto, aprovado, aAprovar){
       <div style="position:relative;height:14px;background:#e8edf5;border-radius:7px;overflow:hidden">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:7px;transition:width 0.4s"></div>
       </div>
-      <div style="display:flex;gap:10px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
+      <div style="display:flex;flex-wrap:wrap;gap:4px 8px;font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:2px">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cor};margin-right:3px;vertical-align:middle"></span>Faturado: ${fmtRK(gasto)}</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1a7f4b;margin-right:3px;vertical-align:middle"></span>A Faturar: ${fmtRK(disponivel)}</span>
         ${aprovado!==undefined?`<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#2E5FA3;margin-right:3px;vertical-align:middle"></span>Aprov: ${fmtRK(aprovado)}</span>`:''}
