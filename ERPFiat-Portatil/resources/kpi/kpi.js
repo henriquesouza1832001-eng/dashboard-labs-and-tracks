@@ -812,7 +812,7 @@ function _obOvBase(d,tipo){
     return`<tr style="cursor:pointer" onclick="abrirDetalheObra('${o.cod}')" title="${o.nome}">
       <td style="font-weight:500;min-width:160px">${tnome(o.nome)}</td>
       <td>${badgeSt(o.status)}</td>
-      <td>${pb(af,'#58a6ff')}</td>
+      ${tipo!=='concluidas'?`<td>${pb(af,'#58a6ff')}</td>`:''}
       <td>${pb(pf,pf>85?'#f85149':pf>60?'#d29922':'#3fb950')}</td>
       <td style="font-family:var(--mono);font-size:10px;color:${b-r<0?'var(--red)':'var(--green)'}">${fmtRK(b-r)}</td>
       <td style="font-family:var(--mono);font-size:10px;color:${corP}">${prazo===null?'—':prazo<0?'Atrasado':prazo+'d'}</td>
@@ -856,7 +856,7 @@ function _obOvBase(d,tipo){
   <div class="ob-ov-tbox" style="margin-bottom:16px">
     <div class="ob-ov-ctit" style="margin-bottom:8px">Detalhamento das ${lista.length} obra(s)</div>
     <table class="ob-ov-table">
-      <thead><tr><th>Obra</th><th>Status</th><th>% Físico</th><th>% Financeiro</th><th>A Faturar</th><th>Prazo</th><th></th></tr></thead>
+      <thead><tr><th>Obra</th><th>Status</th>${tipo!=='concluidas'?'<th>% Físico</th>':''}<th>% Financeiro</th><th>A Faturar</th><th>Prazo</th><th></th></tr></thead>
       <tbody>${linhas||'<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:16px">Nenhuma obra</td></tr>'}</tbody>
     </table>
     <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;flex-wrap:wrap">${_pagHtml}</div>
