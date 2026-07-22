@@ -1640,8 +1640,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const btnOS   = $('btn-nova-os-civil-pad');
       if (btnFunc) btnFunc.style.display = btn.dataset.tab === 'tab-pad-func' ? '' : 'none';
       if (btnOS)   btnOS.style.display   = (btn.dataset.tab === 'tab-pad-civil' || btn.dataset.tab === 'tab-pad-tecnica') ? '' : 'none';
-      if (btn.dataset.tab === 'tab-pad-civil')   { state.abaTipoOS = 'civil';   renderOrdens('civil'); }
+      vif (btn.dataset.tab === 'tab-pad-civil')   { state.abaTipoOS = 'civil';   renderOrdens('civil'); }
       if (btn.dataset.tab === 'tab-pad-tecnica') { state.abaTipoOS = 'tecnica'; renderOrdens('tecnica'); }
+      if (btn.dataset.tab === 'tab-pad-cal')     { padRenderCal(); }
     });
   });
 
@@ -1846,17 +1847,154 @@ async function padCarregar() {
   } catch(e) { console.error('PAD carregar:', e); }
 }
 
+const PAD_CORES = ['#2E5FA3','#e3711a','#3fb950','#d29922','#8957e5','#f85149','#58a6ff','#1a7f4b','#b08800','#0969da'];
+function padCorFunc(id){ const idx=_padFuncs.findIndex(f=>f.id===id); return PAD_CORES[idx%PAD_CORES.length]||'#8a9abf'; }
+
 function padRenderGrid() {
   const grid = document.getElementById('pad-grid');
   if (!grid) return;
-  const funcs = _padFiltroTipo
-    ? _padFuncs.filter(f => f.tipo === _padFiltroTipo)
-    : _padFuncs;
-  if (!funcs.length) {
-    grid.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:24px">Nenhum funcionário cadastrado.</div>';
-    return;
+  const funcs = _padFiltroTipo ? _padFuncs.filter(f=>f.tipo===_padFiltroTipo) : _padFuncs;
+  if (!funcs.length) { grid.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:24px">Nenhum funcionário cadastrado.</div>'; return; }
+
+  const HINI=6, HFIM=20, SPAN=(HFIM-HINI)*60;
+  const ticks=[];
+  for(let h=HINI;h<=HFIM;h+=2) ticks.push(h);
+
+  grid.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      ${funcs.map((f,fi)=>{
+        const cor = PAD_CORES[fi%PAD_CORES.length];
+        const itens = _padItens.filter(i=>i.funcionario_id===f.id)
+          .slice().sort((a,b)=>{
+            const ta=(a.hora_inicio||'00:00').split(':').map(Number); const tb=(b.hora_inicio||'00:00').split(':').map(Number);
+            return (ta[0]*60+ta[1])-(tb[0]*60+tb[1]);
+          });
+        const totalMin=itens.reduce((s,i)=>{
+          const [ih,im]=(i.hora_inicio||'00:00').split(':').map(Number);
+          const [fh,fm]=(i.hora_fim||'00:00').split(':').map(Number);
+          return s+Math.max(0,(fh*60+fm)-(ih*60+im));
+        },0);
+        const hh=Math.floor(totalMin/60).toString().padStart(2,'0');
+        const mm=(totalMin%60).toString().padStart(2,'0');
+
+        const blocos=itens.map(it=>{
+          const [ih,im]=(it.hora_inicio||'00:00').split(':').map(Number);
+          const [fh,fm]=(it.hora_fim||'00:00').split(':').map(Number);
+          const ini=Math.max(0,(ih*60+im)-(HINI*60));
+          const dur=Math.max(0,(fh*60+fm)-(ih*60+im));
+          const left=(ini/SPAN*100).toFixed(2);
+          const width=(dur/SPAN*100).toFixed(2);
+          return `<div class="pad-timeline-bloco" style="left:${left}%;width:${width}%;background:${cor}"
+            title="${it.ambiente} · ${it.hora_inicio}–${it.hora_fim}">
+            ${parseFloat(width)>5?(it.ambiente||'').split(' - ').pop():''}
+          </div>`;
+        }).join('');
+
+        const ticksHtml=ticks.map(h=>{
+          const pct=((h-HINI)/(HFIM-HINI)*100).toFixed(2);
+          return `<div class="pad-timeline-tick" style="left:${pct}%"></div>`;
+        }).join('');
+
+        const envRows=itens.map((it,idx)=>{
+          const [ih,im]=(it.hora_inicio||'00:00').split(':').map(Number);
+          const [fh,fm]=(it.hora_fim||'00:00').split(':').map(Number);
+          const dur=Math.max(0,(fh*60+fm)-(ih*60+im));
+          const dh=Math.floor(dur/60).toString().padStart(2,'0');
+          const dm=(dur%60).toString().padStart(2,'0');
+          return `<tr>
+            <td style="color:var(--text-muted)">${idx+1}</td>
+            <td style="font-weight:500">${it.ambiente||'—'}${it.obs?`<div style="font-size:10px;color:var(--text-muted)">${it.obs}</div>`:''}</td>
+            <td style="font-family:var(--mono);white-space:nowrap">${it.hora_inicio||'—'} – ${it.hora_fim||'—'}</td>
+            <td style="font-family:var(--mono);color:var(--text-muted)">${dh}:${dm}</td>
+            <td style="text-align:right;white-space:nowrap">
+              <button class="btn btn-secondary btn-sm" onclick="padEditarItem('${f.id}',${idx})" style="padding:2px 6px">✎</button>
+              <button class="btn btn-secondary btn-sm" onclick="padExcluirItem('${f.id}',${idx})" style="padding:2px 6px;color:var(--danger)">✕</button>
+            </td>
+          </tr>`;
+        }).join('');
+
+        return `
+          <div class="pad-func-row" onclick="padToggleDetail('${f.id}')">
+            <div style="width:10px;height:10px;border-radius:50%;background:${cor};flex-shrink:0"></div>
+            <div class="pad-func-nome">${f.nome}</div>
+            <div class="pad-func-meta">${f.tipo==='civil'?'Civil':'Técnica'} · ${f.turno||'—'}</div>
+            <div class="pad-func-badge">${itens.length} ambientes</div>
+            <div class="pad-func-badge">${hh}:${mm}h/dia</div>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();padAbrirItem('${f.id}')">+ Ambiente</button>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();padEditarFunc('${f.id}')">✎</button>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();padExcluirFunc('${f.id}')" style="color:var(--danger)">✕</button>
+          </div>
+          <div class="pad-func-detail" id="pad-detail-${f.id}">
+            <div class="pad-timeline-regua">${ticks.map(h=>`<span>${h}:00</span>`).join('')}</div>
+            <div class="pad-timeline" style="margin-bottom:14px">${ticksHtml}${blocos}</div>
+            <table class="pad-env-table">
+              <thead><tr><th>#</th><th>AMBIENTE</th><th>HORÁRIO</th><th>TEMPO</th><th></th></tr></thead>
+              <tbody>${envRows||`<tr><td colspan="5" style="padding:10px;color:var(--text-muted);text-align:center">Nenhum ambiente</td></tr>`}</tbody>
+            </table>
+          </div>`;
+      }).join('')}
+    </div>`;
+
+  // atualizar select do calendário
+  const sel = document.getElementById('cal-filtro-func');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Todos os funcionários</option>'+
+      _padFuncs.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
+    sel.value=cur;
   }
-  grid.innerHTML = funcs.map(f => {
+}
+
+function padToggleDetail(id){
+  const el=document.getElementById('pad-detail-'+id);
+  const row=el?.previousElementSibling;
+  if(!el) return;
+  const open=el.classList.contains('open');
+  // fechar todos
+  document.querySelectorAll('.pad-func-detail').forEach(d=>d.classList.remove('open'));
+  document.querySelectorAll('.pad-func-row').forEach(r=>r.classList.remove('expanded'));
+  if(!open){ el.classList.add('open'); row?.classList.add('expanded'); }
+}
+
+function padRenderCal(){
+  const wrap=document.getElementById('pad-cal-wrap');
+  if(!wrap) return;
+  const filtroFunc=document.getElementById('cal-filtro-func')?.value||'';
+  const filtroTipo=document.getElementById('cal-filtro-tipo')?.value||'';
+  let funcs=_padFuncs;
+  if(filtroFunc) funcs=funcs.filter(f=>f.id===filtroFunc);
+  if(filtroTipo) funcs=funcs.filter(f=>f.tipo===filtroTipo);
+
+  const dias=['Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const diasKey=['seg','ter','qua','qui','sex','sab'];
+  const cols=1+dias.length;
+
+  wrap.innerHTML=`
+    <div class="pad-cal-grid" style="grid-template-columns:180px repeat(${dias.length},1fr)">
+      <div class="pad-cal-header" style="grid-column:1/-1;display:grid;grid-template-columns:180px repeat(${dias.length},1fr)">
+        <div class="pad-cal-header-cell">Funcionário</div>
+        ${dias.map(d=>`<div class="pad-cal-header-cell">${d}</div>`).join('')}
+      </div>
+      ${funcs.map((f,fi)=>{
+        const cor=PAD_CORES[_padFuncs.indexOf(f)%PAD_CORES.length];
+        const itens=_padItens.filter(i=>i.funcionario_id===f.id);
+        return `
+          <div class="pad-cal-func-row" style="grid-column:1/-1;display:grid;grid-template-columns:180px repeat(${dias.length},1fr)">
+            <div class="pad-cal-func-name">
+              <div style="width:8px;height:8px;border-radius:50%;background:${cor};margin-right:8px;flex-shrink:0"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600">${f.nome.split(' ')[0]}</div>
+                <div style="font-size:10px;color:var(--text-muted)">${f.tipo==='civil'?'Civil':'Técnica'}</div>
+              </div>
+            </div>
+            ${diasKey.map(dk=>{
+              const dayItens=itens.filter(i=>i.dia_semana==='todos'||i.dia_semana===dk)
+                .slice().sort((a,b)=>{
+                  const ta=(a.hora_inicio||'00:00').split(':').map(Number);
+                  const tb=(b.hora_inicio||'00:00').split(':').map(Number);
+                  return (ta[0]*60+ta[1])-(tb[0]*60+tb[1]);
+                });
+              return
     const itens = _padItens.filter(i => i.funcionario_id === f.id)
       .sort((a,b) => (a.ordem||0) - (b.ordem||0));
     const totalMin = itens.reduce((s,i) => {
@@ -2046,6 +2184,8 @@ async function padExcluirItem(funcId, idx) {
 // Eventos PAD
 document.getElementById('btn-novo-func-limp')?.addEventListener('click', padAbrirNovoFunc);
 document.getElementById('btn-nova-os-civil-pad')?.addEventListener('click', () => abrirModalOS(state.abaTipoOS));
+document.getElementById('cal-filtro-func')?.addEventListener('change', padRenderCal);
+document.getElementById('cal-filtro-tipo')?.addEventListener('change', padRenderCal);
 document.getElementById('btn-salvar-func-limp')?.addEventListener('click', padSalvarFunc);
 document.getElementById('modal-func-limp-close')?.addEventListener('click', () => fecharModal('modal-func-limp'));
 document.getElementById('modal-func-limp-cancel')?.addEventListener('click', () => fecharModal('modal-func-limp'));

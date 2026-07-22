@@ -129,18 +129,28 @@
         </div>
         <div class="tab-bar">
           <button class="tab-btn active" data-tab="tab-pad-func">Funcionários / PAD</button>
+          <button class="tab-btn" data-tab="tab-pad-cal">Calendário Semanal</button>
           <button class="tab-btn" data-tab="tab-pad-civil">OS Civil</button>
           <button class="tab-btn" data-tab="tab-pad-tecnica">OS Técnica</button>
         </div>
 
         <!-- ABA PAD -->
         <div class="tab-pane active" id="tab-pad-func">
-          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
             <button class="btn btn-secondary btn-sm pad-filtro-tipo active" data-tipo="">Todos</button>
             <button class="btn btn-secondary btn-sm pad-filtro-tipo" data-tipo="civil">Civil</button>
             <button class="btn btn-secondary btn-sm pad-filtro-tipo" data-tipo="tecnica">Técnica</button>
           </div>
-          <div id="pad-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px"></div>
+          <div id="pad-grid"></div>
+        </div>
+
+        <!-- ABA CALENDÁRIO -->
+        <div class="tab-pane" id="tab-pad-cal">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+            <select class="filter-sel" id="cal-filtro-func" style="min-width:200px"><option value="">Todos os funcionários</option></select>
+            <select class="filter-sel" id="cal-filtro-tipo"><option value="">Civil + Técnica</option><option value="civil">Civil</option><option value="tecnica">Técnica</option></select>
+          </div>
+          <div id="pad-cal-wrap"></div>
         </div>
 
         <!-- ABA OS CIVIL -->
