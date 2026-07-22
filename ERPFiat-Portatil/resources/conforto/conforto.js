@@ -2031,7 +2031,7 @@ function padRenderCal(){
   const headerCols = dias.map(d=>`<th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-right:1px solid var(--border);min-width:120px;background:var(--surface2)">${d}</th>`).join('');
 
   wrap.innerHTML=`
-    <div style="overflow:auto;border:1px solid var(--border);border-radius:10px">
+    <div style="overflow:auto;border:1px solid var(--border);border-radius:10px;flex:1;min-height:0">
       <table style="border-collapse:collapse;width:100%">
         <thead>
           <tr>
