@@ -1616,8 +1616,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.add('active');
       const pane = $('pane-' + btn.dataset.pane);
       if (pane) pane.classList.add('active');
-      if (btn.dataset.pane === 'limpeza-civil')   state.abaTipoOS = 'civil';
-      if (btn.dataset.pane === 'limpeza-tecnica')  state.abaTipoOS = 'tecnica';
+      if (btn.dataset.pane === 'pad') padCarregar();
       if (btn.dataset.pane === 'rotinas')          renderRotinas();
       if (btn.dataset.pane === 'cronograma') {
   const mesInput = document.getElementById('crono-mes');
@@ -1635,8 +1634,15 @@ document.addEventListener('DOMContentLoaded', () => {
       bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       pane.querySelectorAll(':scope > .tab-pane, :scope > div > .tab-pane').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
-      const target = $( btn.dataset.tab);
+      const target = $(btn.dataset.tab);
       if (target) target.classList.add('active');
+      // botões de ação do PAD
+      const btnFunc = $('btn-novo-func-limp');
+      const btnOS   = $('btn-nova-os-civil-pad');
+      if (btnFunc) btnFunc.style.display = btn.dataset.tab === 'tab-pad-func' ? '' : 'none';
+      if (btnOS)   btnOS.style.display   = (btn.dataset.tab === 'tab-pad-civil' || btn.dataset.tab === 'tab-pad-tecnica') ? '' : 'none';
+      if (btn.dataset.tab === 'tab-pad-civil')   { state.abaTipoOS = 'civil';   renderOrdens('civil'); }
+      if (btn.dataset.tab === 'tab-pad-tecnica') { state.abaTipoOS = 'tecnica'; renderOrdens('tecnica'); }
     });
   });
 
@@ -1819,3 +1825,239 @@ window.editarTipoUC = editarTipoUC;
 window.excluirTipoUC = excluirTipoUC;
 window.adicionarItemTipoUC = adicionarItemTipoUC;
 window.salvarTipoUC = salvarTipoUC;
+// ══════════════════════════════════════════════════════
+// PAD — PROGRAMA DE ATIVIDADES DIÁRIAS
+// ══════════════════════════════════════════════════════
+let _padFuncs = [];
+let _padItens = [];
+let _padFiltroTipo = '';
+let _padFuncEditId = null;
+let _padFuncAtivoId = null;
+let _padItemEditIdx = null;
+
+async function padCarregar() {
+  try {
+    const [rf, rp] = await Promise.all([
+      api('/api/conforto/funcionarios-limpeza'),
+      api('/api/conforto/pad')
+    ]);
+    _padFuncs = await rf.json();
+    _padItens = await rp.json();
+    padRenderGrid();
+  } catch(e) { console.error('PAD carregar:', e); }
+}
+
+function padRenderGrid() {
+  const grid = document.getElementById('pad-grid');
+  if (!grid) return;
+  const funcs = _padFiltroTipo
+    ? _padFuncs.filter(f => f.tipo === _padFiltroTipo)
+    : _padFuncs;
+  if (!funcs.length) {
+    grid.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:24px">Nenhum funcionário cadastrado.</div>';
+    return;
+  }
+  grid.innerHTML = funcs.map(f => {
+    const itens = _padItens.filter(i => i.funcionario_id === f.id)
+      .sort((a,b) => (a.ordem||0) - (b.ordem||0));
+    const totalMin = itens.reduce((s,i) => {
+      const [ih,im] = (i.hora_inicio||'00:00').split(':').map(Number);
+      const [fh,fm] = (i.hora_fim||'00:00').split(':').map(Number);
+      return s + Math.max(0, (fh*60+fm) - (ih*60+im));
+    }, 0);
+    const hh = Math.floor(totalMin/60).toString().padStart(2,'0');
+    const mm = (totalMin%60).toString().padStart(2,'0');
+    return `
+    <div class="modulo-section" style="margin:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-weight:600;font-size:13px">${f.nome}</div>
+          <div style="font-size:11px;color:var(--text2)">${f.tipo==='civil'?'Limpeza Civil':'Limpeza Técnica'} · ${f.turno||''} · ${f.matricula||''}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:10px;font-family:var(--mono);color:var(--text2)">${hh}:${mm}h/dia</span>
+          <button class="btn btn-secondary btn-sm" onclick="padAbrirItem('${f.id}')">+ Ambiente</button>
+          <button class="btn btn-secondary btn-sm" onclick="padEditarFunc('${f.id}')">✎</button>
+          <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="padExcluirFunc('${f.id}')">✕</button>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 6px;color:var(--text2);font-weight:600">#</th>
+          <th style="text-align:left;padding:4px 6px;color:var(--text2);font-weight:600">AMBIENTE</th>
+          <th style="text-align:center;padding:4px 6px;color:var(--text2);font-weight:600">HORÁRIO</th>
+          <th style="text-align:center;padding:4px 6px;color:var(--text2);font-weight:600">TEMPO</th>
+          <th style="padding:4px 6px"></th>
+        </tr></thead>
+        <tbody>${itens.map((it,idx) => {
+          const [ih,im] = (it.hora_inicio||'00:00').split(':').map(Number);
+          const [fh,fm] = (it.hora_fim||'00:00').split(':').map(Number);
+          const dur = Math.max(0,(fh*60+fm)-(ih*60+im));
+          const dh = Math.floor(dur/60).toString().padStart(2,'0');
+          const dm = (dur%60).toString().padStart(2,'0');
+          return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:5px 6px;color:var(--text2)">${idx+1}</td>
+            <td style="padding:5px 6px;font-weight:500">${it.ambiente||'—'}${it.obs?`<div style="font-size:10px;color:var(--text2)">${it.obs}</div>`:''}</td>
+            <td style="padding:5px 6px;text-align:center;font-family:var(--mono)">${it.hora_inicio||'—'} – ${it.hora_fim||'—'}</td>
+            <td style="padding:5px 6px;text-align:center;font-family:var(--mono)">${dh}:${dm}</td>
+            <td style="padding:5px 6px;text-align:right">
+              <button class="btn btn-secondary btn-sm" onclick="padEditarItem('${f.id}',${idx})" style="padding:2px 6px">✎</button>
+              <button class="btn btn-secondary btn-sm" onclick="padExcluirItem('${f.id}',${idx})" style="padding:2px 6px;color:var(--danger)">✕</button>
+            </td>
+          </tr>`;
+        }).join('')}
+        ${!itens.length?'<tr><td colspan="5" style="padding:10px 6px;color:var(--text2);text-align:center">Nenhum ambiente cadastrado</td></tr>':''}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+
+function padAbrirNovoFunc() {
+  _padFuncEditId = null;
+  document.getElementById('modal-func-limp-title').textContent = 'Novo Funcionário';
+  ['fl-nome','fl-matricula'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fl-tipo').value = 'civil';
+  document.getElementById('fl-turno').value = 'Manhã';
+  document.getElementById('fl-err').textContent = '';
+  abrirModal('modal-func-limp');
+}
+
+function padEditarFunc(id) {
+  const f = _padFuncs.find(f => f.id === id);
+  if (!f) return;
+  _padFuncEditId = id;
+  document.getElementById('modal-func-limp-title').textContent = 'Editar Funcionário';
+  document.getElementById('fl-nome').value = f.nome||'';
+  document.getElementById('fl-matricula').value = f.matricula||'';
+  document.getElementById('fl-tipo').value = f.tipo||'civil';
+  document.getElementById('fl-turno').value = f.turno||'Manhã';
+  document.getElementById('fl-err').textContent = '';
+  abrirModal('modal-func-limp');
+}
+
+async function padSalvarFunc() {
+  const nome = document.getElementById('fl-nome').value.trim();
+  if (!nome) { document.getElementById('fl-err').textContent = 'Nome obrigatório'; return; }
+  const obj = {
+    id: _padFuncEditId || ('func-' + Date.now()),
+    nome,
+    matricula: document.getElementById('fl-matricula').value.trim(),
+    tipo: document.getElementById('fl-tipo').value,
+    turno: document.getElementById('fl-turno').value,
+    ativo: true
+  };
+  if (_padFuncEditId) {
+    const idx = _padFuncs.findIndex(f => f.id === _padFuncEditId);
+    if (idx >= 0) _padFuncs[idx] = obj;
+  } else {
+    _padFuncs.push(obj);
+  }
+  try {
+    await api('/api/conforto/funcionarios-limpeza', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ funcionarios: _padFuncs })
+    });
+    fecharModal('modal-func-limp');
+    padRenderGrid();
+  } catch(e) { document.getElementById('fl-err').textContent = 'Erro ao salvar'; }
+}
+
+async function padExcluirFunc(id) {
+  if (!confirm('Excluir funcionário e todos os ambientes cadastrados?')) return;
+  await api(`/api/conforto/funcionarios-limpeza/${id}`, { method: 'DELETE' });
+  _padFuncs = _padFuncs.filter(f => f.id !== id);
+  _padItens = _padItens.filter(i => i.funcionario_id !== id);
+  padRenderGrid();
+}
+
+function padAbrirItem(funcId) {
+  _padFuncAtivoId = funcId;
+  _padItemEditIdx = null;
+  ['pi-ambiente','pi-obs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pi-inicio').value = '08:00';
+  document.getElementById('pi-fim').value = '09:00';
+  document.getElementById('pi-diasemana').value = 'todos';
+  document.getElementById('pi-err').textContent = '';
+  abrirModal('modal-pad-item');
+}
+
+function padEditarItem(funcId, idx) {
+  _padFuncAtivoId = funcId;
+  _padItemEditIdx = idx;
+  const itens = _padItens.filter(i => i.funcionario_id === funcId)
+    .sort((a,b) => (a.ordem||0) - (b.ordem||0));
+  const it = itens[idx];
+  if (!it) return;
+  document.getElementById('pi-ambiente').value = it.ambiente||'';
+  document.getElementById('pi-inicio').value = it.hora_inicio||'08:00';
+  document.getElementById('pi-fim').value = it.hora_fim||'09:00';
+  document.getElementById('pi-diasemana').value = it.dia_semana||'todos';
+  document.getElementById('pi-obs').value = it.obs||'';
+  document.getElementById('pi-err').textContent = '';
+  abrirModal('modal-pad-item');
+}
+
+async function padSalvarItem() {
+  const ambiente = document.getElementById('pi-ambiente').value.trim();
+  if (!ambiente) { document.getElementById('pi-err').textContent = 'Ambiente obrigatório'; return; }
+  const func = _padFuncs.find(f => f.id === _padFuncAtivoId);
+  const itensFunc = _padItens.filter(i => i.funcionario_id === _padFuncAtivoId)
+    .sort((a,b) => (a.ordem||0) - (b.ordem||0));
+  const novoItem = {
+    id: (itensFunc[_padItemEditIdx]?.id) || ('pi-' + Date.now()),
+    funcionario_id: _padFuncAtivoId,
+    ambiente,
+    hora_inicio: document.getElementById('pi-inicio').value,
+    hora_fim: document.getElementById('pi-fim').value,
+    dia_semana: document.getElementById('pi-diasemana').value,
+    obs: document.getElementById('pi-obs').value.trim(),
+    tipo: func?.tipo || 'civil',
+    ordem: _padItemEditIdx !== null ? (itensFunc[_padItemEditIdx]?.ordem||_padItemEditIdx) : itensFunc.length
+  };
+  if (_padItemEditIdx !== null) {
+    const globalIdx = _padItens.indexOf(itensFunc[_padItemEditIdx]);
+    if (globalIdx >= 0) _padItens[globalIdx] = novoItem;
+  } else {
+    _padItens.push(novoItem);
+  }
+  try {
+    const itensDoFunc = _padItens.filter(i => i.funcionario_id === _padFuncAtivoId);
+    await api('/api/conforto/pad', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ funcionarioId: _padFuncAtivoId, itens: itensDoFunc })
+    });
+    fecharModal('modal-pad-item');
+    padRenderGrid();
+  } catch(e) { document.getElementById('pi-err').textContent = 'Erro ao salvar'; }
+}
+
+async function padExcluirItem(funcId, idx) {
+  const itensFunc = _padItens.filter(i => i.funcionario_id === funcId)
+    .sort((a,b) => (a.ordem||0) - (b.ordem||0));
+  const it = itensFunc[idx];
+  if (!it) return;
+  _padItens = _padItens.filter(i => i.id !== it.id);
+  await api('/api/conforto/pad', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ funcionarioId: funcId, itens: _padItens.filter(i => i.funcionario_id === funcId) })
+  });
+  padRenderGrid();
+}
+
+// Eventos PAD
+document.getElementById('btn-novo-func-limp')?.addEventListener('click', padAbrirNovoFunc);
+document.getElementById('btn-nova-os-civil-pad')?.addEventListener('click', () => abrirModalOS(state.abaTipoOS));
+document.getElementById('btn-salvar-func-limp')?.addEventListener('click', padSalvarFunc);
+document.getElementById('modal-func-limp-close')?.addEventListener('click', () => fecharModal('modal-func-limp'));
+document.getElementById('modal-func-limp-cancel')?.addEventListener('click', () => fecharModal('modal-func-limp'));
+document.getElementById('btn-salvar-pad-item')?.addEventListener('click', padSalvarItem);
+document.getElementById('modal-pad-item-close')?.addEventListener('click', () => fecharModal('modal-pad-item'));
+document.getElementById('modal-pad-item-cancel')?.addEventListener('click', () => fecharModal('modal-pad-item'));
+document.querySelectorAll('.pad-filtro-tipo').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pad-filtro-tipo').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _padFiltroTipo = btn.dataset.tipo;
+    padRenderGrid();
+  });
+});
