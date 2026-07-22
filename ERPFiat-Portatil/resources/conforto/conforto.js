@@ -1640,7 +1640,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const btnOS   = $('btn-nova-os-civil-pad');
       if (btnFunc) btnFunc.style.display = btn.dataset.tab === 'tab-pad-func' ? '' : 'none';
       if (btnOS)   btnOS.style.display   = (btn.dataset.tab === 'tab-pad-civil' || btn.dataset.tab === 'tab-pad-tecnica') ? '' : 'none';
-      vif (btn.dataset.tab === 'tab-pad-civil')   { state.abaTipoOS = 'civil';   renderOrdens('civil'); }
+      if (btn.dataset.tab === 'tab-pad-civil')   { state.abaTipoOS = 'civil';   renderOrdens('civil'); }
       if (btn.dataset.tab === 'tab-pad-tecnica') { state.abaTipoOS = 'tecnica'; renderOrdens('tecnica'); }
       if (btn.dataset.tab === 'tab-pad-cal')     { padRenderCal(); }
     });
