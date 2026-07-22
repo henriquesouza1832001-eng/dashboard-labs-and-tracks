@@ -72,7 +72,16 @@ def run_query(sql_str, params=None):
     with conn.cursor() as cur:
         cur.execute(sql_str, params or [])
         cols = [d[0] for d in cur.description]
-        return [dict(zip(cols, row)) for row in cur.fetchall()]
+        rows = []
+        for row in cur.fetchall():
+            d = {}
+            for k, v in zip(cols, row):
+                if hasattr(v, 'isoformat'):
+                    d[k] = v.isoformat()
+                else:
+                    d[k] = v
+            rows.append(d)
+        return rows
 
 def run_exec(sql_str, params=None):
     conn = get_conn()
@@ -2760,7 +2769,7 @@ async def get_funcionarios_limpeza(request: Request):
         return JSONResponse(rows if rows else [])
     except Exception as e:
         print(f"[funcionarios-limpeza] erro: {e}")
-        return JSONResponse([])
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/conforto/funcionarios-limpeza")
 async def save_funcionarios_limpeza(request: Request):
