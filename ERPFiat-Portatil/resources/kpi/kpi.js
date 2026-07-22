@@ -1334,8 +1334,42 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   ctx.stroke();
   ctx.restore();
 
-  desenharPontoRotulado(idxUltimoReal, valorPlanNoIdx, '#58a6ff', false);
-  desenharPontoRotulado(idxUltimoReal, valorRealNoIdx, '#e3711a', true);
+  const yPlan = yPos(valorPlanNoIdx);
+  const yReal = yPos(valorRealNoIdx);
+  const distMin = 28;
+  const dist = Math.abs(yPlan - yReal);
+  let planAbaixo = false;
+  let realAbaixo = true;
+  if (dist < distMin) {
+    const yPlanLabel = Math.min(yPlan, yReal) - 14;
+    const yRealLabel = Math.max(yPlan, yReal) + 18;
+    [
+      { valor: valorPlanNoIdx, cor: '#58a6ff', yLabel: yPlanLabel },
+      { valor: valorRealNoIdx, cor: '#e3711a', yLabel: yRealLabel },
+    ].forEach(({valor, cor, yLabel}) => {
+      const x = xPos(idxUltimoReal);
+      const y = yPos(valor);
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.strokeStyle=cor; ctx.lineWidth=2; ctx.stroke();
+      ctx.font = '700 10px var(--mono,monospace)';
+      const txt = `${valor.toFixed(1)}%`;
+      const tw = ctx.measureText(txt).width;
+      const yF = Math.max(m.t+12, Math.min(yLabel, m.t+ch-4));
+      ctx.fillStyle='rgba(255,255,255,0.92)';
+      ctx.fillRect(x-tw/2-4, yF-12, tw+8, 16);
+      ctx.fillStyle=cor; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+      ctx.fillText(txt, x, yF);
+      if(Math.abs(yF - y) > 10){
+        ctx.save(); ctx.strokeStyle=cor; ctx.lineWidth=1; ctx.setLineDash([2,2]);
+        ctx.globalAlpha=0.5;
+        ctx.beginPath(); ctx.moveTo(x, y+(y<yF?5:-5)); ctx.lineTo(x, yF+(y<yF?-12:4)); ctx.stroke();
+        ctx.restore();
+      }
+    });
+  } else {
+    desenharPontoRotulado(idxUltimoReal, valorPlanNoIdx, '#58a6ff', false);
+    desenharPontoRotulado(idxUltimoReal, valorRealNoIdx, '#e3711a', true);
+  }
   const idxFimObra = curvaPlan.length - 1;
   if (idxFimObra > idxUltimoReal) {
     const ultPlanFinal = curvaPlan[idxFimObra];
