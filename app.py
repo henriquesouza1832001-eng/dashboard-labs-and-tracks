@@ -2755,8 +2755,12 @@ async def deletar_tipo_uc(tid: str, request: Request):
 @app.get("/api/conforto/funcionarios-limpeza")
 async def get_funcionarios_limpeza(request: Request):
     exigir_auth(request)
-    rows = run_query(f"SELECT * FROM {S_CONFORTO}.funcionarios_limpeza ORDER BY nome")
-    return JSONResponse(rows)
+    try:
+        rows = run_query(f"SELECT * FROM {S_CONFORTO}.funcionarios_limpeza ORDER BY nome")
+        return JSONResponse(rows if rows else [])
+    except Exception as e:
+        print(f"[funcionarios-limpeza] erro: {e}")
+        return JSONResponse([])
 
 @app.post("/api/conforto/funcionarios-limpeza")
 async def save_funcionarios_limpeza(request: Request):
@@ -2792,8 +2796,12 @@ async def delete_funcionario_limpeza(fid: str, request: Request):
 @app.get("/api/conforto/pad")
 async def get_pad(request: Request):
     exigir_auth(request)
-    rows = run_query(f"SELECT * FROM {S_CONFORTO}.pad ORDER BY funcionario_id, ordem")
-    return JSONResponse(rows)
+    try:
+        rows = run_query(f"SELECT * FROM {S_CONFORTO}.pad ORDER BY funcionario_id, ordem")
+        return JSONResponse(rows if rows else [])
+    except Exception as e:
+        print(f"[pad] erro: {e}")
+        return JSONResponse([])
 
 @app.post("/api/conforto/pad")
 async def save_pad(request: Request):
