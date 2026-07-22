@@ -340,6 +340,8 @@ function setKpi(i,val,sub,bar){
   if(CFG.kpisMini[i]){CFG.kpisMini[i].val=val;CFG.kpisMini[i].sub=sub;CFG.kpisMini[i].bar=bar;}
 }
 
+function mkMini(items){ return items.map(([val,lbl])=>`<div class="mod-mini-kpi"><div class="mod-mini-kpi-val">${val}</div><div class="mod-mini-kpi-lbl">${lbl}</div></div>`).join(''); }
+
 function preencherModCards(d){
   const obraInfo = d.obras || {};
   const chamInfo = d.chamados || {};
@@ -347,6 +349,34 @@ function preencherModCards(d){
   if (cardObras && obraInfo.total != null) cardObras.textContent = obraInfo.total + ' cadastradas';
   const cardCham = document.querySelector('a[href="/chamados"] .mod-card-sub');
   if (cardCham && chamInfo.total != null) cardCham.textContent = chamInfo.abertos + ' em aberto · ' + chamInfo.total + ' total';
+}
+
+function preencherModCardsKpi(kpi){
+  // Atividades
+  const ativs = kpi.atividades?.atividades || [];
+  const atPend = ativs.filter(a=>a.status==='todo'||a.status==='doing').length;
+  const atConc = ativs.filter(a=>a.status==='done').length;
+  const miniAtiv = $('mini-atividades');
+  if(miniAtiv) miniAtiv.innerHTML = mkMini([[atPend,'pendentes'],[atConc,'concluídas']]);
+
+  // Conforto
+  const ucs = kpi.conforto?.ucs || [];
+  const prevs = kpi.conforto?.preventivas || [];
+  const hoje = new Date();
+  const vencendo = ucs.filter(u=>{
+    const ult = prevs.filter(p=>p.ucId===u.id&&p.status==='Realizada').sort((a,b)=>new Date(b.dataRealizada)-new Date(a.dataRealizada))[0];
+    if(!ult) return true;
+    return Math.floor((hoje-new Date(ult.dataRealizada))/86400000)>=(u.cicloFiltroDias||90)-14;
+  }).length;
+  const miniConf = $('mini-conforto');
+  if(miniConf) miniConf.innerHTML = mkMini([[ucs.length,'UCs'],[vencendo,'vencendo']]);
+
+  // Acesso
+  const pessoas = kpi.codin?.pessoas || [];
+  const solics = kpi.codin?.solicitacoes || [];
+  const solicPend = solics.filter(s=>s.status==='Pendente').length;
+  const miniAces = $('mini-acesso');
+  if(miniAces) miniAces.innerHTML = mkMini([[pessoas.length,'pessoas'],[solicPend,'pendentes']]);
 }
 
 async function saveCFG(){ await API.hub.config.salvar(CFG); }
@@ -387,6 +417,7 @@ async function carregarPainel(){
     _painelDados = kpi;
     renderPainel(_painelMod);
     renderAlertas(kpi);
+    preencherModCardsKpi(kpi);
     const ativs=(kpi.atividades?.atividades)||[];
     const concluidas=ativs.filter(a=>a.status==='done').length;
     const total=ativs.length;
