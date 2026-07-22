@@ -1838,8 +1838,8 @@ let _padItemEditIdx = null;
 async function padCarregar() {
   try {
     const [rf, rp] = await Promise.all([
-      api('/api/conforto/funcionarios-limpeza'),
-      api('/api/conforto/pad')
+      fetch('/api/conforto/funcionarios-limpeza', {headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''}}),
+      fetch('/api/conforto/pad', {headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''}})
     ]);
     _padFuncs = await rf.json();
     _padItens = await rp.json();
@@ -1953,8 +1953,8 @@ async function padSalvarFunc() {
     _padFuncs.push(obj);
   }
   try {
-    await api('/api/conforto/funcionarios-limpeza', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+    await fetch('/api/conforto/funcionarios-limpeza', {
+      method: 'POST', headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
       body: JSON.stringify({ funcionarios: _padFuncs })
     });
     fecharModal('modal-func-limp');
@@ -1964,7 +1964,7 @@ async function padSalvarFunc() {
 
 async function padExcluirFunc(id) {
   if (!confirm('Excluir funcionário e todos os ambientes cadastrados?')) return;
-  await api(`/api/conforto/funcionarios-limpeza/${id}`, { method: 'DELETE' });
+  await fetch(`/api/conforto/funcionarios-limpeza/${id}`, { method: 'DELETE', headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''} });
   _padFuncs = _padFuncs.filter(f => f.id !== id);
   _padItens = _padItens.filter(i => i.funcionario_id !== id);
   padRenderGrid();
@@ -2022,8 +2022,8 @@ async function padSalvarItem() {
   }
   try {
     const itensDoFunc = _padItens.filter(i => i.funcionario_id === _padFuncAtivoId);
-    await api('/api/conforto/pad', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+    await fetch('/api/conforto/pad', {
+      method: 'POST', headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
       body: JSON.stringify({ funcionarioId: _padFuncAtivoId, itens: itensDoFunc })
     });
     fecharModal('modal-pad-item');
@@ -2037,8 +2037,8 @@ async function padExcluirItem(funcId, idx) {
   const it = itensFunc[idx];
   if (!it) return;
   _padItens = _padItens.filter(i => i.id !== it.id);
-  await api('/api/conforto/pad', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
+  await fetch('/api/conforto/pad', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
     body: JSON.stringify({ funcionarioId: funcId, itens: _padItens.filter(i => i.funcionario_id === funcId) })
   });
   padRenderGrid();

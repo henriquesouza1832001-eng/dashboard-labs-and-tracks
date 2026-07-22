@@ -435,33 +435,32 @@
 </div>
 
 <!-- MODAL FUNCIONÁRIO LIMPEZA -->
-<DIV CLASS="MODAL-OVERLAY" ID="MODAL-FUNC-LIMP">
-  <DIV CLASS="MODAL" STYLE="MAX-WIDTH:520PX">
-    <DIV CLASS="MODAL-HEADER"><SPAN CLASS="MODAL-TITLE" ID="MODAL-FUNC-LIMP-TITLE">NOVO FUNCIONÁRIO</SPAN><BUTTON CLASS="MODAL-CLOSE" ID="MODAL-FUNC-LIMP-CLOSE"><SVG VIEWBOX="0 0 24 24"><LINE X1="18" Y1="6" X2="6" Y2="18"/><LINE X1="6" Y1="6" X2="18" Y2="18"/></SVG></BUTTON></DIV>
-    <DIV CLASS="MODAL-BODY">
-      <DIV CLASS="FORM-ROW"><DIV CLASS="FIELD"><LABEL>NOME *</LABEL><INPUT TYPE="TEXT" ID="FL-NOME" PLACEHOLDER="NOME COMPLETO"></DIV><DIV CLASS="FIELD"><LABEL>MATRÍCULA</LABEL><INPUT TYPE="TEXT" ID="FL-MATRICULA"></DIV></DIV>
-      <DIV CLASS="FORM-ROW"><DIV CLASS="FIELD"><LABEL>TIPO *</LABEL><SELECT ID="FL-TIPO"><OPTION VALUE="CIVIL">CIVIL</OPTION><OPTION VALUE="TECNICA">TÉCNICA</OPTION></SELECT></DIV><DIV CLASS="FIELD"><LABEL>TURNO</LABEL><SELECT ID="FL-TURNO"><OPTION VALUE="MANHÃ">MANHÃ</OPTION><OPTION VALUE="TARDE">TARDE</OPTION><OPTION VALUE="NOITE">NOITE</OPTION><OPTION VALUE="INTEGRAL">INTEGRAL</OPTION></SELECT></DIV></DIV>
-      <DIV CLASS="FIELD-ERR" ID="FL-ERR"></DIV>
-    </DIV>
-    <DIV CLASS="MODAL-FOOTER"><BUTTON CLASS="BTN BTN-SECONDARY" ID="MODAL-FUNC-LIMP-CANCEL">CANCELAR</BUTTON><BUTTON CLASS="BTN BTN-PRIMARY" ID="BTN-SALVAR-FUNC-LIMP">SALVAR</BUTTON></DIV>
-  </DIV>
-</DIV>
+<div class="modal-overlay" id="modal-func-limp">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title" id="modal-func-limp-title">Novo Funcionário</span><button class="modal-close" id="modal-func-limp-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row"><div class="field"><label>Nome *</label><input type="text" id="fl-nome" placeholder="Nome completo"></div><div class="field"><label>Matrícula</label><input type="text" id="fl-matricula"></div></div>
+      <div class="form-row"><div class="field"><label>Tipo *</label><select id="fl-tipo"><option value="civil">Civil</option><option value="tecnica">Técnica</option></select></div><div class="field"><label>Turno</label><select id="fl-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option><option value="Integral">Integral</option></select></div></div>
+      <div class="field-err" id="fl-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-func-limp-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-func-limp">Salvar</button></div>
+  </div>
+</div>
 
 <!-- MODAL PAD ITEM -->
-<DIV CLASS="MODAL-OVERLAY" ID="MODAL-PAD-ITEM">
-  <DIV CLASS="MODAL" STYLE="MAX-WIDTH:480PX">
-    <DIV CLASS="MODAL-HEADER"><SPAN CLASS="MODAL-TITLE">NOVO AMBIENTE</SPAN><BUTTON CLASS="MODAL-CLOSE" ID="MODAL-PAD-ITEM-CLOSE"><SVG VIEWBOX="0 0 24 24"><LINE X1="18" Y1="6" X2="6" Y2="18"/><LINE X1="6" Y1="6" X2="18" Y2="18"/></SVG></BUTTON></DIV>
-    <DIV CLASS="MODAL-BODY">
-      <DIV CLASS="FORM-ROW FULL"><DIV CLASS="FIELD"><LABEL>AMBIENTE / LOCAL *</LABEL><INPUT TYPE="TEXT" ID="PI-AMBIENTE" PLACEHOLDER="EX: SALA - ADM. - 24.19 - MAGNETTI"></DIV></DIV>
-      <DIV CLASS="FORM-ROW"><DIV CLASS="FIELD"><LABEL>HORA INÍCIO</LABEL><INPUT TYPE="TIME" ID="PI-INICIO" VALUE="08:00"></DIV><DIV CLASS="FIELD"><LABEL>HORA FIM</LABEL><INPUT TYPE="TIME" ID="PI-FIM" VALUE="09:00"></DIV></DIV>
-      <DIV CLASS="FORM-ROW FULL"><DIV CLASS="FIELD"><LABEL>DIAS DA SEMANA</LABEL><SELECT ID="PI-DIASEMANA"><OPTION VALUE="TODOS">TODOS OS DIAS ÚTEIS</OPTION><OPTION VALUE="SEG">SEGUNDA</OPTION><OPTION VALUE="TER">TERÇA</OPTION><OPTION VALUE="QUA">QUARTA</OPTION><OPTION VALUE="QUI">QUINTA</OPTION><OPTION VALUE="SEX">SEXTA</OPTION><OPTION VALUE="SAB">SÁBADO</OPTION></SELECT></DIV></DIV>
-      <DIV CLASS="FORM-ROW FULL"><DIV CLASS="FIELD"><LABEL>OBSERVAÇÃO</LABEL><INPUT TYPE="TEXT" ID="PI-OBS" PLACEHOLDER="EX: VARRIÇÃO DE PASSEIO E JANELA"></DIV></DIV>
-      <DIV CLASS="FIELD-ERR" ID="PI-ERR"></DIV>
-    </DIV>
-    <DIV CLASS="MODAL-FOOTER"><BUTTON CLASS="BTN BTN-SECONDARY" ID="MODAL-PAD-ITEM-CANCEL">CANCELAR</BUTTON><BUTTON CLASS="BTN BTN-PRIMARY" ID="BTN-SALVAR-PAD-ITEM">SALVAR</BUTTON></DIV>
-  </DIV>
-</DIV>
-
+<div class="modal-overlay" id="modal-pad-item">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><span class="modal-title">Novo Ambiente</span><button class="modal-close" id="modal-pad-item-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="field"><label>Ambiente / Local *</label><input type="text" id="pi-ambiente" placeholder="Ex: SALA - Adm. - 24.19 - MAGNETTI"></div></div>
+      <div class="form-row"><div class="field"><label>Hora Início</label><input type="time" id="pi-inicio" value="08:00"></div><div class="field"><label>Hora Fim</label><input type="time" id="pi-fim" value="09:00"></div></div>
+      <div class="form-row full"><div class="field"><label>Dias da Semana</label><select id="pi-diasemana"><option value="todos">Todos os dias úteis</option><option value="seg">Segunda</option><option value="ter">Terça</option><option value="qua">Quarta</option><option value="qui">Quinta</option><option value="sex">Sexta</option><option value="sab">Sábado</option></select></div></div>
+      <div class="form-row full"><div class="field"><label>Observação</label><input type="text" id="pi-obs" placeholder="Ex: Varrição de passeio e janela"></div></div>
+      <div class="field-err" id="pi-err"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" id="modal-pad-item-cancel">Cancelar</button><button class="btn btn-primary" id="btn-salvar-pad-item">Salvar</button></div>
+  </div>
+</div>
 <!-- MODAL OS -->
 <div class="modal-overlay" id="modal-os">
   <div class="modal">
