@@ -1936,8 +1936,6 @@ function padRenderGrid() {
           </div>`;
       }).join('')}
     </div>`;
-
-  // atualizar select do calendário
   const sel = document.getElementById('cal-filtro-func');
   if(sel){
     const cur=sel.value;
@@ -1952,7 +1950,6 @@ function padToggleDetail(id){
   const row=el?.previousElementSibling;
   if(!el) return;
   const open=el.classList.contains('open');
-  // fechar todos
   document.querySelectorAll('.pad-func-detail').forEach(d=>d.classList.remove('open'));
   document.querySelectorAll('.pad-func-row').forEach(r=>r.classList.remove('expanded'));
   if(!open){ el.classList.add('open'); row?.classList.add('expanded'); }
@@ -1967,44 +1964,61 @@ function padRenderCal(){
   if(filtroFunc) funcs=funcs.filter(f=>f.id===filtroFunc);
   if(filtroTipo) funcs=funcs.filter(f=>f.tipo===filtroTipo);
 
+  const HINI=6, HFIM=20, SPAN=(HFIM-HINI)*60;
+  const PX_PER_MIN=2;
+  const totalH=SPAN*PX_PER_MIN;
   const dias=['Seg','Ter','Qua','Qui','Sex','Sáb'];
   const diasKey=['seg','ter','qua','qui','sex','sab'];
-  const cols=1+dias.length;
+
+  const ticks=[];
+  for(let h=HINI;h<=HFIM;h++){
+    const top=((h-HINI)*60*PX_PER_MIN);
+    ticks.push(`<div class="pad-cal-ruler-tick" style="top:${top}px;height:20px">${h.toString().padStart(2,'0')}:00</div>`);
+    if(h<HFIM){
+    }
+  }
+  const colsHtml=diasKey.map((dk,di)=>{
+    const lines=[];
+    for(let h=HINI;h<=HFIM;h++){
+      const top=((h-HINI)*60*PX_PER_MIN);
+      lines.push(`<div class="pad-cal-hour-line" style="top:${top}px"></div>`);
+      if(h<HFIM) lines.push(`<div class="pad-cal-hour-line half" style="top:${top+30*PX_PER_MIN}px"></div>`);
+    }
+    const blocos=funcs.map((f,fi)=>{
+      const cor=PAD_CORES[_padFuncs.indexOf(f)%PAD_CORES.length];
+      const itens=_padItens.filter(i=>i.funcionario_id===f.id&&(i.dia_semana==='todos'||i.dia_semana===dk));
+      return itens.map(it=>{
+        const [ih,im]=(it.hora_inicio||'06:00').split(':').map(Number);
+        const [fh,fm]=(it.hora_fim||'06:00').split(':').map(Number);
+        const top=((ih*60+im)-(HINI*60))*PX_PER_MIN;
+        const height=Math.max(14,(fh*60+fm)-(ih*60+im))*PX_PER_MIN;
+        const nome=(it.ambiente||'').split(' - ').pop();
+        const isRev=(it.obs||'').includes('revisão');
+        const total=funcs.length||1;
+        const slotW=Math.floor(100/total);
+        const leftPct=fi*slotW;
+        const rightPct=100-((fi+1)*slotW);
+        return `<div class="pad-cal-bloco-v" style="top:${top}px;height:${height}px;background:${cor};opacity:${isRev?0.6:1};left:${leftPct}%;right:${rightPct}%"
+          title="${f.nome} · ${it.ambiente}\n${it.hora_inicio}–${it.hora_fim}${isRev?' (revisão)':''}">
+          <span class="bloco-hora">${it.hora_inicio}${isRev?' ↩':''}</span>
+          <span class="bloco-nome">${nome}</span>
+        </div>`;
+      }).join('');
+    }).join('');
+
+    return `<div class="pad-cal-day-col" style="height:${totalH}px">${lines.join('')}${blocos}</div>`;
+  }).join('');
 
   wrap.innerHTML=`
-    <div class="pad-cal-grid" style="grid-template-columns:180px repeat(${dias.length},1fr)">
-      <div class="pad-cal-header" style="grid-column:1/-1;display:grid;grid-template-columns:180px repeat(${dias.length},1fr)">
-        <div class="pad-cal-header-cell">Funcionário</div>
-        ${dias.map(d=>`<div class="pad-cal-header-cell">${d}</div>`).join('')}
+    <div class="pad-cal-wrap-outer">
+      <div class="pad-cal-ruler">
+        <div class="pad-cal-ruler-header"></div>
+        <div class="pad-cal-ruler-body" style="height:${totalH}px;position:relative">${ticks.join('')}</div>
       </div>
-      ${funcs.map((f,fi)=>{
-        const cor=PAD_CORES[_padFuncs.indexOf(f)%PAD_CORES.length];
-        const itens=_padItens.filter(i=>i.funcionario_id===f.id);
-        return `
-          <div class="pad-cal-func-row" style="grid-column:1/-1;display:grid;grid-template-columns:180px repeat(${dias.length},1fr)">
-            <div class="pad-cal-func-name">
-              <div style="width:8px;height:8px;border-radius:50%;background:${cor};margin-right:8px;flex-shrink:0"></div>
-              <div>
-                <div style="font-size:12px;font-weight:600">${f.nome.split(' ')[0]}</div>
-                <div style="font-size:10px;color:var(--text-muted)">${f.tipo==='civil'?'Civil':'Técnica'}</div>
-              </div>
-            </div>
-            ${diasKey.map(dk=>{
-              const dayItens=itens.filter(i=>i.dia_semana==='todos'||i.dia_semana===dk)
-                .slice().sort((a,b)=>{
-                  const ta=(a.hora_inicio||'00:00').split(':').map(Number);
-                  const tb=(b.hora_inicio||'00:00').split(':').map(Number);
-                  return (ta[0]*60+ta[1])-(tb[0]*60+tb[1]);
-                });
-              return `<div class="pad-cal-day-cell">
-                ${dayItens.map(it=>`
-                  <div class="pad-cal-bloco" style="background:${cor}" title="${it.ambiente}&#10;${it.hora_inicio}–${it.hora_fim}">
-                    ${it.hora_inicio} ${(it.ambiente||'').split(' - ').pop()}
-                  </div>`).join('')}
-              </div>`;
-            }).join('')}
-          </div>`;
-      }).join('')}
+      <div class="pad-cal-cols">
+        <div class="pad-cal-header-row">${dias.map(d=>`<div class="pad-cal-header-cell">${d}</div>`).join('')}</div>
+        <div class="pad-cal-body">${colsHtml}</div>
+      </div>
     </div>`;
 }
 
