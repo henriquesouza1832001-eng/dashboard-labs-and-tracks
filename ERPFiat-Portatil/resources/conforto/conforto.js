@@ -2078,9 +2078,11 @@ function padRenderCal(){
   if(!wrap) return;
   const filtroFunc=document.getElementById('cal-filtro-func')?.value||'';
   const filtroTipo=document.getElementById('cal-filtro-tipo')?.value||'';
+  const filtroGalpao=document.getElementById('cal-filtro-galpao')?.value||'';
   let funcs=_padFuncs;
   if(filtroFunc) funcs=funcs.filter(f=>f.id===filtroFunc);
   if(filtroTipo) funcs=funcs.filter(f=>f.tipo===filtroTipo);
+  if(filtroGalpao) funcs=funcs.filter(f=>_padItens.some(i=>i.funcionario_id===f.id&&padExtrairGalpao(i.ambiente)===filtroGalpao));
   if(!funcs.length){ wrap.innerHTML='<div style="padding:24px;color:var(--text-muted);font-size:13px">Nenhum funcionário.</div>'; return; }
   const HINI=6, HFIM=20, SPAN=(HFIM-HINI)*60;
   const PX_PER_MIN=1.4;
@@ -2105,7 +2107,7 @@ function padRenderCal(){
   const linhas = funcs.map(f=>{
     const cor = PAD_CORES[_padFuncs.indexOf(f)%PAD_CORES.length];
     const celulas = diasKey.map(dk=>{
-      const itens = _padItens.filter(i=>i.funcionario_id===f.id&&(i.dia_semana==='todos'||i.dia_semana===dk))
+      const itens = _padItens.filter(i=>i.funcionario_id===f.id&&(i.dia_semana==='todos'||i.dia_semana===dk)&&(!filtroGalpao||padExtrairGalpao(i.ambiente)===filtroGalpao))
         .sort((a,b)=>{
           const ta=(a.hora_inicio||'00:00').split(':').map(Number);
           const tb=(b.hora_inicio||'00:00').split(':').map(Number);
