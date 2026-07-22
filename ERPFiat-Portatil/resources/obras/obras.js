@@ -163,17 +163,21 @@ function renderDashboard(){
   const obrasEstudo = state.obras.filter(o=>o.status==='Em Estudo');
   const bgtPlanj    = obrasPlanj.reduce((s,o)=>s+budgetObra(o.cod),0);
   const bgtEstudo   = obrasEstudo.reduce((s,o)=>s+budgetObra(o.cod),0);
+  const obrasConc = state.obras.filter(o=>o.status==='Concluído');
+  const bgtAndamento = state.obras.filter(o=>o.status==='Em Andamento').reduce((s,o)=>s+budgetObra(o.cod),0);
+  const bgtConc = obrasConc.reduce((s,o)=>s+budgetObra(o.cod),0);
   $('kpi-grid').innerHTML=`
-    <div class="kpi-card"><div class="kpi-label">TOTAL OBRAS</div><div class="kpi-val blue">${state.obras.length}</div></div>
-    <div class="kpi-card"><div class="kpi-label">EM ANDAMENTO</div><div class="kpi-val orange">${andamento}</div></div>
-    <div class="kpi-card"><div class="kpi-label">CONCLUÍDAS</div><div class="kpi-val green">${state.obras.filter(o=>o.status==='Concluído').length}</div></div>
+    <div class="kpi-card"><div class="kpi-label">TOTAL OBRAS</div><div class="kpi-val blue">${state.obras.length}</div><div class="kpi-budget-sub">${fmtRCard(totalB)} budget</div></div>
+    <div class="kpi-card"><div class="kpi-label">EM ANDAMENTO</div><div class="kpi-val orange">${andamento}</div><div class="kpi-budget-sub">${fmtRCard(bgtAndamento)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">CONCLUÍDAS</div><div class="kpi-val green">${obrasConc.length}</div><div class="kpi-budget-sub">${fmtRCard(bgtConc)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">PLANEJADAS</div><div class="kpi-val blue">${obrasPlanj.length}</div><div class="kpi-budget-sub">${fmtRCard(bgtPlanj)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">EM ESTUDO</div><div class="kpi-val" style="color:var(--text-muted)">${obrasEstudo.length}</div><div class="kpi-budget-sub">${fmtRCard(bgtEstudo)}</div></div>`;
+  $('kpi-grid-fin').innerHTML=`
     <div class="kpi-card"><div class="kpi-label">BUDGET</div><div class="kpi-val blue">${fmtRCard(totalB)}</div></div>
     <div class="kpi-card"><div class="kpi-label">TOTAL FATURADO</div><div class="kpi-val yellow">${fmtRCard(totalR)}</div></div>
     <div class="kpi-card"><div class="kpi-label">TOTAL A FATURAR</div><div class="kpi-val ${totalAFaturar<0?'red':'green'}">${fmtRCard(totalAFaturar)}</div></div>
     <div class="kpi-card"><div class="kpi-label">BUDGET APROVADO</div><div class="kpi-val green">${fmtRCard(bgtAprovado)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">BUDGET A APROVAR</div><div class="kpi-val yellow">${fmtRCard(bgtAprovar)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">R$ PLANEJADAS (${obrasPlanj.length})</div><div class="kpi-val blue">${fmtRCard(bgtPlanj)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">R$ EM ESTUDO (${obrasEstudo.length})</div><div class="kpi-val" style="color:var(--text-muted)">${fmtRCard(bgtEstudo)}</div></div>`;
+    <div class="kpi-card"><div class="kpi-label">BUDGET A APROVAR</div><div class="kpi-val yellow">${fmtRCard(bgtAprovar)}</div></div>`;
   const tbody=$('dash-tbody');
   if(!state.obras.length){tbody.innerHTML='<tr class="empty-row"><td colspan="10">nenhuma obra cadastrada</td></tr>';$('dash-tfoot').innerHTML='';return;}
   let tB=0,tR=0;
