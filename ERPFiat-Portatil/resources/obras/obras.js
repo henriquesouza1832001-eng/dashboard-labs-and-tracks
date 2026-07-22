@@ -62,7 +62,7 @@ function avancFisico(obraCod){
 }
 function afEtapa(e){
   const subs = e.subtarefas||[];
-  if(!subs.length) return 0;
+  if(!subs.length) return e.avancoFisico||0;
   const pesoTotal = subs.reduce((s,st)=>s+(st.peso||1),0)||1;
   const exec = subs.reduce((s,st)=>s+(st.peso||1)*(st.avancoFisico||0),0);
   return exec/pesoTotal;
@@ -440,6 +440,7 @@ function editarEtapa(cod, idx){
   if($('etapa-dt-inicio-real')) $('etapa-dt-inicio-real').value = e?.dtInicioReal||'';
   if($('etapa-dt-fim-real'))    $('etapa-dt-fim-real').value    = e?.dtFimReal||'';
   if($('etapa-orcamento'))      $('etapa-orcamento').value      = e?.orcamento||0;
+  if($('etapa-af-manual'))      $('etapa-af-manual').value      = (e?.subtarefas?.length ? '' : (e?.avancoFisico||''));
   abrirModal('modal-etapa');
 }
 function excluirEtapa(cod, idx){
@@ -1022,6 +1023,7 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
     ['etapa-nome','etapa-obs'].forEach(id=>$(id).value='');
     $('etapa-dt-inicio').value='';$('etapa-dt-fim').value='';
     $('etapa-resp').value='';$('etapa-peso').value=1;if($('etapa-dt-real'))$('etapa-dt-real').value='';
+    if($('etapa-af-manual'))$('etapa-af-manual').value='';
     $('etapa-err').textContent='';
     abrirModal('modal-etapa');
   });

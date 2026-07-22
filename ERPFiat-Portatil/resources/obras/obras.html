@@ -388,7 +388,6 @@
       <div class="form-row cols3"><div class="field"><label>Início Previsto</label><input type="date" id="ob-dt-ini-prev"></div><div class="field"><label>Fim Previsto</label><input type="date" id="ob-dt-fim-prev"></div><div class="field"></div></div>
       <div class="form-row cols3"><div class="field"><label>Início Real</label><input type="date" id="ob-dt-ini-real"></div><div class="field"><label>Fim Real</label><input type="date" id="ob-dt-fim-real"></div><div class="field"></div></div>
       <div class="form-row cols3"><div class="field"><label>Cronograma Inicial — Início</label><input type="date" id="ob-crono-ini"></div><div class="field"><label>Cronograma Inicial — Fim</label><input type="date" id="ob-crono-fim"></div><div class="field"></div></div>
-      <div class="form-row cols3"><div class="field"><label>Cronograma Inicial — Início</label><input type="date" id="ob-crono-ini"></div><div class="field"><label>Cronograma Inicial — Fim</label><input type="date" id="ob-crono-fim"></div><div class="field"></div></div>
       <div class="form-row full"><div class="field"><label>Observação</label><textarea id="ob-obs" rows="2"></textarea></div></div>
       <div class="field-err" id="ob-err"></div>
     </div>
@@ -473,7 +472,8 @@
         <div class="field"><label>Responsável</label><select id="etapa-resp"><option value="">—</option></select></div>
         <div class="field"><label>Peso (importância)</label><input type="number" id="etapa-peso" min="1" max="100" value="1"></div>
       </div>
-      <div class="field-hint" style="font-size:12px;color:var(--text-muted)">O avanço físico é calculado automaticamente a partir das sub-tarefas.</div>
+      <div class="form-row full" id="etapa-af-manual-row"><div class="field"><label>Avanço Físico Manual (%) <span style="font-weight:400;color:var(--text-muted)">— use quando não há sub-tarefas</span></label><input type="number" id="etapa-af-manual" min="0" max="100" step="1" placeholder="0"></div></div>
+      <div class="field-hint" style="font-size:12px;color:var(--text-muted)">O avanço físico é calculado automaticamente a partir das sub-tarefas quando existirem.</div>
       <div class="form-row full"><div class="field"><label>Observação</label><textarea id="etapa-obs" rows="2"></textarea></div></div>
       <div class="field-err" id="etapa-err"></div>
     </div>

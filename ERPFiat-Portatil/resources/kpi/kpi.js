@@ -892,7 +892,6 @@ function buildOverlayAndamento(d){
   const {header}=_obOvBase(d,'andamento');
   return header+`
   <div style="display:flex;gap:10px;margin-bottom:14px">
-    <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
       <div class="ob-ov-ctit">Faturado por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
@@ -1014,7 +1013,7 @@ function desenharMicroBarras(id, items){
 }
 function afEtapa(e){
   const subs = e.subtarefas||[];
-  if(!subs.length) return 0;
+  if(!subs.length) return e.avancoFisico||0;
   const pesoTotal = subs.reduce((s,st)=>s+(st.peso||1),0)||1;
   const exec = subs.reduce((s,st)=>s+(st.peso||1)*(st.avancoFisico||0),0);
   return exec/pesoTotal;
@@ -1391,36 +1390,6 @@ function drawOverlayCharts(tipo,d){
     wrap.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px" id="cv-ov-pizza1-titulo">Avanço por Obras em Andamento</div>`+(src.length?barrasHTML(src,{labelW:90,fmt:'pct'}):'<div style="color:var(--text-muted);font-size:12px;padding:16px 0">Sem dados</div>');
   }
 
-  // Previsto × Realizado
-  const totalB=lista.reduce((s,o)=>s+budgObra(o.cod),0);
-  const totalR=lista.reduce((s,o)=>s+realObra(o.cod),0);
-  const bulletWrap=document.getElementById('bullet-ov-wrap');
-  if(bulletWrap){
-    const estourou=totalR>totalB;
-    const pct=totalB>0?Math.min(totalR/totalB,1):0;
-    const pctTxt=totalB>0?((totalR/totalB)*100).toFixed(1)+'%':'0%';
-    const cor=estourou?'#f85149':pct>=0.8?'#e3711a':'#2E5FA3';
-    const disponivel=Math.max(totalB-totalR,0);
-    const budgetArrDraw=(d.obras&&d.obras.budget)?d.obras.budget:(d.budget||[]);
-    const codsDraw=new Set(lista.map(o=>o.cod));
-    const budgetFiltradoDraw=budgetArrDraw.filter(b=>codsDraw.has(b.obraCod));
-    const bgtAprovDraw=budgetFiltradoDraw.filter(b=>b.statusBudget==='Aprovado'||!b.statusBudget).reduce((s,b)=>s+(b.budgetAprov||0),0);
-    const bgtAprovarDraw=budgetFiltradoDraw.filter(b=>b.statusBudget==='A Aprovar').reduce((s,b)=>s+(b.budgetAprov||0),0);
-    bulletWrap.innerHTML=`
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">A Faturar × Faturado</div>
-      <div style="position:relative;height:18px;background:#e8edf5;border-radius:9px;overflow:hidden;margin-bottom:12px">
-        <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:9px"></div>
-        <div style="position:absolute;right:0;top:-4px;bottom:-4px;width:2px;background:#8a9abf;border-radius:2px"></div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:${cor};flex-shrink:0"></span><span style="color:var(--text-muted)">Faturado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(totalR)}</b></div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#e8edf5;border:1px solid #8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">${estourou?'Excedente':'A Faturar'}</span><b style="margin-left:auto;font-family:var(--mono);color:${estourou?'#f85149':'var(--text)'}">${fmtRK(estourou?totalR-totalB:disponivel)}</b></div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#8a9abf;flex-shrink:0"></span><span style="color:var(--text-muted)">Uso do budget</span><b style="margin-left:auto;font-family:var(--mono);color:${cor}">${pctTxt}</b></div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#1a7f4b;flex-shrink:0"></span><span style="color:var(--text-muted)">Budget aprovado</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(bgtAprovDraw)}</b></div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px"><span style="width:10px;height:10px;border-radius:3px;background:#d29922;flex-shrink:0"></span><span style="color:var(--text-muted)">A aprovar</span><b style="margin-left:auto;font-family:var(--mono)">${fmtRK(bgtAprovarDraw)}</b></div>
-      </div>`;
-  }
-
   // Faturado por categoria
   const catM={};lista.forEach(o=>{lanc.filter(l=>l.obraCod===o.cod).forEach(l=>{const c=l.categoria||'Outros';catM[c]=(catM[c]||0)+l.qtd*l.precoUnit;});});
   const top=Object.entries(catM).sort((a,b)=>b[1]-a[1]).slice(0,8);
@@ -1497,10 +1466,9 @@ function abrirDetalheObra(cod){
   </div>
 
   <div class="ob-ov-kpis" style="margin-bottom:12px">
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Budget</div><div class="ob-ov-kpi-val c-azul">${fmtRK(b)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Faturado</div><div class="ob-ov-kpi-val c-laranja">${fmtRK(r)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Faturar</div><div class="ob-ov-kpi-val ${b-r<0?'c-vermelho':'c-verde'}">${fmtRK(b-r)}</div></div>
-    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Eficiência</div><div class="ob-ov-kpi-val ${ef>5?'c-verde':ef<-5?'c-vermelho':'c-amarelo'}">${ef>=0?'+':''}${fmt(ef,1)}%</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Status</div><div class="ob-ov-kpi-val" style="font-size:13px">${badgeSt(o.status)}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Prazo</div><div class="ob-ov-kpi-val" style="font-size:14px;color:${corP}">${prazoTxt}</div></div>
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Avanço Físico</div><div class="ob-ov-kpi-val ${af>70?'c-verde':af>40?'c-amarelo':'c-laranja'}">${fmt(af,1)}%</div></div>
@@ -1547,6 +1515,33 @@ function abrirDetalheObra(cod){
       " style="font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);cursor:pointer;font-family:var(--font)">✏️ editar</button>
     </div>
     <textarea id="obs-det-obra" readonly rows="4" style="width:100%;font-size:12px;color:var(--text);line-height:1.6;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:var(--font);resize:vertical;box-sizing:border-box;outline:none">${o.observacao||o.obs||o.observacoes||''}</textarea>
+  </div>
+
+  <div class="ob-ov-tbox" style="margin-bottom:12px">
+    <div class="ob-ov-ctit" style="margin-bottom:8px">Próximas Etapas</div>
+    ${(()=>{
+      if(!etapas.length) return '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Nenhuma etapa cadastrada no cronograma.</div>';
+      const etOrdenadas = etapas.slice().sort((a,b2)=>(a.dtInicio||'9999').localeCompare(b2.dtInicio||'9999'));
+      return etOrdenadas.map(e=>{
+        const af=afEtapa(e);
+        const corAf=af>=100?'#3fb950':af>0?'#e3711a':'#8a9abf';
+        const statusEt=af>=100?'Concluída':af>0?'Em andamento':'Pendente';
+        const corSt=af>=100?'#3fb950':af>0?'#e3711a':'#8a9abf';
+        return`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${e.nome||'—'}</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="flex:1;height:4px;background:#e8edf5;border-radius:2px;overflow:hidden">
+                <div style="height:100%;width:${Math.min(af,100)}%;background:${corAf};border-radius:2px"></div>
+              </div>
+              <span style="font-size:10px;font-family:var(--mono);color:${corAf};min-width:32px">${af.toFixed(0)}%</span>
+            </div>
+          </div>
+          <span style="font-size:10px;color:${corSt};font-weight:600;white-space:nowrap">${statusEt}</span>
+          <span style="font-size:10px;font-family:var(--mono);color:var(--text-muted);white-space:nowrap">${e.dtInicio?e.dtInicio.split('-').reverse().join('/'):'—'} → ${e.dtFim?e.dtFim.split('-').reverse().join('/'):'—'}</span>
+        </div>`;
+      }).join('');
+    })()}
   </div>
 
   ${lancsObra.length?`
