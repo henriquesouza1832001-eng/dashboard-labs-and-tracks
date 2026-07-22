@@ -1963,62 +1963,85 @@ function padRenderCal(){
   let funcs=_padFuncs;
   if(filtroFunc) funcs=funcs.filter(f=>f.id===filtroFunc);
   if(filtroTipo) funcs=funcs.filter(f=>f.tipo===filtroTipo);
-
+  if(!funcs.length){ wrap.innerHTML='<div style="padding:24px;color:var(--text-muted);font-size:13px">Nenhum funcionário.</div>'; return; }
   const HINI=6, HFIM=20, SPAN=(HFIM-HINI)*60;
-  const PX_PER_MIN=2;
-  const totalH=SPAN*PX_PER_MIN;
+  const PX_PER_MIN=1.4;
+  const ROW_H=SPAN*PX_PER_MIN;
   const dias=['Seg','Ter','Qua','Qui','Sex','Sáb'];
   const diasKey=['seg','ter','qua','qui','sex','sab'];
-
-  const ticks=[];
-  for(let h=HINI;h<=HFIM;h++){
-    const top=((h-HINI)*60*PX_PER_MIN);
-    ticks.push(`<div class="pad-cal-ruler-tick" style="top:${top}px;height:20px">${h.toString().padStart(2,'0')}:00</div>`);
-    if(h<HFIM){
+  function horaLines(){
+    let h='';
+    for(let i=HINI;i<=HFIM;i++){
+      const t=((i-HINI)*60*PX_PER_MIN);
+      h+=`<div style="position:absolute;left:0;right:0;top:${t}px;border-top:1px solid var(--border);opacity:0.35;pointer-events:none"></div>`;
+      if(i<HFIM) h+=`<div style="position:absolute;left:0;right:0;top:${t+30*PX_PER_MIN}px;border-top:1px dashed var(--border);opacity:0.2;pointer-events:none"></div>`;
     }
+    return h;
   }
-  const colsHtml=diasKey.map((dk,di)=>{
-    const lines=[];
-    for(let h=HINI;h<=HFIM;h++){
-      const top=((h-HINI)*60*PX_PER_MIN);
-      lines.push(`<div class="pad-cal-hour-line" style="top:${top}px"></div>`);
-      if(h<HFIM) lines.push(`<div class="pad-cal-hour-line half" style="top:${top+30*PX_PER_MIN}px"></div>`);
-    }
-    const blocos=funcs.map((f,fi)=>{
-      const cor=PAD_CORES[_padFuncs.indexOf(f)%PAD_CORES.length];
-      const itens=_padItens.filter(i=>i.funcionario_id===f.id&&(i.dia_semana==='todos'||i.dia_semana===dk));
-      return itens.map(it=>{
+  let regua='';
+  for(let i=HINI;i<=HFIM;i++){
+    const t=((i-HINI)*60*PX_PER_MIN);
+    regua+=`<div style="position:absolute;top:${t-6}px;right:6px;font-size:9px;font-family:var(--mono);color:var(--text-muted);line-height:1">${i.toString().padStart(2,'0')}:00</div>`;
+  }
+
+  const linhas = funcs.map(f=>{
+    const cor = PAD_CORES[_padFuncs.indexOf(f)%PAD_CORES.length];
+    const celulas = diasKey.map(dk=>{
+      const itens = _padItens.filter(i=>i.funcionario_id===f.id&&(i.dia_semana==='todos'||i.dia_semana===dk))
+        .sort((a,b)=>{
+          const ta=(a.hora_inicio||'00:00').split(':').map(Number);
+          const tb=(b.hora_inicio||'00:00').split(':').map(Number);
+          return (ta[0]*60+ta[1])-(tb[0]*60+tb[1]);
+        });
+      const blocos = itens.map(it=>{
         const [ih,im]=(it.hora_inicio||'06:00').split(':').map(Number);
         const [fh,fm]=(it.hora_fim||'06:00').split(':').map(Number);
         const top=((ih*60+im)-(HINI*60))*PX_PER_MIN;
-        const height=Math.max(14,(fh*60+fm)-(ih*60+im))*PX_PER_MIN;
-        const nome=(it.ambiente||'').split(' - ').pop();
+        const height=Math.max(10,(fh*60+fm)-(ih*60+im))*PX_PER_MIN;
         const isRev=(it.obs||'').includes('revisão');
-        const total=funcs.length||1;
-        const slotW=Math.floor(100/total);
-        const leftPct=fi*slotW;
-        const rightPct=100-((fi+1)*slotW);
-        return `<div class="pad-cal-bloco-v" style="top:${top}px;height:${height}px;background:${cor};opacity:${isRev?0.6:1};left:${leftPct}%;right:${rightPct}%"
-          title="${f.nome} · ${it.ambiente}\n${it.hora_inicio}–${it.hora_fim}${isRev?' (revisão)':''}">
-          <span class="bloco-hora">${it.hora_inicio}${isRev?' ↩':''}</span>
-          <span class="bloco-nome">${nome}</span>
+        const nome=(it.ambiente||'').split(' - ').pop();
+        return `<div style="position:absolute;left:2px;right:2px;top:${top}px;height:${height}px;background:${cor};opacity:${isRev?0.55:1};border-radius:3px;padding:1px 3px;overflow:hidden;cursor:default;box-shadow:0 1px 2px rgba(0,0,0,0.15)"
+          title="${it.ambiente}\n${it.hora_inicio}–${it.hora_fim}${isRev?' (revisão)':''}">
+          <span style="font-size:8px;font-family:var(--mono);color:rgba(255,255,255,0.85);display:block">${it.hora_inicio}${isRev?' ↩':''}</span>
+          ${height>18?`<span style="font-size:9px;font-weight:600;color:#fff;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</span>`:''}
         </div>`;
       }).join('');
+      return `<td style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;position:relative;height:${ROW_H}px;min-width:120px">
+        ${horaLines()}${blocos}
+      </td>`;
     }).join('');
 
-    return `<div class="pad-cal-day-col" style="height:${totalH}px">${lines.join('')}${blocos}</div>`;
+    return `<tr>
+      <td style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;position:sticky;left:0;z-index:2;background:var(--surface);min-width:44px;width:44px;vertical-align:top">
+        <div style="position:relative;height:${ROW_H}px">${regua}</div>
+      </td>
+      <td style="border-right:2px solid var(--border);border-bottom:1px solid var(--border);padding:8px 10px;white-space:nowrap;position:sticky;left:44px;z-index:2;background:var(--surface);vertical-align:top;min-width:140px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0"></div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${f.nome}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${f.tipo==='civil'?'Civil':'Técnica'}</div>
+          </div>
+        </div>
+      </td>
+      ${celulas}
+    </tr>`;
   }).join('');
 
+  const headerCols = dias.map(d=>`<th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-right:1px solid var(--border);min-width:120px;background:var(--surface2)">${d}</th>`).join('');
+
   wrap.innerHTML=`
-    <div class="pad-cal-wrap-outer">
-      <div class="pad-cal-ruler">
-        <div class="pad-cal-ruler-header"></div>
-        <div class="pad-cal-ruler-body" style="height:${totalH}px;position:relative">${ticks.join('')}</div>
-      </div>
-      <div class="pad-cal-cols">
-        <div class="pad-cal-header-row">${dias.map(d=>`<div class="pad-cal-header-cell">${d}</div>`).join('')}</div>
-        <div class="pad-cal-body">${colsHtml}</div>
-      </div>
+    <div style="overflow:auto;border:1px solid var(--border);border-radius:10px">
+      <table style="border-collapse:collapse;width:100%">
+        <thead>
+          <tr>
+            <th style="background:var(--surface2);border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-width:44px;width:44px"></th>
+            <th style="background:var(--surface2);border-right:2px solid var(--border);border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;position:sticky;left:44px;z-index:3;min-width:140px">Funcionário</th>
+            ${headerCols}
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
     </div>`;
 }
 
