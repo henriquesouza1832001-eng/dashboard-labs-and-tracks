@@ -2767,22 +2767,16 @@ async def save_funcionarios_limpeza(request: Request):
     exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
-    funcs = body.get("funcionarios", [])
-    if not funcs:
-        await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.funcionarios_limpeza")
+    f = body.get("funcionario") or (body.get("funcionarios") or [None])[0]
+    if not f:
         return JSONResponse({"ok": True})
-    selects, params = [], []
-    for f in funcs:
-        selects.append("SELECT ? AS id,? AS nome,? AS tipo,? AS matricula,? AS turno,? AS ativo,? AS atualizado_por")
-        params += [f["id"], f["nome"], f.get("tipo","civil"), f.get("matricula",""), f.get("turno",""), f.get("ativo", True), u]
-    origem = " UNION ALL ".join(selects)
     await arun_exec_retry(f"""
         MERGE INTO {S_CONFORTO}.funcionarios_limpeza AS t
-        USING ({origem}) AS s ON t.id = s.id
+        USING (SELECT ? AS id,? AS nome,? AS tipo,? AS matricula,? AS turno,? AS ativo,? AS atualizado_por) AS s ON t.id = s.id
         WHEN MATCHED THEN UPDATE SET nome=s.nome,tipo=s.tipo,matricula=s.matricula,turno=s.turno,ativo=s.ativo,atualizado_por=s.atualizado_por,atualizado_em=current_timestamp()
         WHEN NOT MATCHED THEN INSERT (id,nome,tipo,matricula,turno,ativo,atualizado_por,atualizado_em)
         VALUES (s.id,s.nome,s.tipo,s.matricula,s.turno,s.ativo,s.atualizado_por,current_timestamp())
-    """, params)
+    """, [f["id"], f["nome"], f.get("tipo","civil"), f.get("matricula",""), f.get("turno",""), bool(f.get("ativo",True)), u])
     return JSONResponse({"ok": True})
 
 @app.delete("/api/conforto/funcionarios-limpeza/{fid}")
@@ -2790,6 +2784,12 @@ async def delete_funcionario_limpeza(fid: str, request: Request):
     exigir_auth(request)
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.funcionarios_limpeza WHERE id=?", [fid])
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.pad WHERE funcionario_id=?", [fid])
+    return JSONResponse({"ok": True})
+
+@app.delete("/api/conforto/pad/{item_id}")
+async def delete_pad_item(item_id: str, request: Request):
+    exigir_auth(request)
+    await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.pad WHERE id=?", [item_id])
     return JSONResponse({"ok": True})
 
 # ── PAD ───────────────────────────────────────────────────────────────
@@ -2808,20 +2808,19 @@ async def save_pad(request: Request):
     exigir_auth(request)
     body = await request.json()
     u = get_usuario(request)
-    func_id = body.get("funcionarioId")
-    itens = body.get("itens", [])
-    if func_id:
-        await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.pad WHERE funcionario_id=?", [func_id])
-    if itens:
-        rows, params = [], []
-        for i, it in enumerate(itens):
-            rows.append("(?,?,?,?,?,?,?,?,?,?)")
-            params += [it["id"], func_id, it.get("ambiente"), it.get("hora_inicio") or it.get("horaInicio"), it.get("hora_fim") or it.get("horaFim"),
-                       it.get("obs",""), it.get("dia_semana","todos") or it.get("diaSemana","todos"), it.get("tipo","civil"), i, u]
-        await arun_exec_retry(f"""
-            INSERT INTO {S_CONFORTO}.pad (id,funcionario_id,ambiente,hora_inicio,hora_fim,obs,dia_semana,tipo,ordem,atualizado_por)
-            VALUES {",".join(rows)}
-        """, params)
+    it = body.get("item")
+    if not it:
+        return JSONResponse({"ok": True})
+    func_id = it.get("funcionario_id")
+    ordem = it.get("ordem", 0)
+    await arun_exec_retry(f"""
+        MERGE INTO {S_CONFORTO}.pad AS t
+        USING (SELECT ? AS id,? AS funcionario_id,? AS ambiente,? AS hora_inicio,? AS hora_fim,? AS obs,? AS dia_semana,? AS tipo,? AS ordem,? AS atualizado_por) AS s ON t.id = s.id
+        WHEN MATCHED THEN UPDATE SET funcionario_id=s.funcionario_id,ambiente=s.ambiente,hora_inicio=s.hora_inicio,hora_fim=s.hora_fim,obs=s.obs,dia_semana=s.dia_semana,tipo=s.tipo,ordem=s.ordem,atualizado_por=s.atualizado_por,atualizado_em=current_timestamp()
+        WHEN NOT MATCHED THEN INSERT (id,funcionario_id,ambiente,hora_inicio,hora_fim,obs,dia_semana,tipo,ordem,atualizado_por,atualizado_em)
+        VALUES (s.id,s.funcionario_id,s.ambiente,s.hora_inicio,s.hora_fim,s.obs,s.dia_semana,s.tipo,s.ordem,s.atualizado_por,current_timestamp())
+    """, [it["id"], func_id, it.get("ambiente"), it.get("hora_inicio"), it.get("hora_fim"),
+          it.get("obs",""), it.get("dia_semana","todos"), it.get("tipo","civil"), ordem, u])
     return JSONResponse({"ok": True})
 
 @app.get("/login")

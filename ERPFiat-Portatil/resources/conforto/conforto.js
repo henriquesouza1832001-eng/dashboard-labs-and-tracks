@@ -2115,10 +2115,9 @@ async function padSalvarItem() {
     _padItens.push(novoItem);
   }
   try {
-    const itensDoFunc = _padItens.filter(i => i.funcionario_id === _padFuncAtivoId);
     await fetch('/api/conforto/pad', {
       method: 'POST', headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
-      body: JSON.stringify({ funcionarioId: _padFuncAtivoId, itens: itensDoFunc })
+      body: JSON.stringify({ item: novoItem })
     });
     fecharModal('modal-pad-item');
     await padCarregar();
@@ -2130,11 +2129,7 @@ async function padExcluirItem(funcId, idx) {
     .sort((a,b) => (a.ordem||0) - (b.ordem||0));
   const it = itensFunc[idx];
   if (!it) return;
-  _padItens = _padItens.filter(i => i.id !== it.id);
-  await fetch('/api/conforto/pad', {
-    method: 'POST', headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
-    body: JSON.stringify({ funcionarioId: funcId, itens: _padItens.filter(i => i.funcionario_id === funcId) })
-  });
+  await fetch(`/api/conforto/pad/${it.id}`, { method: 'DELETE', headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''} });
   await padCarregar();
 }
 
