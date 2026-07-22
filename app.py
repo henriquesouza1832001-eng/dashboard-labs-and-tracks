@@ -2816,8 +2816,8 @@ async def save_pad(request: Request):
         rows, params = [], []
         for i, it in enumerate(itens):
             rows.append("(?,?,?,?,?,?,?,?,?,?)")
-            params += [it["id"], func_id, it.get("ambiente"), it.get("horaInicio"), it.get("horaFim"),
-                       it.get("obs",""), it.get("diaSemana","todos"), it.get("tipo","civil"), i, u]
+            params += [it["id"], func_id, it.get("ambiente"), it.get("hora_inicio") or it.get("horaInicio"), it.get("hora_fim") or it.get("horaFim"),
+                       it.get("obs",""), it.get("dia_semana","todos") or it.get("diaSemana","todos"), it.get("tipo","civil"), i, u]
         await arun_exec_retry(f"""
             INSERT INTO {S_CONFORTO}.pad (id,funcionario_id,ambiente,hora_inicio,hora_fim,obs,dia_semana,tipo,ordem,atualizado_por)
             VALUES {",".join(rows)}

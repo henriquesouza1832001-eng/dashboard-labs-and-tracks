@@ -2054,16 +2054,14 @@ async function padSalvarFunc() {
       body: JSON.stringify({ funcionarios: _padFuncs })
     });
     fecharModal('modal-func-limp');
-    padRenderGrid();
+    await padCarregar();
   } catch(e) { document.getElementById('fl-err').textContent = 'Erro ao salvar'; }
 }
 
 async function padExcluirFunc(id) {
   if (!confirm('Excluir funcionário e todos os ambientes cadastrados?')) return;
   await fetch(`/api/conforto/funcionarios-limpeza/${id}`, { method: 'DELETE', headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''} });
-  _padFuncs = _padFuncs.filter(f => f.id !== id);
-  _padItens = _padItens.filter(i => i.funcionario_id !== id);
-  padRenderGrid();
+  await padCarregar();
 }
 
 function padAbrirItem(funcId) {
@@ -2123,7 +2121,7 @@ async function padSalvarItem() {
       body: JSON.stringify({ funcionarioId: _padFuncAtivoId, itens: itensDoFunc })
     });
     fecharModal('modal-pad-item');
-    padRenderGrid();
+    await padCarregar();
   } catch(e) { document.getElementById('pi-err').textContent = 'Erro ao salvar'; }
 }
 
@@ -2137,7 +2135,7 @@ async function padExcluirItem(funcId, idx) {
     method: 'POST', headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
     body: JSON.stringify({ funcionarioId: funcId, itens: _padItens.filter(i => i.funcionario_id === funcId) })
   });
-  padRenderGrid();
+  await padCarregar();
 }
 
 // Eventos PAD
