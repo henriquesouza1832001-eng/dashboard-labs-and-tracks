@@ -1955,6 +1955,25 @@ function padToggleDetail(id){
   if(!open){ el.classList.add('open'); row?.classList.add('expanded'); }
 }
 
+function padCalPopover(el, pid, ambiente, ini, fim, dur, rev, func){
+  document.querySelectorAll('[id^="pop-"]').forEach(p=>p.style.display='none');
+  const pop = document.getElementById(pid);
+  if(!pop) return;
+  const rect = el.getBoundingClientRect();
+  pop.style.display = 'block';
+  const spaceRight = window.innerWidth - rect.right;
+  if(spaceRight > 260){
+    pop.style.left = (rect.right + 8) + 'px';
+  } else {
+    pop.style.left = (rect.left - 260) + 'px';
+  }
+  pop.style.top = Math.min(rect.top, window.innerHeight - 180) + 'px';
+  setTimeout(()=>{
+    function closeOnOut(e){ if(!pop.contains(e.target) && e.target !== el){ pop.style.display='none'; document.removeEventListener('click', closeOnOut); } }
+    document.addEventListener('click', closeOnOut);
+  }, 10);
+}
+
 function padRenderCal(){
   const wrap=document.getElementById('pad-cal-wrap');
   if(!wrap) return;
@@ -1994,18 +2013,37 @@ function padRenderCal(){
           return (ta[0]*60+ta[1])-(tb[0]*60+tb[1]);
         });
       const blocos = itens.map(it=>{
-        const [ih,im]=(it.hora_inicio||'06:00').split(':').map(Number);
-        const [fh,fm]=(it.hora_fim||'06:00').split(':').map(Number);
-        const top=((ih*60+im)-(HINI*60))*PX_PER_MIN;
-        const height=Math.max(10,(fh*60+fm)-(ih*60+im))*PX_PER_MIN;
-        const isRev=(it.obs||'').includes('revisão');
-        const nome=(it.ambiente||'').split(' - ').pop();
-        return `<div style="position:absolute;left:2px;right:2px;top:${top}px;height:${height}px;background:${cor};opacity:${isRev?0.55:1};border-radius:3px;padding:1px 3px;overflow:hidden;cursor:default;box-shadow:0 1px 2px rgba(0,0,0,0.15)"
-          title="${it.ambiente}\n${it.hora_inicio}–${it.hora_fim}${isRev?' (revisão)':''}">
-          <span style="font-size:8px;font-family:var(--mono);color:rgba(255,255,255,0.85);display:block">${it.hora_inicio}${isRev?' ↩':''}</span>
-          ${height>18?`<span style="font-size:9px;font-weight:600;color:#fff;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</span>`:''}
-        </div>`;
-      }).join('');
+          const [ih,im]=(it.hora_inicio||'06:00').split(':').map(Number);
+          const [fh,fm]=(it.hora_fim||'06:00').split(':').map(Number);
+          const top=((ih*60+im)-(HINI*60))*PX_PER_MIN;
+          const height=Math.max(10,(fh*60+fm)-(ih*60+im))*PX_PER_MIN;
+          const isRev=(it.obs||'').includes('revisão');
+          const dur=Math.max(0,(fh*60+fm)-(ih*60+im));
+          const dh=Math.floor(dur/60).toString().padStart(2,'0');
+          const dm=(dur%60).toString().padStart(2,'0');
+          const pid=`pop-${it.id}-${dk}`;
+          return `
+            <div style="position:absolute;left:2px;right:2px;top:${top}px;height:${height}px;background:${cor};opacity:${isRev?0.55:1};border-radius:4px;padding:2px 4px;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:filter .1s"
+              onmouseenter="this.style.filter='brightness(1.12)'"
+              onmouseleave="this.style.filter=''"
+              onclick="padCalPopover(this,'${pid}','${(it.ambiente||'').replace(/'/g,"\\'")}','${it.hora_inicio}','${it.hora_fim}','${dh}:${dm}','${isRev?'revisão':''}','${f.nome}')">
+              <span style="font-size:8px;font-family:var(--mono);color:rgba(255,255,255,0.9);display:block;font-weight:600">${it.hora_inicio}${isRev?' ↩':''}</span>
+              ${height>22?`<span style="font-size:8px;color:rgba(255,255,255,0.7);display:block;font-family:var(--mono)">${it.hora_fim}</span>`:''}
+            </div>
+            <div id="${pid}" style="display:none;position:fixed;z-index:999;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:14px 16px;min-width:220px;max-width:300px;pointer-events:auto">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="width:10px;height:10px;border-radius:50%;background:${cor};flex-shrink:0;margin-right:8px"></div>
+                <div style="font-size:11px;font-weight:600;color:var(--text-muted);flex:1">${f.nome}</div>
+                <button onclick="event.stopPropagation();document.getElementById('${pid}').style.display='none'" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px">×</button>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3">${it.ambiente||'—'}</div>
+              <div style="display:flex;gap:12px;font-size:11px;font-family:var(--mono);color:var(--text-muted)">
+                <span>🕐 ${it.hora_inicio} – ${it.hora_fim}</span>
+                <span>⏱ ${dh}:${dm}</span>
+              </div>
+              ${isRev?`<div style="margin-top:6px;font-size:10px;color:var(--text-muted);background:var(--surface2);border-radius:4px;padding:3px 6px">↩ revisão</div>`:''}
+            </div>`;
+        }).join('');
       return `<td style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;position:relative;height:${ROW_H}px;min-width:120px">
         ${horaLines()}${blocos}
       </td>`;
