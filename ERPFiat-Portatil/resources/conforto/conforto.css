@@ -23,7 +23,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .save-status.nosave .dot { background: var(--text-muted); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 .file-badge { font-family: var(--mono); font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 3px 10px; color: var(--text-muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#app { display: none; height: calc(100vh - 52px); }
+#app { display: flex; height: calc(100vh - 52px); }
 .layout { display: flex; height: 100%; }
 .sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 .sidebar-section { padding: 16px 12px 8px; }

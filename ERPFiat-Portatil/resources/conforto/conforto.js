@@ -1602,7 +1602,6 @@ async function tentarCarregar(){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('app').style.display = 'block';
   popularSelects();
   gerarOSdasRotinas();
   renderTudo();
