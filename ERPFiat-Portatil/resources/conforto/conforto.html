@@ -113,60 +113,60 @@
       </div>
 
       <!-- PAD -->
-      <DIV CLASS="PANE" ID="PANE-PAD">
-        <DIV CLASS="PANE-HEADER">
-          <DIV><DIV CLASS="PANE-TITLE">PAD — LIMPEZA</DIV><DIV CLASS="PANE-SUB">PROGRAMA DE ATIVIDADES DIÁRIAS, OS CIVIL E TÉCNICA</DIV></DIV>
-          <DIV CLASS="PANE-ACTIONS" ID="PAD-PANE-ACTIONS">
-            <BUTTON CLASS="BTN BTN-PRIMARY BTN-SM" ID="BTN-NOVO-FUNC-LIMP" STYLE="DISPLAY:NONE">
-              <SVG VIEWBOX="0 0 24 24"><LINE X1="12" Y1="5" X2="12" Y2="19"/><LINE X1="5" Y1="12" X2="19" Y2="12"/></SVG>
-              NOVO FUNCIONÁRIO
-            </BUTTON>
-            <BUTTON CLASS="BTN BTN-PRIMARY BTN-SM" ID="BTN-NOVA-OS-CIVIL-PAD" STYLE="DISPLAY:NONE">
-              <SVG VIEWBOX="0 0 24 24"><LINE X1="12" Y1="5" X2="12" Y2="19"/><LINE X1="5" Y1="12" X2="19" Y2="12"/></SVG>
-              NOVA OS
-            </BUTTON>
-          </DIV>
-        </DIV>
-        <DIV CLASS="TAB-BAR">
-          <BUTTON CLASS="TAB-BTN ACTIVE" DATA-TAB="TAB-PAD-FUNC">FUNCIONÁRIOS / PAD</BUTTON>
-          <BUTTON CLASS="TAB-BTN" DATA-TAB="TAB-PAD-CIVIL">OS CIVIL</BUTTON>
-          <BUTTON CLASS="TAB-BTN" DATA-TAB="TAB-PAD-TECNICA">OS TÉCNICA</BUTTON>
-        </DIV>
+      <div class="pane" id="pane-pad">
+        <div class="pane-header">
+          <div><div class="pane-title">PAD — Limpeza</div><div class="pane-sub">Programa de Atividades Diárias, OS Civil e Técnica</div></div>
+          <div class="pane-actions" id="pad-pane-actions">
+            <button class="btn btn-primary btn-sm" id="btn-novo-func-limp" style="display:none">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo Funcionário
+            </button>
+            <button class="btn btn-primary btn-sm" id="btn-nova-os-civil-pad" style="display:none">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova OS
+            </button>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-pad-func">Funcionários / PAD</button>
+          <button class="tab-btn" data-tab="tab-pad-civil">OS Civil</button>
+          <button class="tab-btn" data-tab="tab-pad-tecnica">OS Técnica</button>
+        </div>
 
         <!-- ABA PAD -->
-        <DIV CLASS="TAB-PANE ACTIVE" ID="TAB-PAD-FUNC">
-          <DIV STYLE="DISPLAY:FLEX;GAP:8PX;MARGIN-BOTTOM:16PX;FLEX-WRAP:WRAP">
-            <BUTTON CLASS="BTN BTN-SECONDARY BTN-SM PAD-FILTRO-TIPO ACTIVE" DATA-TIPO="">TODOS</BUTTON>
-            <BUTTON CLASS="BTN BTN-SECONDARY BTN-SM PAD-FILTRO-TIPO" DATA-TIPO="CIVIL">CIVIL</BUTTON>
-            <BUTTON CLASS="BTN BTN-SECONDARY BTN-SM PAD-FILTRO-TIPO" DATA-TIPO="TECNICA">TÉCNICA</BUTTON>
-          </DIV>
-          <DIV ID="PAD-GRID" STYLE="DISPLAY:GRID;GRID-TEMPLATE-COLUMNS:REPEAT(AUTO-FILL,MINMAX(320PX,1FR));GAP:14PX"></DIV>
-        </DIV>
+        <div class="tab-pane active" id="tab-pad-func">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm pad-filtro-tipo active" data-tipo="">Todos</button>
+            <button class="btn btn-secondary btn-sm pad-filtro-tipo" data-tipo="civil">Civil</button>
+            <button class="btn btn-secondary btn-sm pad-filtro-tipo" data-tipo="tecnica">Técnica</button>
+          </div>
+          <div id="pad-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px"></div>
+        </div>
 
         <!-- ABA OS CIVIL -->
-        <DIV CLASS="TAB-PANE" ID="TAB-PAD-CIVIL">
-          <DIV CLASS="TABLE-WRAP">
-            <DIV CLASS="TABLE-TOOLBAR">
-              <DIV CLASS="SEARCH-BOX"><SVG VIEWBOX="0 0 24 24"><CIRCLE CX="11" CY="11" R="8"/><LINE X1="21" Y1="21" X2="16.65" Y2="16.65"/></SVG><INPUT TYPE="TEXT" ID="CIVIL-SEARCH" PLACEHOLDER="BUSCAR OS…"></DIV>
-              <SELECT CLASS="FILTER-SEL" ID="CIVIL-FILTRO-STATUS"><OPTION VALUE="">TODOS OS STATUS</OPTION><OPTION>PROGRAMADA</OPTION><OPTION>EM EXECUÇÃO</OPTION><OPTION>CONCLUÍDA</OPTION><OPTION>CANCELADA</OPTION></SELECT>
-              <SELECT CLASS="FILTER-SEL" ID="CIVIL-FILTRO-AREA"><OPTION VALUE="">TODAS AS ÁREAS</OPTION></SELECT>
-            </DIV>
-            <TABLE><THEAD><TR><TH>OS#</TH><TH>ÁREA</TH><TH>RESPONSÁVEL</TH><TH>PREVISTA</TH><TH>REALIZADA</TH><TH>STATUS</TH><TH>OBSERVAÇÃO</TH><TH>AÇÕES</TH></TR></THEAD><TBODY ID="CIVIL-OS-TBODY"></TBODY></TABLE>
-          </DIV>
-        </DIV>
+        <div class="tab-pane" id="tab-pad-civil">
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="civil-search" placeholder="Buscar OS…"></div>
+              <select class="filter-sel" id="civil-filtro-status"><option value="">Todos os Status</option><option>Programada</option><option>Em Execução</option><option>Concluída</option><option>Cancelada</option></select>
+              <select class="filter-sel" id="civil-filtro-area"><option value="">Todas as Áreas</option></select>
+            </div>
+            <table><thead><tr><th>OS#</th><th>Área</th><th>Responsável</th><th>Prevista</th><th>Realizada</th><th>Status</th><th>Observação</th><th>Ações</th></tr></thead><tbody id="civil-os-tbody"></tbody></table>
+          </div>
+        </div>
 
         <!-- ABA OS TÉCNICA -->
-        <DIV CLASS="TAB-PANE" ID="TAB-PAD-TECNICA">
-          <DIV CLASS="TABLE-WRAP">
-            <DIV CLASS="TABLE-TOOLBAR">
-              <DIV CLASS="SEARCH-BOX"><SVG VIEWBOX="0 0 24 24"><CIRCLE CX="11" CY="11" R="8"/><LINE X1="21" Y1="21" X2="16.65" Y2="16.65"/></SVG><INPUT TYPE="TEXT" ID="TEC-SEARCH" PLACEHOLDER="BUSCAR OS…"></DIV>
-              <SELECT CLASS="FILTER-SEL" ID="TEC-FILTRO-STATUS"><OPTION VALUE="">TODOS OS STATUS</OPTION><OPTION>PROGRAMADA</OPTION><OPTION>EM EXECUÇÃO</OPTION><OPTION>CONCLUÍDA</OPTION><OPTION>CANCELADA</OPTION></SELECT>
-              <SELECT CLASS="FILTER-SEL" ID="TEC-FILTRO-AREA"><OPTION VALUE="">TODAS AS ÁREAS</OPTION></SELECT>
-            </DIV>
-            <TABLE><THEAD><TR><TH>OS#</TH><TH>ÁREA</TH><TH>RESPONSÁVEL</TH><TH>PREVISTA</TH><TH>REALIZADA</TH><TH>STATUS</TH><TH>OBSERVAÇÃO</TH><TH>AÇÕES</TH></TR></THEAD><TBODY ID="TEC-OS-TBODY"></TBODY></TABLE>
-          </DIV>
-        </DIV>
-      </DIV>
+        <div class="tab-pane" id="tab-pad-tecnica">
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="tec-search" placeholder="Buscar OS…"></div>
+              <select class="filter-sel" id="tec-filtro-status"><option value="">Todos os Status</option><option>Programada</option><option>Em Execução</option><option>Concluída</option><option>Cancelada</option></select>
+              <select class="filter-sel" id="tec-filtro-area"><option value="">Todas as Áreas</option></select>
+            </div>
+            <table><thead><tr><th>OS#</th><th>Área</th><th>Responsável</th><th>Prevista</th><th>Realizada</th><th>Status</th><th>Observação</th><th>Ações</th></tr></thead><tbody id="tec-os-tbody"></tbody></table>
+          </div>
+        </div>
+      </div>
 
       <!-- AR-CONDICIONADO -->
       <div class="pane" id="pane-ar-condicionado">
