@@ -2051,7 +2051,7 @@ async function padSalvarFunc() {
   try {
     await fetch('/api/conforto/funcionarios-limpeza', {
       method: 'POST', headers: {'Content-Type':'application/json','X-Ctrl-Token': localStorage.getItem('ctrl-token')||''},
-      body: JSON.stringify({ funcionarios: _padFuncs })
+      body: JSON.stringify({ funcionario: obj })
     });
     fecharModal('modal-func-limp');
     await padCarregar();
