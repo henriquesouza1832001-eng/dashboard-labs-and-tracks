@@ -1994,59 +1994,16 @@ function padRenderCal(){
                   const tb=(b.hora_inicio||'00:00').split(':').map(Number);
                   return (ta[0]*60+ta[1])-(tb[0]*60+tb[1]);
                 });
-              return
-    const itens = _padItens.filter(i => i.funcionario_id === f.id)
-      .sort((a,b) => (a.ordem||0) - (b.ordem||0));
-    const totalMin = itens.reduce((s,i) => {
-      const [ih,im] = (i.hora_inicio||'00:00').split(':').map(Number);
-      const [fh,fm] = (i.hora_fim||'00:00').split(':').map(Number);
-      return s + Math.max(0, (fh*60+fm) - (ih*60+im));
-    }, 0);
-    const hh = Math.floor(totalMin/60).toString().padStart(2,'0');
-    const mm = (totalMin%60).toString().padStart(2,'0');
-    return `
-    <div class="modulo-section" style="margin:0">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div>
-          <div style="font-weight:600;font-size:13px">${f.nome}</div>
-          <div style="font-size:11px;color:var(--text2)">${f.tipo==='civil'?'Limpeza Civil':'Limpeza Técnica'} · ${f.turno||''} · ${f.matricula||''}</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span style="font-size:10px;font-family:var(--mono);color:var(--text2)">${hh}:${mm}h/dia</span>
-          <button class="btn btn-secondary btn-sm" onclick="padAbrirItem('${f.id}')">+ Ambiente</button>
-          <button class="btn btn-secondary btn-sm" onclick="padEditarFunc('${f.id}')">✎</button>
-          <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="padExcluirFunc('${f.id}')">✕</button>
-        </div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:11px">
-        <thead><tr style="border-bottom:1px solid var(--border)">
-          <th style="text-align:left;padding:4px 6px;color:var(--text2);font-weight:600">#</th>
-          <th style="text-align:left;padding:4px 6px;color:var(--text2);font-weight:600">AMBIENTE</th>
-          <th style="text-align:center;padding:4px 6px;color:var(--text2);font-weight:600">HORÁRIO</th>
-          <th style="text-align:center;padding:4px 6px;color:var(--text2);font-weight:600">TEMPO</th>
-          <th style="padding:4px 6px"></th>
-        </tr></thead>
-        <tbody>${itens.map((it,idx) => {
-          const [ih,im] = (it.hora_inicio||'00:00').split(':').map(Number);
-          const [fh,fm] = (it.hora_fim||'00:00').split(':').map(Number);
-          const dur = Math.max(0,(fh*60+fm)-(ih*60+im));
-          const dh = Math.floor(dur/60).toString().padStart(2,'0');
-          const dm = (dur%60).toString().padStart(2,'0');
-          return `<tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:5px 6px;color:var(--text2)">${idx+1}</td>
-            <td style="padding:5px 6px;font-weight:500">${it.ambiente||'—'}${it.obs?`<div style="font-size:10px;color:var(--text2)">${it.obs}</div>`:''}</td>
-            <td style="padding:5px 6px;text-align:center;font-family:var(--mono)">${it.hora_inicio||'—'} – ${it.hora_fim||'—'}</td>
-            <td style="padding:5px 6px;text-align:center;font-family:var(--mono)">${dh}:${dm}</td>
-            <td style="padding:5px 6px;text-align:right">
-              <button class="btn btn-secondary btn-sm" onclick="padEditarItem('${f.id}',${idx})" style="padding:2px 6px">✎</button>
-              <button class="btn btn-secondary btn-sm" onclick="padExcluirItem('${f.id}',${idx})" style="padding:2px 6px;color:var(--danger)">✕</button>
-            </td>
-          </tr>`;
-        }).join('')}
-        ${!itens.length?'<tr><td colspan="5" style="padding:10px 6px;color:var(--text2);text-align:center">Nenhum ambiente cadastrado</td></tr>':''}</tbody>
-      </table>
+              return `<div class="pad-cal-day-cell">
+                ${dayItens.map(it=>`
+                  <div class="pad-cal-bloco" style="background:${cor}" title="${it.ambiente}&#10;${it.hora_inicio}–${it.hora_fim}">
+                    ${it.hora_inicio} ${(it.ambiente||'').split(' - ').pop()}
+                  </div>`).join('')}
+              </div>`;
+            }).join('')}
+          </div>`;
+      }).join('')}
     </div>`;
-  }).join('');
 }
 
 function padAbrirNovoFunc() {
