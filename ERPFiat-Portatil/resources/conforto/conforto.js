@@ -1841,6 +1841,8 @@ async function padCarregar() {
       fetch('/api/conforto/funcionarios-limpeza', {headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''}}),
       fetch('/api/conforto/pad', {headers: {'X-Ctrl-Token': localStorage.getItem('ctrl-token')||''}})
     ]);
+    if(!rf.ok || !rp.ok){ console.error('PAD: erro na API', rf.status, rp.status); return; }
+    if(!rf.ok || !rp.ok){ console.error('PAD: erro na API', rf.status, rp.status); return; }
     _padFuncs = await rf.json();
     _padItens = await rp.json();
     padRenderGrid();
