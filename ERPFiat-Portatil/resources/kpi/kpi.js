@@ -877,7 +877,6 @@ function buildOverlayTotal(d){
   const {header}=_obOvBase(d,'total');
   return header+`
   <div style="display:flex;gap:10px;margin-bottom:14px">
-    <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
       <div class="ob-ov-ctit">Faturado por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
@@ -910,7 +909,6 @@ function buildOverlayConcluidas(d){
     <div id="obs-concluidas-lista"></div>
   </div>
   <div style="display:flex;gap:10px;margin-bottom:14px">
-    <div class="ob-ov-cbox" style="width:240px;flex-shrink:0" id="bullet-ov-wrap"></div>
     <div class="ob-ov-cbox" style="flex:1;min-width:0">
       <div class="ob-ov-ctit">Faturado por Categoria</div>
       <canvas id="cv-ov-barras" width="400" height="220" style="width:100%;height:220px;display:block"></canvas>
@@ -1522,23 +1520,52 @@ function abrirDetalheObra(cod){
     ${(()=>{
       if(!etapas.length) return '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Nenhuma etapa cadastrada no cronograma.</div>';
       const etOrdenadas = etapas.slice().sort((a,b2)=>(a.dtInicio||'9999').localeCompare(b2.dtInicio||'9999'));
-      return etOrdenadas.map(e=>{
+      return etOrdenadas.map((e,ei)=>{
         const af=afEtapa(e);
         const corAf=af>=100?'#3fb950':af>0?'#e3711a':'#8a9abf';
         const statusEt=af>=100?'Concluída':af>0?'Em andamento':'Pendente';
         const corSt=af>=100?'#3fb950':af>0?'#e3711a':'#8a9abf';
-        return`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${e.nome||'—'}</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <div style="flex:1;height:4px;background:#e8edf5;border-radius:2px;overflow:hidden">
-                <div style="height:100%;width:${Math.min(af,100)}%;background:${corAf};border-radius:2px"></div>
+        const subs=e.subtarefas||[];
+        const subsHtml=subs.map(s=>{
+          const itens=s.itens||[];
+          const itensHtml=itens.length?itens.map(it=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0 4px 16px;border-bottom:1px solid var(--border)">
+              <div style="width:12px;height:12px;border-radius:3px;border:1.5px solid ${it.concluido?'#3fb950':'var(--border)'};background:${it.concluido?'#3fb950':'transparent'};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+                ${it.concluido?'<svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}
               </div>
-              <span style="font-size:10px;font-family:var(--mono);color:${corAf};min-width:32px">${af.toFixed(0)}%</span>
+              <span style="font-size:11px;color:${it.concluido?'var(--text-dim)':'var(--text)'};text-decoration:${it.concluido?'line-through':'none'};flex:1">${it.texto||'—'}</span>
+              ${it.dtFim?`<span style="font-size:10px;font-family:var(--mono);color:var(--text-muted)">${it.dtFim.split('-').reverse().join('/')}</span>`:''}
+            </div>`).join(''):'';
+          const afSub=s.avancoFisico||0;
+          const corSub=afSub>=100?'#3fb950':afSub>0?'#e3711a':'#8a9abf';
+          return`<div style="margin-left:12px;border-left:2px solid var(--border);padding-left:10px;margin-top:6px">
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+              <span style="font-size:11px;font-weight:600;color:var(--text);flex:1">${s.nome||'—'}</span>
+              <div style="width:80px;height:3px;background:#e8edf5;border-radius:2px;overflow:hidden;flex-shrink:0">
+                <div style="height:100%;width:${Math.min(afSub,100)}%;background:${corSub};border-radius:2px"></div>
+              </div>
+              <span style="font-size:10px;font-family:var(--mono);color:${corSub};min-width:28px;text-align:right">${afSub.toFixed(0)}%</span>
             </div>
+            ${itensHtml}
+          </div>`;
+        }).join('');
+        const idEt=`et-det-${ei}-${cod}`;
+        return`<div style="border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;cursor:pointer" onclick="const el=document.getElementById('${idEt}');el.style.display=el.style.display==='none'?'block':'none'">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${e.nome||'—'}</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <div style="flex:1;height:4px;background:#e8edf5;border-radius:2px;overflow:hidden">
+                  <div style="height:100%;width:${Math.min(af,100)}%;background:${corAf};border-radius:2px"></div>
+                </div>
+                <span style="font-size:10px;font-family:var(--mono);color:${corAf};min-width:32px">${af.toFixed(0)}%</span>
+              </div>
+            </div>
+            <span style="font-size:10px;color:${corSt};font-weight:600;white-space:nowrap">${statusEt}</span>
+            <span style="font-size:10px;font-family:var(--mono);color:var(--text-muted);white-space:nowrap">${e.dtInicio?e.dtInicio.split('-').reverse().join('/'):'—'} → ${e.dtFim?e.dtFim.split('-').reverse().join('/'):'—'}</span>
+            <span style="font-size:10px;color:var(--text-dim)">${subs.length?'▼':''}</span>
           </div>
-          <span style="font-size:10px;color:${corSt};font-weight:600;white-space:nowrap">${statusEt}</span>
-          <span style="font-size:10px;font-family:var(--mono);color:var(--text-muted);white-space:nowrap">${e.dtInicio?e.dtInicio.split('-').reverse().join('/'):'—'} → ${e.dtFim?e.dtFim.split('-').reverse().join('/'):'—'}</span>
+          <div id="${idEt}" style="display:none;padding-bottom:8px">${subsHtml||'<div style="font-size:11px;color:var(--text-muted);padding:6px 0 4px">Sem sub-tarefas cadastradas.</div>'}</div>
         </div>`;
       }).join('');
     })()}
