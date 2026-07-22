@@ -1846,6 +1846,7 @@ async function padCarregar() {
     _padFuncs = await rf.json();
     _padItens = await rp.json();
     padRenderGrid();
+    padPopularFiltroGalpao();
   } catch(e) { console.error('PAD carregar:', e); }
 }
 
@@ -1953,6 +1954,104 @@ function padToggleDetail(id){
   document.querySelectorAll('.pad-func-detail').forEach(d=>d.classList.remove('open'));
   document.querySelectorAll('.pad-func-row').forEach(r=>r.classList.remove('expanded'));
   if(!open){ el.classList.add('open'); row?.classList.add('expanded'); }
+}
+
+function padExtrairGalpao(ambiente){
+  const sala = (ambiente||'').match(/\b(\d{2,})\.(\d+[A-Za-z]?)\b/);
+  if(sala) return 'G.' + sala[1];
+  const gexp = (ambiente||'').match(/G\.?\s*(\d{2,})/i);
+  if(gexp) return 'G.' + gexp[1];
+  return 'Outros';
+}
+
+function padPopularFiltroGalpao(){
+  const sel = document.getElementById('cal-filtro-galpao');
+  if(!sel) return;
+  const galpoes = new Set();
+  _padItens.forEach(it => galpoes.add(padExtrairGalpao(it.ambiente)));
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todos os galpões</option>' +
+    [...galpoes].sort().map(g=>`<option value="${g}">${g}</option>`).join('');
+  sel.value = cur;
+}
+
+function padRenderRota(){
+  const wrap = document.getElementById('pad-cal-wrap');
+  if(!wrap) return;
+  const filtroFunc = document.getElementById('cal-filtro-func')?.value||'';
+  const filtroTipo = document.getElementById('cal-filtro-tipo')?.value||'';
+  const filtroGalpao = document.getElementById('cal-filtro-galpao')?.value||'';
+
+  let funcs = _padFuncs;
+  if(filtroFunc) funcs = funcs.filter(f=>f.id===filtroFunc);
+  if(filtroTipo) funcs = funcs.filter(f=>f.tipo===filtroTipo);
+
+  const porGalpao = {};
+  funcs.forEach(f=>{
+    const itens = _padItens.filter(i=>i.funcionario_id===f.id);
+    itens.forEach(it=>{
+      const g = padExtrairGalpao(it.ambiente);
+      if(filtroGalpao && g !== filtroGalpao) return;
+      if(!porGalpao[g]) porGalpao[g] = {};
+      if(!porGalpao[g][f.id]) porGalpao[g][f.id] = {func:f, itens:[]};
+      porGalpao[g][f.id].itens.push(it);
+    });
+  });
+
+  if(!Object.keys(porGalpao).length){
+    wrap.innerHTML='<div style="padding:24px;color:var(--text-muted);font-size:13px">Nenhum ambiente encontrado.</div>';
+    return;
+  }
+
+  const html = Object.entries(porGalpao).sort(([a],[b])=>a.localeCompare(b)).map(([galpao, funcMap])=>{
+    const totalItens = Object.values(funcMap).reduce((s,v)=>s+v.itens.length,0);
+    const totalFuncs = Object.keys(funcMap).length;
+
+    const funcRows = Object.values(funcMap).map(({func:f, itens})=>{
+      const cor = PAD_CORES[_padFuncs.indexOf(f)%PAD_CORES.length];
+      const sorted = itens.slice().sort((a,b)=>{
+        const ta=(a.hora_inicio||'00:00').split(':').map(Number);
+        const tb=(b.hora_inicio||'00:00').split(':').map(Number);
+        return (ta[0]*60+ta[1])-(tb[0]*60+tb[1]);
+      });
+      const itemHtml = sorted.map((it,idx)=>{
+        const [ih,im]=(it.hora_inicio||'00:00').split(':').map(Number);
+        const [fh,fm]=(it.hora_fim||'00:00').split(':').map(Number);
+        const dur=Math.max(0,(fh*60+fm)-(ih*60+im));
+        const dh=Math.floor(dur/60).toString().padStart(2,'0');
+        const dm=(dur%60).toString().padStart(2,'0');
+        const isRev=(it.obs||'').includes('revisão');
+        const nome=(it.ambiente||'').split(' - ').pop();
+        return `
+          ${idx>0?'<span class="pad-rota-seta">→</span>':''}
+          <div class="pad-rota-item" style="border-left:3px solid ${cor};opacity:${isRev?0.65:1}" title="${it.ambiente}">
+            <span class="pad-rota-item-hora">${it.hora_inicio}–${it.hora_fim}</span>
+            <span class="pad-rota-item-nome">${nome}${isRev?' ↩':''}</span>
+            <span class="pad-rota-item-dur">${dh}:${dm}</span>
+          </div>`;
+      }).join('');
+
+      return `<div class="pad-rota-func-row">
+        <div class="pad-rota-func-header">
+          <div style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0"></div>
+          <span class="pad-rota-func-nome">${f.nome}</span>
+          <span style="font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-left:4px">${sorted.length} local${sorted.length>1?'is':''}</span>
+        </div>
+        <div class="pad-rota-items">${itemHtml}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="pad-rota-galpao">
+      <div class="pad-rota-galpao-header">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span class="pad-rota-galpao-titulo">${galpao}</span>
+        <span class="pad-rota-galpao-meta">${totalFuncs} funcionário${totalFuncs>1?'s':''} · ${totalItens} ambiente${totalItens>1?'s':''}</span>
+      </div>
+      ${funcRows}
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML = `<div style="padding:4px 0">${html}</div>`;
 }
 
 function padCalPopover(el, pid, ambiente, ini, fim, dur, rev, func){
@@ -2211,8 +2310,21 @@ async function padExcluirItem(funcId, idx) {
 // Eventos PAD
 document.getElementById('btn-novo-func-limp')?.addEventListener('click', padAbrirNovoFunc);
 document.getElementById('btn-nova-os-civil-pad')?.addEventListener('click', () => abrirModalOS(state.abaTipoOS));
-document.getElementById('cal-filtro-func')?.addEventListener('change', padRenderCal);
-document.getElementById('cal-filtro-tipo')?.addEventListener('change', padRenderCal);
+document.getElementById('cal-filtro-func')?.addEventListener('change', ()=>padDispatchVista());
+document.getElementById('cal-filtro-tipo')?.addEventListener('change', ()=>padDispatchVista());
+document.getElementById('cal-filtro-galpao')?.addEventListener('change', ()=>padDispatchVista());
+document.querySelectorAll('.pad-vista-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.pad-vista-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    padDispatchVista();
+  });
+});
+function padDispatchVista(){
+  const vista = document.querySelector('.pad-vista-btn.active')?.dataset.vista||'calendario';
+  if(vista==='rota') padRenderRota();
+  else padRenderCal();
+}
 document.getElementById('btn-salvar-func-limp')?.addEventListener('click', padSalvarFunc);
 document.getElementById('modal-func-limp-close')?.addEventListener('click', () => fecharModal('modal-func-limp'));
 document.getElementById('modal-func-limp-cancel')?.addEventListener('click', () => fecharModal('modal-func-limp'));

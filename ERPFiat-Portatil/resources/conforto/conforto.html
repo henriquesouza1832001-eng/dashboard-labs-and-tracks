@@ -149,8 +149,13 @@
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
             <select class="filter-sel" id="cal-filtro-func" style="min-width:200px"><option value="">Todos os funcionários</option></select>
             <select class="filter-sel" id="cal-filtro-tipo"><option value="">Civil + Técnica</option><option value="civil">Civil</option><option value="tecnica">Técnica</option></select>
+            <select class="filter-sel" id="cal-filtro-galpao" style="min-width:160px"><option value="">Todos os galpões</option></select>
+            <div style="margin-left:auto;display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:3px">
+              <button class="btn btn-sm pad-vista-btn active" data-vista="calendario" style="padding:5px 12px;font-size:12px">📅 Calendário</button>
+              <button class="btn btn-sm pad-vista-btn" data-vista="rota" style="padding:5px 12px;font-size:12px">🗺 Rota por Galpão</button>
+            </div>
           </div>
-          <div id="pad-cal-wrap"></div>
+          <div id="pad-cal-wrap" style="flex:1;min-height:0;overflow:auto"></div>
         </div>
 
         <!-- ABA OS CIVIL -->
