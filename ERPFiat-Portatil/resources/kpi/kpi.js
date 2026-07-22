@@ -329,7 +329,7 @@ painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:
     <button onclick="alternarModulo('${id}')" style="font-size:10px;color:var(--text-muted);cursor:pointer;padding:4px 12px;border:1px solid var(--border);border-radius:5px;background:var(--surface);font-family:var(--font);transition:all .12s" onmouseover="this.style.color='var(--blue-light)';this.style.borderColor='var(--blue-light)'" onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'">✕ fechar</button>`;
   painel.appendChild(header);
   const conteudo=document.createElement('div');
-  conteudo.style.cssText='flex:1;min-height:0';
+  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column';
   painel.appendChild(conteudo);
   mainScroll.appendChild(painel);
   const d=lerCache(CACHES[id]);
@@ -364,7 +364,7 @@ function abrirModuloComDrill(modulo,tipo){
       <button onclick="alternarModulo('${modulo}')" style="font-size:10px;color:var(--text-muted);cursor:pointer;padding:4px 12px;border:1px solid var(--border);border-radius:5px;background:var(--surface);font-family:var(--font)">✕ fechar</button>`;
     painel.appendChild(header);
     const conteudo=document.createElement('div');
-    conteudo.style.cssText='flex:1;min-height:0';
+    conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column';
     painel.appendChild(conteudo);
     mainScroll.appendChild(painel);
     const d=lerCache(CACHES[modulo]);
@@ -858,7 +858,7 @@ function _obOvBase(d,tipo){
     <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">avanço físico médio</div><div class="ob-ov-kpi-val ${avgFis>70?'c-verde':avgFis>40?'c-amarelo':'c-laranja'}">${fmt(avgFis,1)}%</div></div>
     `:''}
   </div>
-  <div class="ob-ov-tbox" style="margin-bottom:16px">
+  <div class="ob-ov-tbox" style="margin-bottom:16px;flex:1;min-height:0">
     <div class="ob-ov-ctit" style="margin-bottom:8px">Detalhamento das ${lista.length} obra(s)</div>
     <table class="ob-ov-table">
       <thead><tr><th>Obra</th><th>Status</th>${tipo!=='concluidas'?'<th>% Físico</th>':''}<th>% Financeiro</th><th>A Faturar</th><th>Prazo</th><th></th></tr></thead>
@@ -2054,7 +2054,7 @@ function voltarParaLista(){
   if(!conteudo||!_obrasData)return;
   const tipo=_drillOb||'total';
   conteudo.innerHTML='';
-  conteudo.style.cssText='flex:1;min-height:0';
+  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column';
   const overlay=document.createElement('div');
   overlay.className='ob-overlay';
   overlay.id='ob-overlay';
