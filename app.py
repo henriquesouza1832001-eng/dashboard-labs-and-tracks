@@ -2900,6 +2900,30 @@ async def _startup_capex():
     except Exception as e:
         print(f"[startup][capex] schema: {e}")
     """Chamado dentro de _prefetch_body() no startup do app."""
+    for ddl in [
+        f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.plantas (
+            id STRING, nome STRING, ativo BOOLEAN,
+            criado_em TIMESTAMP, atualizado_em TIMESTAMP)""",
+        f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.projetos (
+            id STRING, planta_id STRING, titulo STRING, descricao STRING,
+            ano_orcamento INT, categoria STRING, responsavel STRING, status STRING,
+            valor_solicitado DOUBLE, valor_aprovado DOUBLE, moeda STRING,
+            prioridade STRING, justificativa STRING, retorno_previsto STRING,
+            obs STRING, criado_em TIMESTAMP, atualizado_em TIMESTAMP, atualizado_por STRING)""",
+        f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.itens (
+            id STRING, projeto_id STRING, descricao STRING, categoria STRING,
+            fornecedor STRING, quantidade DOUBLE, unidade STRING,
+            preco_unitario DOUBLE, total DOUBLE, moeda STRING,
+            ordem INT, obs STRING, atualizado_em TIMESTAMP, atualizado_por STRING)""",
+        f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.arquivos (
+            id STRING, projeto_id STRING, nome STRING, tipo STRING,
+            tamanho_bytes LONG, conteudo_blob STRING, extraido_json STRING,
+            atualizado_em TIMESTAMP, atualizado_por STRING)""",
+    ]:
+        try:
+            await arun_exec_retry(ddl)
+        except Exception as e:
+            print(f"[startup][capex] ddl erro: {e}")
     await arun_exec_retry(f"""
         CREATE TABLE IF NOT EXISTS {S_CAPEX}.plantas (
             id     STRING,
@@ -2909,75 +2933,6 @@ async def _startup_capex():
             atualizado_em TIMESTAMP
         )
     """)
-    try:
-        existe = await arun_query(f"SELECT id FROM {S_CAPEX}.plantas LIMIT 1")
-        if not existe:
-            selects, params = [], []
-            for p in PLANTAS_PADRAO:
-                pid = p.lower().replace(" ", "_").replace("-", "_")
-                selects.append("SELECT ? AS id, ? AS nome, true AS ativo")
-                params += [pid, p]
-            origem = " UNION ALL ".join(selects)
-            await arun_exec_retry(f"""
-                INSERT INTO {S_CAPEX}.plantas (id, nome, ativo, criado_em, atualizado_em)
-                SELECT id, nome, ativo, current_timestamp(), current_timestamp() FROM ({origem})
-            """, params)
-    except Exception as e:
-        print(f"[startup][capex] plantas seed: {e}")
-    await arun_exec_retry(f"""
-        CREATE TABLE IF NOT EXISTS {S_CAPEX}.projetos (
-            id              STRING,
-            planta_id       STRING,
-            titulo          STRING,
-            descricao       STRING,
-            ano_orcamento   INT,
-            categoria       STRING,
-            responsavel     STRING,
-            status          STRING,
-            valor_solicitado DOUBLE,
-            valor_aprovado  DOUBLE,
-            moeda           STRING,
-            prioridade      STRING,
-            justificativa   STRING,
-            retorno_previsto STRING,
-            obs             STRING,
-            criado_em       TIMESTAMP,
-            atualizado_em   TIMESTAMP,
-            atualizado_por  STRING
-        )
-    """)
-    await arun_exec_retry(f"""
-        CREATE TABLE IF NOT EXISTS {S_CAPEX}.itens (
-            id              STRING,
-            projeto_id      STRING,
-            descricao       STRING,
-            categoria       STRING,
-            fornecedor      STRING,
-            quantidade      DOUBLE,
-            unidade         STRING,
-            preco_unitario  DOUBLE,
-            total           DOUBLE,
-            moeda           STRING,
-            ordem           INT,
-            obs             STRING,
-            atualizado_em   TIMESTAMP,
-            atualizado_por  STRING
-        )
-    """)
-    await arun_exec_retry(f"""
-        CREATE TABLE IF NOT EXISTS {S_CAPEX}.arquivos (
-            id              STRING,
-            projeto_id      STRING,
-            nome            STRING,
-            tipo            STRING,
-            tamanho_bytes   LONG,
-            conteudo_blob   STRING,
-            extraido_json   STRING,
-            atualizado_em   TIMESTAMP,
-            atualizado_por  STRING
-        )
-    """)
-
     print("[startup][capex] tabelas ok")
 
 
