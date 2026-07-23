@@ -203,6 +203,7 @@ function updateDashboard(){
   document.getElementById('m-pontos').textContent=state.pontos.length;
   document.getElementById('m-restritos').textContent=state.pontos.filter(p=>p.tipo==='Restrito').length;
   atualizarDashboardSolicitacoes();
+  renderTopPontos();
 }
 
 function atualizarDashboardSolicitacoes(){
@@ -264,6 +265,21 @@ function renderPessoas(filtroTxt='',filtroStatus=''){
 document.getElementById('busca-pessoas').addEventListener('input',()=>renderPessoas(document.getElementById('busca-pessoas').value,document.getElementById('filtro-status-pessoa').value));
 document.getElementById('filtro-status-pessoa').addEventListener('change',()=>renderPessoas(document.getElementById('busca-pessoas').value,document.getElementById('filtro-status-pessoa').value));
 
+function popularPontosModal(acesso=null){
+  const pub = acesso?.pub||[];
+  const priv = acesso?.priv||[];
+  const ponPub = state.pontos.filter(p=>p.tipo!=='Restrito');
+  const ponPriv = state.pontos.filter(p=>p.tipo==='Restrito');
+  document.getElementById('p-pontos-pub').innerHTML = ponPub.length
+    ? ponPub.map(p=>`<label class="check-item"><input type="checkbox" class="p-pub-chk" value="${p.nome}" ${pub.includes(p.nome)?'checked':''}>${p.nome}</label>`).join('')
+    : '<span style="color:var(--text2);font-size:12px">Nenhum ponto público.</span>';
+  document.getElementById('p-pontos-priv').innerHTML = ponPriv.length
+    ? ponPriv.map(p=>`<label class="check-item restrito"><input type="checkbox" class="p-priv-chk" value="${p.nome}" ${priv.includes(p.nome)?'checked':''}>🔒 ${p.nome}</label>`).join('')
+    : '<span style="color:var(--text2);font-size:12px">Nenhum ponto restrito.</span>';
+  document.getElementById('p-pontos-pub-wrap').style.display = pub.length ? 'block' : 'none';
+  document.getElementById('p-pontos-priv-wrap').style.display = priv.length ? 'block' : 'none';
+}
+
 document.getElementById('btn-nova-pessoa').addEventListener('click',()=>{
   editCtx={tipo:'pessoa',idx:-1};
   document.getElementById('modal-pessoa-title').textContent='Novo cadastro';
@@ -271,6 +287,7 @@ document.getElementById('btn-nova-pessoa').addEventListener('click',()=>{
   document.getElementById('p-status').value='Ativo';
   document.getElementById('p-err').textContent='';
   document.getElementById('p-id').removeAttribute('readonly');
+  popularPontosModal();
   abrirModal('modal-pessoa');
 });
 window.editarPessoa=function(i){
@@ -280,7 +297,10 @@ window.editarPessoa=function(i){
   document.getElementById('p-nome').value=p.nome; document.getElementById('p-cargo').value=p.cargo||'';
   document.getElementById('p-setor').value=p.setor||''; document.getElementById('p-status').value=p.status;
   document.getElementById('p-lib').value=p.lib||''; document.getElementById('p-obs').value=p.obs||'';
-  document.getElementById('p-err').textContent=''; abrirModal('modal-pessoa');
+  document.getElementById('p-err').textContent='';
+  const acesso = state.acessos.find(a=>a.pessoaId===p.id);
+  popularPontosModal(acesso);
+  abrirModal('modal-pessoa');
 };
 document.getElementById('btn-salvar-pessoa').addEventListener('click',()=>{
   const id=document.getElementById('p-id').value.trim(),nome=document.getElementById('p-nome').value.trim(),err=document.getElementById('p-err');
@@ -288,7 +308,14 @@ document.getElementById('btn-salvar-pessoa').addEventListener('click',()=>{
   if(editCtx.idx===-1&&state.pessoas.some(p=>p.id===id)){err.textContent='ID já cadastrado.';return;}
   const obj={id,nome,cargo:document.getElementById('p-cargo').value.trim(),setor:document.getElementById('p-setor').value.trim(),status:document.getElementById('p-status').value,lib:document.getElementById('p-lib').value,obs:document.getElementById('p-obs').value.trim()};
   if(editCtx.idx>=0)state.pessoas[editCtx.idx]=obj; else state.pessoas.push(obj);
-  fecharModal('modal-pessoa');renderPessoas();agendarSalvamento();
+  const pubSel=[...document.querySelectorAll('.p-pub-chk:checked')].map(x=>x.value);
+  const privSel=[...document.querySelectorAll('.p-priv-chk:checked')].map(x=>x.value);
+  const acessoIdx=state.acessos.findIndex(a=>a.pessoaId===id);
+  if(pubSel.length||privSel.length){
+    const acessoObj={pessoaId:id,pessoaNome:nome,pub:pubSel,priv:privSel,ini:'',fim:''};
+    if(acessoIdx>=0)state.acessos[acessoIdx]=acessoObj; else state.acessos.push(acessoObj);
+  }
+  fecharModal('modal-pessoa');renderPessoas();renderAcessos();agendarSalvamento();
   toast(editCtx.idx>=0?'Atualizado!':'Cadastrado!','success');
 });
 window.filtrarPontos=function(){ renderPontos((document.getElementById('busca-pontos').value||'').toLowerCase()); };
@@ -478,15 +505,63 @@ window.buscaPorPermissao=function(){
   if(ponto)lista=lista.filter(a=>(a.pub||[]).includes(ponto)||(a.priv||[]).includes(ponto));
   res.innerHTML=lista.length?`<div class="resultado-card"><div style="font-size:12px;font-weight:600;margin-bottom:8px">Resultados (${lista.length}):</div>${lista.map(a=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span class="mono" style="color:var(--text2)">${a.pessoaId}</span><span>${a.pessoaNome}</span></div><div>${(a.pub||[]).map(p=>`<span class="chip">${p}</span>`).join('')}${(a.priv||[]).map(p=>`<span class="chip chip-restrito">🔒 ${p}</span>`).join('')}</div></div>`).join('')}</div>`:'<div style="color:var(--text2);font-size:12px;margin-top:8px">Nenhum resultado.</div>';
 };
+let _vistaMatriz = 'pessoas-pontos';
+window.setVistaMatriz = function(v){
+  _vistaMatriz = v;
+  document.querySelectorAll('.mat-vista').forEach(b=>b.classList.toggle('active',b.dataset.vista===v));
+  renderMatriz();
+};
 function renderMatriz(){
   const wrap=document.getElementById('matriz-wrap');
-  if(!state.pontos.length||!state.leitores.length){wrap.innerHTML='<div class="empty-state" style="padding:48px">Configure pontos e leitores.</div>';return;}
-  let html='<table class="table matriz-table"><thead><tr><th>Ponto</th><th>Tipo</th><th>CODIN</th>';
-  state.leitores.forEach(l=>{html+=`<th style="text-align:center;font-family:var(--mono)">${l}</th>`;});
+  if(_vistaMatriz==='pontos-leitores'){
+    if(!state.pontos.length||!state.leitores.length){wrap.innerHTML='<div class="empty-state" style="padding:48px">Configure pontos e leitores.</div>';return;}
+    let html='<table class="table matriz-table"><thead><tr><th>Ponto</th><th>Tipo</th><th>CODIN</th>';
+    state.leitores.forEach(l=>{html+=`<th style="text-align:center;font-family:var(--mono)">${l}</th>`;});
+    html+='</tr></thead><tbody>';
+    state.pontos.forEach(p=>{html+=`<tr><td>${p.nome}</td><td>${badgePonto(p.tipo)}</td><td><span class="mono">${p.codin||'—'}</span></td>`;state.leitores.forEach(l=>{html+=p.leitores.includes(l)?'<td class="matriz-cell-ok">✓</td>':'<td class="matriz-cell-empty">·</td>';});html+='</tr>';});
+    html+='</tbody></table>';
+    wrap.innerHTML=html;
+    return;
+  }
+  if(!state.pessoas.length||!state.pontos.length){wrap.innerHTML='<div class="empty-state" style="padding:48px">Cadastre pessoas e pontos para visualizar.</div>';return;}
+  let html='<table class="table matriz-table"><thead><tr><th>Pessoa</th><th>Status</th>';
+  state.pontos.forEach(p=>{html+=`<th style="text-align:center;font-size:10px;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.nome}">${p.tipo==='Restrito'?'🔒 ':''}${p.codin||p.nome.slice(0,8)}</th>`;});
   html+='</tr></thead><tbody>';
-  state.pontos.forEach(p=>{html+=`<tr><td>${p.nome}</td><td>${badgePonto(p.tipo)}</td><td><span class="mono">${p.codin||'—'}</span></td>`;state.leitores.forEach(l=>{html+=p.leitores.includes(l)?'<td class="matriz-cell-ok">✓</td>':'<td class="matriz-cell-empty">·</td>';});html+='</tr>';});
+  state.pessoas.forEach(p=>{
+    const acesso=state.acessos.find(a=>a.pessoaId===p.id);
+    html+=`<tr><td><div style="font-weight:500">${p.nome}</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">${p.id}</div></td><td>${badge(p.status)}</td>`;
+    state.pontos.forEach(pt=>{
+      const temPub=(acesso?.pub||[]).includes(pt.nome);
+      const temPriv=(acesso?.priv||[]).includes(pt.nome);
+      if(temPriv)html+='<td class="matriz-cell-ok" style="text-align:center;background:rgba(168,85,247,.12);color:#a855f7" title="Acesso restrito">🔒</td>';
+      else if(temPub)html+='<td class="matriz-cell-ok" style="text-align:center" title="Acesso público">✓</td>';
+      else html+='<td class="matriz-cell-empty" style="text-align:center">·</td>';
+    });
+    html+='</tr>';
+  });
   html+='</tbody></table>';
   wrap.innerHTML=html;
+}
+
+function renderTopPontos(){
+  const el=document.getElementById('dashboard-top-pontos');
+  if(!el)return;
+  if(!state.pontos.length){el.innerHTML='<div style="color:var(--text2);font-size:12px">Nenhum ponto cadastrado.</div>';return;}
+  const contagem=state.pontos.map(p=>({
+    nome:p.nome,codin:p.codin,tipo:p.tipo,
+    total:state.acessos.filter(a=>(a.pub||[]).includes(p.nome)||(a.priv||[]).includes(p.nome)).length
+  })).sort((a,b)=>b.total-a.total).slice(0,6);
+  const max=contagem[0]?.total||1;
+  el.innerHTML=contagem.map(p=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="font-weight:500">${p.tipo==='Restrito'?'🔒 ':''}${p.nome}</span>
+        <span style="font-family:var(--mono);color:var(--text2)">${p.total} pessoa${p.total!==1?'s':''}</span>
+      </div>
+      <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${max>0?Math.round(p.total/max*100):0}%;background:${p.tipo==='Restrito'?'#a855f7':'var(--blue)'};border-radius:3px;transition:width .6s"></div>
+      </div>
+    </div>`).join('');
 }
 function renderLeitoresCfg(){ document.getElementById('leitores-list').innerHTML=state.leitores.map((l,i)=>`<span class="chip-tag">${l}<button onclick="removerLeitor(${i})" title="Remover">×</button></span>`).join(''); }
 document.getElementById('btn-add-leitor').addEventListener('click',adicionarLeitor);

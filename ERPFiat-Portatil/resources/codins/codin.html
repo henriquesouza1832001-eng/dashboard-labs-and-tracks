@@ -145,10 +145,16 @@
           <div class="metric-card"><div class="metric-label">Solicitações (30 dias)</div><div class="metric-value" id="m-solic-mes">0</div></div>
           <div class="metric-card"><div class="metric-label">Taxa de aprovação</div><div class="metric-value text-green" id="m-taxa-aprovacao">0%</div></div>
         </div>
-        <div class="card">
-          <div class="card-title">Solicitações pendentes mais antigas</div>
-          <div id="dashboard-pendentes-lista" class="dashboard-pendentes-lista">
-            <div class="empty-state">Nenhuma solicitação pendente.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="card">
+            <div class="card-title">Pontos mais acessados</div>
+            <div id="dashboard-top-pontos" style="padding:12px 16px"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Solicitações pendentes mais antigas</div>
+            <div id="dashboard-pendentes-lista" class="dashboard-pendentes-lista">
+              <div class="empty-state">Nenhuma solicitação pendente.</div>
+            </div>
           </div>
         </div>
       </section>
@@ -306,8 +312,14 @@
       </section>
       <!-- MATRIZ -->
       <section class="page" id="page-matriz">
-        <div class="page-header"><div><h1>Matriz Pontos × Leitores</h1><p class="page-desc">Visão cruzada de habilitações</p></div></div>
-        <div class="card p-0"><div class="table-wrap" id="matriz-wrap"><div class="empty-state" style="padding:48px">Configure pontos e leitores para visualizar.</div></div></div>
+        <div class="page-header">
+          <div><h1>Matriz Pessoas × Pontos</h1><p class="page-desc">Quem tem acesso a quê — visão cruzada completa</p></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm mat-vista active" data-vista="pessoas-pontos" onclick="setVistaMatriz('pessoas-pontos')">Pessoas × Pontos</button>
+            <button class="btn btn-sm mat-vista" data-vista="pontos-leitores" onclick="setVistaMatriz('pontos-leitores')">Pontos × Leitores</button>
+          </div>
+        </div>
+        <div class="card p-0"><div class="table-wrap" id="matriz-wrap"><div class="empty-state" style="padding:48px">Carregando...</div></div></div>
       </section>
       <!-- CONFIG -->
       <section class="page" id="page-config">
@@ -355,6 +367,21 @@
         <div class="form-group"><label>Data liberação</label><input type="date" id="p-lib"></div>
       </div>
       <div class="form-group"><label>Observações</label><textarea id="p-obs" rows="2"></textarea></div>
+      <div class="form-group" style="margin-top:12px">
+        <label style="margin-bottom:8px;display:block">Pontos de Acesso</label>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button type="button" class="btn btn-sm" id="p-acesso-pub-toggle" onclick="toggleSecaoPontosModal('pub')" style="font-size:11px">Públicos</button>
+          <button type="button" class="btn btn-sm" id="p-acesso-priv-toggle" onclick="toggleSecaoPontosModal('priv')" style="font-size:11px">Restritos</button>
+        </div>
+        <div id="p-pontos-pub-wrap" style="display:none;margin-bottom:8px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Pontos públicos</div>
+          <div id="p-pontos-pub" class="check-grid"></div>
+        </div>
+        <div id="p-pontos-priv-wrap" style="display:none">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Pontos restritos</div>
+          <div id="p-pontos-priv" class="check-grid restricted-grid"></div>
+        </div>
+      </div>
       <div class="form-msg" id="p-err"></div>
     </div>
     <div class="modal-footer"><button class="btn" data-close="modal-pessoa">Cancelar</button><button class="btn btn-primary" id="btn-salvar-pessoa">Salvar</button></div>
