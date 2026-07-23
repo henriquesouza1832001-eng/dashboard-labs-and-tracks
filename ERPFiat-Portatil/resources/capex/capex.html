@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -7,12 +6,13 @@
 <title>CAPEX — Controler</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="/capex/capex.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <a class="topbar-back" href="/">
+  <a class="topbar-back" href="/hub">
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
     Hub
   </a>
@@ -23,18 +23,25 @@
       <div class="dot"></div>
       <span id="save-txt">sem alterações</span>
     </div>
+    <button class="btn-sm" id="btn-config">⚙ Grupos & Plantas</button>
     <button class="btn-primary" id="btn-novo">+ Novo Projeto</button>
   </div>
 </div>
 
+<!-- ABAS PRINCIPAIS -->
+<div class="main-tabs">
+  <button class="main-tab active" data-tab="matriz">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Matriz
+  </button>
+  <button class="main-tab" data-tab="dashboard">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Dashboard
+  </button>
+</div>
+
 <!-- FILTROS -->
 <div class="filterbar">
-  <div class="fb-group">
-    <label>Planta</label>
-    <select id="sel-planta">
-      <option value="">Todas as Plantas</option>
-    </select>
-  </div>
   <div class="fb-group">
     <label>Ano</label>
     <select id="sel-ano"></select>
@@ -43,34 +50,104 @@
     <label>Status</label>
     <select id="sel-status">
       <option value="">Todos</option>
-      <option value="Rascunho">Rascunho</option>
-      <option value="Em Análise">Em Análise</option>
-      <option value="Aprovado">Aprovado</option>
-      <option value="Reprovado">Reprovado</option>
-      <option value="Em Execução">Em Execução</option>
-      <option value="Concluído">Concluído</option>
+      <option>Rascunho</option>
+      <option>Em Análise</option>
+      <option>Aprovado</option>
+      <option>Reprovado</option>
+      <option>Em Execução</option>
+      <option>Concluído</option>
     </select>
   </div>
   <div class="fb-group fb-search">
     <label>Busca</label>
-    <input type="text" id="inp-busca" placeholder="Título, responsável, categoria...">
+    <input type="text" id="inp-busca" placeholder="Projeto, responsável...">
   </div>
-  <div class="fb-totais" id="fb-totais">
-    <div class="fb-tot"><span id="tot-qtd">0</span><small>projetos</small></div>
-    <div class="fb-tot"><span id="tot-sol">R$ 0</span><small>solicitado</small></div>
-    <div class="fb-tot"><span id="tot-apr">R$ 0</span><small>aprovado</small></div>
-  </div>
-</div>
-
-<!-- GRID DE PROJETOS -->
-<div class="main-layout">
-  <!-- LISTA -->
-  <div class="proj-lista" id="proj-lista">
-    <div class="loading-msg">Carregando projetos CAPEX...</div>
+  <div class="fb-totais">
+    <div class="fb-tot"><div class="fb-tot-val" id="tot-qtd">0</div><div class="fb-tot-lbl">projetos</div></div>
+    <div class="fb-tot"><div class="fb-tot-val" id="tot-sol">R$ 0</div><div class="fb-tot-lbl">solicitado</div></div>
+    <div class="fb-tot"><div class="fb-tot-val" id="tot-apr">R$ 0</div><div class="fb-tot-lbl">aprovado</div></div>
   </div>
 </div>
 
-<!-- MODAL PROJETO -->
+<!-- ══════════════════ ABA MATRIZ ══════════════════ -->
+<div class="pane active" id="pane-matriz">
+  <div class="matriz-wrap">
+    <!-- pills de plantas -->
+    <div class="matriz-header" id="plantas-pills"></div>
+    <!-- tabela -->
+    <div class="matriz-table-wrap">
+      <table class="matriz-table" id="matriz-table">
+        <thead id="matriz-thead"></thead>
+        <tbody id="matriz-tbody"></tbody>
+        <tfoot id="matriz-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ ABA DASHBOARD ══════════════════ -->
+<div class="pane" id="pane-dashboard">
+  <div class="dashboard-wrap">
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-card-lbl">Total Projetos</div>
+        <div class="kpi-card-val blue" id="kpi-total">0</div>
+        <div class="kpi-card-sub">no ano selecionado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-lbl">Valor Solicitado</div>
+        <div class="kpi-card-val blue" id="kpi-sol">R$ 0</div>
+        <div class="kpi-card-sub">soma de todos os projetos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-lbl">Valor Aprovado</div>
+        <div class="kpi-card-val green" id="kpi-apr">R$ 0</div>
+        <div class="kpi-card-sub">projetos aprovados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-lbl">Taxa de Aprovação</div>
+        <div class="kpi-card-val yellow" id="kpi-taxa">0%</div>
+        <div class="kpi-card-sub">aprovados / total</div>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+      <!-- Barras por Planta -->
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Valor por Planta</div>
+        </div>
+        <div class="chart-body" style="height:260px">
+          <canvas id="chart-plantas"></canvas>
+        </div>
+      </div>
+
+      <!-- Donut status -->
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Status dos Projetos</div>
+        </div>
+        <div class="chart-body" style="height:260px;display:flex;align-items:center;justify-content:center">
+          <canvas id="chart-status" style="max-height:240px;max-width:300px"></canvas>
+        </div>
+      </div>
+
+      <!-- Linha por grupo -->
+      <div class="chart-card chart-card-full">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Valor por Grupo (ESLM, Proving Grounds...)</div>
+        </div>
+        <div class="chart-body" style="height:260px">
+          <canvas id="chart-grupos"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL PROJETO ══════════════════ -->
 <div class="modal-overlay" id="modal" style="display:none">
   <div class="modal">
     <div class="modal-hdr">
@@ -85,50 +162,43 @@
     </div>
     <div class="modal-body">
 
-      <!-- ABA GERAL -->
+      <!-- GERAL -->
       <div class="tab-pane active" id="tab-geral">
         <div class="form-grid">
           <div class="fg-row">
             <div class="fg-col">
-              <label>Planta *</label>
-              <select id="f-planta" required></select>
+              <label>Grupo *</label>
+              <select id="f-grupo"></select>
             </div>
             <div class="fg-col">
-              <label>Ano Orçamento *</label>
+              <label>Planta *</label>
+              <select id="f-planta"></select>
+            </div>
+            <div class="fg-col">
+              <label>Ano *</label>
               <input type="number" id="f-ano" min="2020" max="2035">
             </div>
             <div class="fg-col">
               <label>Status</label>
               <select id="f-status">
-                <option>Rascunho</option>
-                <option>Em Análise</option>
-                <option>Aprovado</option>
-                <option>Reprovado</option>
-                <option>Em Execução</option>
-                <option>Concluído</option>
-              </select>
-            </div>
-            <div class="fg-col">
-              <label>Prioridade</label>
-              <select id="f-prioridade">
-                <option>Alta</option>
-                <option>Média</option>
-                <option>Baixa</option>
+                <option>Rascunho</option><option>Em Análise</option>
+                <option>Aprovado</option><option>Reprovado</option>
+                <option>Em Execução</option><option>Concluído</option>
               </select>
             </div>
           </div>
           <div class="fg-row">
             <div class="fg-col fg-col-2">
-              <label>Título do Projeto *</label>
+              <label>Título *</label>
               <input type="text" id="f-titulo" placeholder="Ex: Substituição de compressores linha 3">
-            </div>
-            <div class="fg-col">
-              <label>Categoria</label>
-              <input type="text" id="f-categoria" placeholder="Ex: Equipamentos, Obras, TI">
             </div>
             <div class="fg-col">
               <label>Responsável</label>
               <input type="text" id="f-responsavel">
+            </div>
+            <div class="fg-col">
+              <label>Prioridade</label>
+              <select id="f-prioridade"><option>Alta</option><option>Média</option><option>Baixa</option></select>
             </div>
           </div>
           <div class="fg-row">
@@ -140,7 +210,7 @@
           <div class="fg-row">
             <div class="fg-col">
               <label>Valor Solicitado</label>
-              <div class="inp-money"><span id="f-moeda-label">R$</span><input type="number" id="f-val-sol" min="0" step="0.01"></div>
+              <div class="inp-money"><span>R$</span><input type="number" id="f-val-sol" min="0" step="0.01"></div>
             </div>
             <div class="fg-col">
               <label>Valor Aprovado</label>
@@ -163,7 +233,7 @@
           <div class="fg-row">
             <div class="fg-col fg-col-full">
               <label>Justificativa</label>
-              <textarea id="f-justificativa" rows="3" placeholder="Por que este projeto deve ser aprovado?"></textarea>
+              <textarea id="f-justificativa" rows="2" placeholder="Por que este projeto deve ser aprovado?"></textarea>
             </div>
           </div>
           <div class="fg-row">
@@ -175,41 +245,38 @@
         </div>
       </div>
 
-      <!-- ABA ITENS -->
+      <!-- ITENS -->
       <div class="tab-pane" id="tab-itens">
         <div class="itens-hdr">
           <span class="itens-total" id="itens-total">Total: R$ 0,00</span>
           <button class="btn-sm" id="btn-add-item">+ Item</button>
         </div>
         <table class="tbl-itens">
-          <thead>
-            <tr>
-              <th>Descrição</th><th>Categoria</th><th>Fornecedor</th>
-              <th class="num">Qtd</th><th>Un</th>
-              <th class="num">Preço Unit.</th><th class="num">Total</th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Descrição</th><th>Categoria</th><th>Fornecedor</th>
+            <th class="num">Qtd</th><th>Un</th>
+            <th class="num">Preço Unit.</th><th class="num">Total</th><th></th>
+          </tr></thead>
           <tbody id="itens-body"></tbody>
         </table>
       </div>
 
-      <!-- ABA ARQUIVOS -->
+      <!-- ARQUIVOS -->
       <div class="tab-pane" id="tab-arquivos">
         <div class="arq-zone">
           <div class="arq-info">
             <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <p>Arraste ou selecione o <strong>Excel (xlsx)</strong> e/ou o <strong>One Pager (pptx)</strong></p>
-            <p class="arq-hint">Ambos serão compactados em um único ZIP salvo no Delta Lake</p>
+            <p>Selecione o <strong>Excel (.xlsx)</strong> e/ou o <strong>One Pager (.pptx)</strong></p>
+            <p style="font-size:11px;margin-top:4px;opacity:.7">Ambos serão compactados em um ZIP no Delta Lake</p>
           </div>
           <div class="arq-selects">
-            <div class="arq-pick" id="pick-xlsx">
+            <div class="arq-pick">
               <div class="arq-pick-label">📊 Excel (.xlsx)</div>
               <div class="arq-pick-nome" id="nome-xlsx">Nenhum arquivo</div>
               <input type="file" accept=".xlsx" id="inp-xlsx" hidden>
               <button class="btn-sm" onclick="document.getElementById('inp-xlsx').click()">Selecionar</button>
             </div>
-            <div class="arq-pick" id="pick-pptx">
+            <div class="arq-pick">
               <div class="arq-pick-label">📑 One Pager (.pptx)</div>
               <div class="arq-pick-nome" id="nome-pptx">Nenhum arquivo</div>
               <input type="file" accept=".pptx,.ppt" id="inp-pptx" hidden>
@@ -217,13 +284,12 @@
             </div>
           </div>
           <div class="arq-actions">
-            <button class="btn-primary" id="btn-upload" disabled>Salvar Arquivos no Delta</button>
+            <button class="btn-primary" id="btn-upload" disabled>Salvar no Delta Lake</button>
             <div class="arq-status" id="arq-status"></div>
           </div>
-          <!-- arquivo existente -->
           <div class="arq-existente" id="arq-existente" style="display:none">
             <div class="arq-ex-info">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span id="arq-ex-nome">—</span>
               <span class="arq-ex-size" id="arq-ex-size">—</span>
             </div>
@@ -235,18 +301,41 @@
         </div>
       </div>
 
-      <!-- ABA EXTRAÍDO -->
+      <!-- EXTRAÍDO -->
       <div class="tab-pane" id="tab-extraido">
-        <div class="extraido-wrap" id="extraido-wrap">
-          <div class="extraido-vazio">Faça o upload dos arquivos para ver os dados extraídos.</div>
-        </div>
+        <div id="extraido-wrap"><div class="extraido-vazio">Faça o upload dos arquivos para ver os dados extraídos.</div></div>
       </div>
-
     </div>
     <div class="modal-footer">
       <button class="btn-ghost" id="btn-cancelar">Cancelar</button>
-      <button class="btn-danger" id="btn-excluir" style="display:none">Excluir Projeto</button>
+      <button class="btn-danger" id="btn-excluir" style="display:none">Excluir</button>
       <button class="btn-primary" id="btn-salvar">Salvar Projeto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL CONFIG (Grupos & Plantas) ══════════════════ -->
+<div class="modal-overlay" id="modal-config" style="display:none">
+  <div class="modal" style="width:560px;max-height:80vh">
+    <div class="modal-hdr">
+      <div class="modal-ttl">Grupos & Plantas</div>
+      <button class="modal-close" id="config-close">×</button>
+    </div>
+    <div class="modal-body config-panel">
+      <div class="config-section">
+        <h3>Grupos de Projeto</h3>
+        <div class="config-list" id="grupos-list"></div>
+        <button class="btn-sm" style="margin-top:8px" id="btn-add-grupo">+ Adicionar Grupo</button>
+      </div>
+      <div class="config-section">
+        <h3>Plantas</h3>
+        <div class="config-list" id="plantas-list"></div>
+        <button class="btn-sm" style="margin-top:8px" id="btn-add-planta">+ Adicionar Planta</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="config-cancelar">Cancelar</button>
+      <button class="btn-primary" id="btn-salvar-config">Salvar Configurações</button>
     </div>
   </div>
 </div>
