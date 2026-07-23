@@ -2,7 +2,7 @@
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse, Response
 from databricks import sql
-import os, json, asyncio, hashlib, jwt, datetime, threading, time, traceback
+import os, json, asyncio, hashlib, jwt, datetime, threading, time as _time, time, traceback, base64, io, zipfile
 def to_date_or_none(v):
     if not v or not str(v).strip():
         return None
@@ -37,6 +37,8 @@ S_CODIN      = "eng_lab.dashboard_labs_and_tracks_codin"
 S_CONFORTO   = "eng_lab.dashboard_labs_and_tracks_conforto"
 S_ATIVIDADES = "eng_lab.dashboard_labs_and_tracks_atividades"
 S_HUB        = "eng_lab.dashboard_labs_and_tracks_hub"
+S_CAPEX      = "eng_lab.dashboard_labs_and_tracks_capex"
+PLANTAS_PADRAO = ["Betim", "Goiania-PE", "Porto Real", "Cordoba", "Palomar"]
 
 _conn_lock = threading.Lock()
 _local = threading.local()
@@ -610,6 +612,7 @@ LOADERS = {
     "codin":      _load_codin,
     "atividades": _load_atividades,
     "conforto":   _load_conforto,
+    "capex":      lambda: _load_capex(),
 }
 
 def _atualizar_cache_conforto_lista(chave, tabela, mapper, ids):
@@ -731,6 +734,7 @@ async def _prefetch_body():
             print("[startup] tipos_uc populados com padrão")
     except Exception as e:
         print(f"[startup] tipos_uc seed: {e}")
+    await _startup_capex()
     for nome, fn in LOADERS.items():
         try:
             print(f"[startup] carregando {nome}...")
@@ -1394,6 +1398,8 @@ async def save_codin(request: Request):
         pontos = body.get("pontos", [])
         for p in pontos:
             p["_id"] = p.get("id") or p.get("codin") or p.get("nome")
+            if not p["_id"]:
+                continue
         if pontos:
             selects, params = [], []
             for p in pontos:
@@ -2801,7 +2807,6 @@ async def delete_pad_item(item_id: str, request: Request):
     await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.pad WHERE id=?", [item_id])
     return JSONResponse({"ok": True})
 
-# ── PAD ───────────────────────────────────────────────────────────────
 @app.get("/api/conforto/pad")
 async def get_pad(request: Request):
     exigir_auth(request)
@@ -2836,5 +2841,506 @@ async def save_pad(request: Request):
 async def login_redirect(request: Request):
     next_url = request.query_params.get("next", "/")
     return RedirectResponse(url=next_url, status_code=302)
+
+def _load_capex():
+    """Carrega tudo de uma vez e monta payload hierárquico por planta."""
+    projetos   = run_query(f"SELECT * FROM {S_CAPEX}.projetos ORDER BY criado_em DESC")
+    itens      = run_query(f"SELECT * FROM {S_CAPEX}.itens ORDER BY ordem ASC")
+    plantas    = run_query(f"SELECT * FROM {S_CAPEX}.plantas ORDER BY nome ASC")
+    arquivos   = run_query(f"SELECT id, projeto_id, nome, tipo, tamanho_bytes, atualizado_em, atualizado_por FROM {S_CAPEX}.arquivos")
+    itens_map = {}
+    for it in itens:
+        itens_map.setdefault(it["projeto_id"], []).append(it)
+    arq_map = {}
+    for a in arquivos:
+        arq_map.setdefault(a["projeto_id"], []).append(a)
+
+    for p in projetos:
+        p["itens"]    = itens_map.get(p["id"], [])
+        p["arquivos"] = arq_map.get(p["id"], [])
+
+    payload = {
+        "versao":   "1.0",
+        "projetos": projetos,
+        "plantas":  plantas if plantas else [{"id": n.lower().replace(" ","_"), "nome": n} for n in PLANTAS_PADRAO],
+    }
+    cache_set("capex", payload)
+
+
+def _atualizar_cache_capex_parcial(ids_projetos):
+    if not ids_projetos:
+        return
+    payload = cache_get("capex")
+    if payload is None:
+        _load_capex()
+        return
+
+    ph = ",".join(["?" for _ in ids_projetos])
+    proj_novos  = run_query(f"SELECT * FROM {S_CAPEX}.projetos WHERE id IN ({ph})", ids_projetos)
+    itens_novos = run_query(f"SELECT * FROM {S_CAPEX}.itens WHERE projeto_id IN ({ph}) ORDER BY ordem ASC", ids_projetos)
+    arq_novos   = run_query(f"SELECT id, projeto_id, nome, tipo, tamanho_bytes, atualizado_em, atualizado_por FROM {S_CAPEX}.arquivos WHERE projeto_id IN ({ph})", ids_projetos)
+
+    itens_map = {}
+    for it in itens_novos:
+        itens_map.setdefault(it["projeto_id"], []).append(it)
+    arq_map = {}
+    for a in arq_novos:
+        arq_map.setdefault(a["projeto_id"], []).append(a)
+    for p in proj_novos:
+        p["itens"]    = itens_map.get(p["id"], [])
+        p["arquivos"] = arq_map.get(p["id"], [])
+
+    ids_set = set(ids_projetos)
+    payload["projetos"] = [p for p in payload.get("projetos", []) if p["id"] not in ids_set] + proj_novos
+    cache_set("capex", payload)
+
+async def _startup_capex():
+    """Chamado dentro de _prefetch_body() no startup do app."""
+    await arun_exec_retry(f"""
+        CREATE TABLE IF NOT EXISTS {S_CAPEX}.plantas (
+            id     STRING,
+            nome   STRING,
+            ativo  BOOLEAN,
+            criado_em   TIMESTAMP,
+            atualizado_em TIMESTAMP
+        )
+    """)
+    try:
+        existe = await arun_query(f"SELECT id FROM {S_CAPEX}.plantas LIMIT 1")
+        if not existe:
+            selects, params = [], []
+            for p in PLANTAS_PADRAO:
+                pid = p.lower().replace(" ", "_").replace("-", "_")
+                selects.append("SELECT ? AS id, ? AS nome, true AS ativo")
+                params += [pid, p]
+            origem = " UNION ALL ".join(selects)
+            await arun_exec_retry(f"""
+                INSERT INTO {S_CAPEX}.plantas (id, nome, ativo, criado_em, atualizado_em)
+                SELECT id, nome, ativo, current_timestamp(), current_timestamp() FROM ({origem})
+            """, params)
+    except Exception as e:
+        print(f"[startup][capex] plantas seed: {e}")
+    await arun_exec_retry(f"""
+        CREATE TABLE IF NOT EXISTS {S_CAPEX}.projetos (
+            id              STRING,
+            planta_id       STRING,
+            titulo          STRING,
+            descricao       STRING,
+            ano_orcamento   INT,
+            categoria       STRING,
+            responsavel     STRING,
+            status          STRING,
+            valor_solicitado DOUBLE,
+            valor_aprovado  DOUBLE,
+            moeda           STRING,
+            prioridade      STRING,
+            justificativa   STRING,
+            retorno_previsto STRING,
+            obs             STRING,
+            criado_em       TIMESTAMP,
+            atualizado_em   TIMESTAMP,
+            atualizado_por  STRING
+        )
+    """)
+    await arun_exec_retry(f"""
+        CREATE TABLE IF NOT EXISTS {S_CAPEX}.itens (
+            id              STRING,
+            projeto_id      STRING,
+            descricao       STRING,
+            categoria       STRING,
+            fornecedor      STRING,
+            quantidade      DOUBLE,
+            unidade         STRING,
+            preco_unitario  DOUBLE,
+            total           DOUBLE,
+            moeda           STRING,
+            ordem           INT,
+            obs             STRING,
+            atualizado_em   TIMESTAMP,
+            atualizado_por  STRING
+        )
+    """)
+    await arun_exec_retry(f"""
+        CREATE TABLE IF NOT EXISTS {S_CAPEX}.arquivos (
+            id              STRING,
+            projeto_id      STRING,
+            nome            STRING,
+            tipo            STRING,
+            tamanho_bytes   LONG,
+            conteudo_blob   STRING,
+            extraido_json   STRING,
+            atualizado_em   TIMESTAMP,
+            atualizado_por  STRING
+        )
+    """)
+
+    print("[startup][capex] tabelas ok")
+
+
+def _compactar_arquivos(xlsx_b64: str | None, pptx_b64: str | None,
+                         nome_xlsx: str = "capex.xlsx",
+                         nome_pptx: str = "one_pager.pptx") -> tuple[str, int]:
+    """
+    Empacota xlsx + pptx em um único ZIP e retorna (base64_do_zip, tamanho_bytes).
+    Usa ZIP_DEFLATED para máxima compressão.
+    Ambos os arquivos são opcionais — inclui só os que existem.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        if xlsx_b64:
+            zf.writestr(nome_xlsx, base64.b64decode(xlsx_b64))
+        if pptx_b64:
+            zf.writestr(nome_pptx, base64.b64decode(pptx_b64))
+    raw = buf.getvalue()
+    return base64.b64encode(raw).decode("utf-8"), len(raw)
+
+
+def _extrair_xlsx(xlsx_bytes: bytes) -> dict:
+    """
+    Extrai dados estruturados do Excel (openpyxl).
+    Retorna dict com itens, valores e metadados.
+    """
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(io.BytesIO(xlsx_bytes), read_only=True, data_only=True)
+        resultado = {"planilhas": {}, "resumo": {}}
+        for nome_aba in wb.sheetnames:
+            ws = wb[nome_aba]
+            linhas = []
+            for row in ws.iter_rows(values_only=True):
+                if any(c is not None for c in row):
+                    linhas.append(list(row))
+            resultado["planilhas"][nome_aba] = linhas
+        # Heurística: primeira aba com "valor" ou "capex" no nome tem os itens
+        for aba, linhas in resultado["planilhas"].items():
+            if linhas:
+                headers = [str(c).lower() if c else "" for c in linhas[0]]
+                itens_extraidos = []
+                for row in linhas[1:]:
+                    item = {headers[i]: row[i] for i in range(min(len(headers), len(row)))}
+                    itens_extraidos.append(item)
+                resultado["resumo"][aba] = {
+                    "total_linhas": len(itens_extraidos),
+                    "colunas": headers,
+                }
+                if not resultado.get("itens_principais"):
+                    resultado["itens_principais"] = itens_extraidos[:200]  # limite sensato
+        return resultado
+    except Exception as e:
+        return {"erro": str(e)}
+
+
+def _extrair_pptx(pptx_bytes: bytes) -> dict:
+    """
+    Extrai textos e notas do PowerPoint (python-pptx).
+    Retorna dict com slides e textos.
+    """
+    try:
+        from pptx import Presentation
+        prs = Presentation(io.BytesIO(pptx_bytes))
+        slides = []
+        for i, slide in enumerate(prs.slides):
+            textos = []
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text.strip():
+                    textos.append(shape.text.strip())
+            notas = ""
+            if slide.has_notes_slide:
+                notas = slide.notes_slide.notes_text_frame.text.strip()
+            slides.append({"slide": i + 1, "textos": textos, "notas": notas})
+        return {"total_slides": len(slides), "slides": slides}
+    except Exception as e:
+        return {"erro": str(e)}
+
+
+def _processar_zip_e_extrair(zip_b64: str) -> dict:
+    """
+    Descompacta o ZIP e extrai dados do xlsx e pptx internos.
+    Retorna dicionário consolidado para popular o módulo.
+    """
+    try:
+        raw = base64.b64decode(zip_b64)
+        buf = io.BytesIO(raw)
+        resultado = {"xlsx": None, "pptx": None}
+        with zipfile.ZipFile(buf, "r") as zf:
+            for nome in zf.namelist():
+                conteudo = zf.read(nome)
+                ext = nome.rsplit(".", 1)[-1].lower()
+                if ext == "xlsx":
+                    resultado["xlsx"] = _extrair_xlsx(conteudo)
+                elif ext in ("pptx", "ppt"):
+                    resultado["pptx"] = _extrair_pptx(conteudo)
+        return resultado
+    except Exception as e:
+        return {"erro": str(e)}
+
+@app.get("/api/capex/plantas")
+async def listar_plantas(request: Request):
+    exigir_auth(request)
+    payload = cache_get("capex")
+    if payload:
+        return JSONResponse(payload.get("plantas", []))
+    rows = run_query(f"SELECT * FROM {S_CAPEX}.plantas WHERE ativo=true ORDER BY nome")
+    return JSONResponse(rows)
+
+
+@app.post("/api/capex/plantas")
+async def salvar_planta(request: Request):
+    exigir_auth(request)
+    body = await request.json()
+    u = get_usuario(request)
+    planta = body if isinstance(body, dict) else body[0]
+    pid = planta.get("id") or planta["nome"].lower().replace(" ", "_").replace("-", "_")
+    await arun_exec_retry(f"""
+        MERGE INTO {S_CAPEX}.plantas AS t
+        USING (SELECT ? AS id, ? AS nome, ? AS ativo) AS s ON t.id = s.id
+        WHEN MATCHED THEN UPDATE SET
+            nome=s.nome, ativo=s.ativo, atualizado_em=current_timestamp()
+        WHEN NOT MATCHED THEN INSERT (id, nome, ativo, criado_em, atualizado_em)
+            VALUES (s.id, s.nome, s.ativo, current_timestamp(), current_timestamp())
+    """, [pid, planta["nome"], planta.get("ativo", True)])
+    cache_invalidate("capex")
+    asyncio.create_task(asyncio.to_thread(_load_capex))
+    return JSONResponse({"ok": True, "id": pid})
+
+@app.get("/api/capex")
+async def get_capex(request: Request):
+    exigir_auth(request)
+    return JSONResponse(get_cached("capex"))
+
+
+@app.get("/api/capex/projetos")
+async def listar_projetos(request: Request):
+    exigir_auth(request)
+    planta = request.query_params.get("planta")
+    payload = get_cached("capex")
+    projetos = payload.get("projetos", [])
+    if planta:
+        projetos = [p for p in projetos if p.get("planta_id") == planta]
+    return JSONResponse(projetos)
+
+
+@app.post("/api/capex/projetos")
+async def salvar_projetos(request: Request):
+    """
+    Salva lista de projetos + itens.
+    Padrão idêntico ao /api/obras: MERGE + cache parcial.
+    """
+    exigir_auth(request)
+    body   = await request.json()
+    u      = get_usuario(request)
+    lista  = body.get("projetos", [body]) if isinstance(body, dict) else body
+
+    try:
+        sel_proj, par_proj = [], []
+        for p in lista:
+            sel_proj.append(
+                "SELECT ? AS id, ? AS planta_id, ? AS titulo, ? AS descricao, "
+                "? AS ano_orcamento, ? AS categoria, ? AS responsavel, ? AS status, "
+                "? AS valor_solicitado, ? AS valor_aprovado, ? AS moeda, ? AS prioridade, "
+                "? AS justificativa, ? AS retorno_previsto, ? AS obs, ? AS atualizado_por"
+            )
+            par_proj += [
+                p["id"], p.get("planta_id"), p.get("titulo"), p.get("descricao"),
+                p.get("ano_orcamento"), p.get("categoria"), p.get("responsavel"), p.get("status", "Rascunho"),
+                p.get("valor_solicitado", 0), p.get("valor_aprovado", 0), p.get("moeda", "BRL"),
+                p.get("prioridade", "Média"), p.get("justificativa"), p.get("retorno_previsto"),
+                p.get("obs"), u,
+            ]
+        origem = " UNION ALL ".join(sel_proj)
+        await arun_exec_retry(f"""
+            MERGE INTO {S_CAPEX}.projetos AS t
+            USING ({origem}) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET
+                planta_id=s.planta_id, titulo=s.titulo, descricao=s.descricao,
+                ano_orcamento=s.ano_orcamento, categoria=s.categoria, responsavel=s.responsavel,
+                status=s.status, valor_solicitado=s.valor_solicitado, valor_aprovado=s.valor_aprovado,
+                moeda=s.moeda, prioridade=s.prioridade, justificativa=s.justificativa,
+                retorno_previsto=s.retorno_previsto, obs=s.obs,
+                atualizado_em=current_timestamp(), atualizado_por=s.atualizado_por
+            WHEN NOT MATCHED THEN INSERT
+                (id,planta_id,titulo,descricao,ano_orcamento,categoria,responsavel,status,
+                 valor_solicitado,valor_aprovado,moeda,prioridade,justificativa,retorno_previsto,
+                 obs,criado_em,atualizado_em,atualizado_por)
+            VALUES
+                (s.id,s.planta_id,s.titulo,s.descricao,s.ano_orcamento,s.categoria,s.responsavel,
+                 s.status,s.valor_solicitado,s.valor_aprovado,s.moeda,s.prioridade,s.justificativa,
+                 s.retorno_previsto,s.obs,current_timestamp(),current_timestamp(),s.atualizado_por)
+        """, par_proj)
+
+        ids = [p["id"] for p in lista]
+        ph  = ",".join(["?" for _ in ids])
+        await arun_exec_retry(f"DELETE FROM {S_CAPEX}.itens WHERE projeto_id IN ({ph})", ids)
+
+        rows_it, par_it = [], []
+        for p in lista:
+            for i, it in enumerate(p.get("itens", [])):
+                iid = it.get("id") or f"{p['id']}_it_{i}"
+                total = (it.get("quantidade", 1) or 1) * (it.get("preco_unitario", 0) or 0)
+                rows_it.append("(?,?,?,?,?,?,?,?,?,?,?,?,current_timestamp(),?)")
+                par_it += [
+                    iid, p["id"], it.get("descricao"), it.get("categoria"),
+                    it.get("fornecedor"), it.get("quantidade", 1), it.get("unidade", "un"),
+                    it.get("preco_unitario", 0), total, it.get("moeda", "BRL"),
+                    i, it.get("obs"), u,
+                ]
+        if rows_it:
+            await arun_exec_retry(f"""
+                INSERT INTO {S_CAPEX}.itens
+                    (id,projeto_id,descricao,categoria,fornecedor,quantidade,unidade,
+                     preco_unitario,total,moeda,ordem,obs,atualizado_em,atualizado_por)
+                VALUES {",".join(rows_it)}
+            """, par_it)
+
+    except Exception as e:
+        print(f"[capex] erro salvar projetos: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+
+    await asyncio.to_thread(_atualizar_cache_capex_parcial, ids)
+    return JSONResponse({"ok": True})
+
+
+@app.delete("/api/capex/projetos/{pid}")
+async def deletar_projeto(pid: str, request: Request):
+    exigir_auth(request)
+    try:
+        await arun_exec_retry(f"DELETE FROM {S_CAPEX}.projetos WHERE id=?", [pid])
+        await arun_exec_retry(f"DELETE FROM {S_CAPEX}.itens WHERE projeto_id=?", [pid])
+        await arun_exec_retry(f"DELETE FROM {S_CAPEX}.arquivos WHERE projeto_id=?", [pid])
+        payload = cache_get("capex")
+        if payload is not None:
+            payload["projetos"] = [p for p in payload.get("projetos", []) if p["id"] != pid]
+            cache_set("capex", payload)
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"erro": str(e)}, status_code=500)
+
+
+@app.post("/api/capex/projetos/{pid}/arquivo")
+async def upload_arquivo(pid: str, request: Request):
+    """
+    Recebe { xlsx_b64, xlsx_nome, pptx_b64, pptx_nome } ou
+           { zip_b64, nome } (ZIP já pronto).
+    Compacta, salva o blob no Delta, extrai metadados e devolve em <1s
+    graças ao save-first / extract-async pattern:
+      1. Salva ZIP imediatamente → responde ok
+      2. Extrai xlsx/pptx em background → MERGE com extraido_json
+    """
+    exigir_auth(request)
+    body = await request.json()
+    u    = get_usuario(request)
+
+    xlsx_b64  = body.get("xlsx_b64")
+    pptx_b64  = body.get("pptx_b64")
+    zip_b64   = body.get("zip_b64")
+    nome      = body.get("nome", f"capex_{pid}.zip")
+    xlsx_nome = body.get("xlsx_nome", "capex.xlsx")
+    pptx_nome = body.get("pptx_nome", "one_pager.pptx")
+
+    if not zip_b64 and (xlsx_b64 or pptx_b64):
+        zip_b64, tamanho = _compactar_arquivos(xlsx_b64, pptx_b64, xlsx_nome, pptx_nome)
+    elif zip_b64:
+        tamanho = len(base64.b64decode(zip_b64))
+    else:
+        return JSONResponse({"erro": "Nenhum arquivo recebido"}, status_code=400)
+
+    arq_id = f"arq_{pid}_{int(_time.time() * 1000)}"
+
+    try:
+        await arun_exec_retry(f"""
+            MERGE INTO {S_CAPEX}.arquivos AS t
+            USING (SELECT ? AS id, ? AS projeto_id, ? AS nome, ? AS tipo,
+                          ? AS tamanho_bytes, ? AS conteudo_blob,
+                          NULL AS extraido_json, ? AS atualizado_por) AS s
+            ON t.projeto_id = s.projeto_id
+            WHEN MATCHED THEN UPDATE SET
+                id=s.id, nome=s.nome, tipo=s.tipo, tamanho_bytes=s.tamanho_bytes,
+                conteudo_blob=s.conteudo_blob, extraido_json=NULL,
+                atualizado_em=current_timestamp(), atualizado_por=s.atualizado_por
+            WHEN NOT MATCHED THEN INSERT
+                (id,projeto_id,nome,tipo,tamanho_bytes,conteudo_blob,extraido_json,atualizado_em,atualizado_por)
+            VALUES (s.id,s.projeto_id,s.nome,'zip',s.tamanho_bytes,s.conteudo_blob,NULL,current_timestamp(),s.atualizado_por)
+        """, [arq_id, pid, nome, "zip", tamanho, zip_b64, u])
+    except Exception as e:
+        print(f"[capex][arquivo] erro salvar blob: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    
+    async def _extrair_e_atualizar():
+        try:
+            dados = await asyncio.to_thread(_processar_zip_e_extrair, zip_b64)
+            extraido_str = json.dumps(dados, ensure_ascii=False, default=str)
+            await arun_exec_retry(f"""
+                UPDATE {S_CAPEX}.arquivos
+                SET extraido_json=?, atualizado_em=current_timestamp()
+                WHERE id=?
+            """, [extraido_str, arq_id])
+            await asyncio.to_thread(_atualizar_cache_capex_parcial, [pid])
+        except Exception as e:
+            print(f"[capex][extração] erro background: {e}")
+
+    asyncio.create_task(_extrair_e_atualizar())
+
+    await asyncio.to_thread(_atualizar_cache_capex_parcial, [pid])
+    return JSONResponse({"ok": True, "id": arq_id, "tamanho_bytes": tamanho, "extraindo": True})
+
+
+@app.get("/api/capex/projetos/{pid}/arquivo")
+async def download_arquivo(pid: str, request: Request):
+    """
+    Retorna o ZIP como base64. O front descompacta client-side
+    ou usa diretamente para download.
+    """
+    exigir_auth(request)
+    rows = run_query(
+        f"SELECT id, nome, tipo, tamanho_bytes, conteudo_blob, extraido_json FROM {S_CAPEX}.arquivos WHERE projeto_id=? LIMIT 1",
+        [pid]
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    r = rows[0]
+    return JSONResponse({
+        "id":            r["id"],
+        "nome":          r["nome"],
+        "tipo":          r["tipo"],
+        "tamanho_bytes": r["tamanho_bytes"],
+        "zip_b64":       r["conteudo_blob"],
+        "extraido":      json.loads(r["extraido_json"]) if r.get("extraido_json") else None,
+    })
+
+
+@app.get("/api/capex/projetos/{pid}/extraido")
+async def get_extraido(pid: str, request: Request):
+    """
+    Retorna apenas os dados extraídos (sem o blob), útil para
+    popular o módulo com os dados do xlsx/pptx.
+    """
+    exigir_auth(request)
+    rows = run_query(
+        f"SELECT extraido_json FROM {S_CAPEX}.arquivos WHERE projeto_id=? LIMIT 1",
+        [pid]
+    )
+    if not rows or not rows[0].get("extraido_json"):
+        return JSONResponse({"extraido": None, "status": "pendente"})
+    return JSONResponse({"extraido": json.loads(rows[0]["extraido_json"]), "status": "ok"})
+
+
+@app.delete("/api/capex/projetos/{pid}/arquivo")
+async def deletar_arquivo(pid: str, request: Request):
+    exigir_auth(request)
+    await arun_exec_retry(f"DELETE FROM {S_CAPEX}.arquivos WHERE projeto_id=?", [pid])
+    payload = cache_get("capex")
+    if payload:
+        for p in payload.get("projetos", []):
+            if p["id"] == pid:
+                p["arquivos"] = []
+        cache_set("capex", payload)
+    return JSONResponse({"ok": True})
+
+@app.get("/capex")
+async def pagina_capex(request: Request):
+    exigir_auth(request)
+    dados = get_cached("capex")
+    html_path = os.path.join(BASE, "capex", "capex.html")
+    return inject(html_path, dados)
 
 app.mount("/", StaticFiles(directory=BASE, html=True), name="static")

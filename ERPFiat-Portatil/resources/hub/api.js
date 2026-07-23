@@ -85,4 +85,15 @@ const API = {
   toggleAtivo: (id, ativo) => req('/admin/usuarios/' + id,        { method: 'PUT',   body: JSON.stringify({ ativo }) }),
   resetSenha:  (id, senha) => req('/admin/usuarios/' + id + '/senha', { method: 'PUT', body: JSON.stringify({ senha }) }),
 },
+  capex: {
+    listar:          ()        => req('/capex',                                {}, 120000),
+    projetos:        (planta)  => req('/capex/projetos' + (planta ? '?planta=' + planta : ''), {}, 60000),
+    salvar:          (d)       => req('/capex/projetos',                       { method: 'POST', body: JSON.stringify(d) }),
+    excluir:         (id)      => req('/capex/projetos/' + id,                 { method: 'DELETE' }),
+    uploadArquivo:   (id, d)   => req('/capex/projetos/' + id + '/arquivo',    { method: 'POST', body: JSON.stringify(d) }),
+    downloadArquivo: (id)      => req('/capex/projetos/' + id + '/arquivo',    {}),
+    extraido:        (id)      => req('/capex/projetos/' + id + '/extraido',   {}),
+    plantas:         ()        => req('/capex/plantas',                        {}, 600000),
+    salvarPlanta:    (d)       => req('/capex/plantas',                        { method: 'POST', body: JSON.stringify(d) }),
+  },
 };

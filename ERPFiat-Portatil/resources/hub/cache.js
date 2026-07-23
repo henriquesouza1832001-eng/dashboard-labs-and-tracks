@@ -7,6 +7,7 @@ const CHAVES = {
   conforto: 'ctrl_conforto',
   kpi:      'ctrl_kpi',
   config:   'ctrl_config',
+  capex:    'ctrl_capex',
 };
 
 const STALE_MS = 5 * 60 * 1000;

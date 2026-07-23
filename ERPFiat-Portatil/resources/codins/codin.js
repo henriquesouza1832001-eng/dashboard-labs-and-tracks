@@ -33,10 +33,13 @@ function carregarDeJSON(json){
 async function abrirArquivo(){ return false; }
 async function carregarDados(){
   const d = window.__DADOS__ || await API.codin.listar();
- if (d) {
-  state.pessoas = Array.isArray(d.pessoas) ? d.pessoas : [];
-  state.pontos  = Array.isArray(d.pontos)  ? d.pontos  : [];
-}
+  if (d) {
+    state.pessoas = Array.isArray(d.pessoas) ? d.pessoas : [];
+    state.pontos  = (Array.isArray(d.pontos) ? d.pontos : []).map(p=>({
+      ...p,
+      id: p.id || p.codin || p.nome
+    }));
+  }
 }
 function aplicarFiltroURL(){
   const p = new URLSearchParams(location.search);

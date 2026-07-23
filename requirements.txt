@@ -5,3 +5,5 @@ pandas
 python-multipart
 PyJWT
 bcrypt
+openpyxl
+python-pptx
