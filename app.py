@@ -2895,6 +2895,10 @@ def _atualizar_cache_capex_parcial(ids_projetos):
     cache_set("capex", payload)
 
 async def _startup_capex():
+    try:
+        await arun_exec_retry("CREATE SCHEMA IF NOT EXISTS eng_lab.dashboard_labs_and_tracks_capex")
+    except Exception as e:
+        print(f"[startup][capex] schema: {e}")
     """Chamado dentro de _prefetch_body() no startup do app."""
     await arun_exec_retry(f"""
         CREATE TABLE IF NOT EXISTS {S_CAPEX}.plantas (
