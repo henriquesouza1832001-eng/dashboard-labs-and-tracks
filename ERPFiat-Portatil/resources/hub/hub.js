@@ -187,40 +187,50 @@ function renderPainelObras(d){
 }
 
 function renderPainelCapex(d){
-  const budget=d.obras?.budget||[];
-  const lanc=d.obras?.lancamentos||[];
-  const obras=d.obras?.obras||[];
-  const totalB=budget.reduce((s,b)=>s+(b.budgetAprov||0),0);
-  const totalR=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-  const pct=totalB>0?Math.round(totalR/totalB*100):0;
-  const cor=pct>=100?'#c0392b':pct>=80?'#b07d00':'#2E5FA3';
-  const porObra=obras.map(o=>({
-    nome:o.nome,cod:o.cod,
-    budget:budget.filter(b=>b.obraCod===o.cod).reduce((s,b)=>s+(b.budgetAprov||0),0),
-    real:lanc.filter(l=>l.obraCod===o.cod).reduce((s,l)=>s+l.qtd*l.precoUnit,0)
-  })).filter(x=>x.budget>0).sort((a,b)=>b.real-a.real).slice(0,7);
-  return`<div class="hp-sec">Resumo geral</div>
+  const projetos = (d.capex?.projetos||[]);
+  const plantas  = (d.capex?.plantas||[]);
+  const total    = projetos.length;
+  const aprovados= projetos.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído').length;
+  const solBRL   = projetos.reduce((s,p)=>s+(p.valor_solicitado||0),0);
+  const aprBRL   = projetos.reduce((s,p)=>s+(p.valor_aprovado||0),0);
+  const pctApr   = total>0?Math.round(aprovados/total*100):0;
+  const corApr   = pctApr>=80?'#1a7f4b':pctApr>=40?'#b07d00':'#2E5FA3';
+
+  const porPlanta = plantas.map(pl=>({
+    nome: pl.nome,
+    sol:  projetos.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+(p.valor_solicitado||0),0),
+    apr:  projetos.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+(p.valor_aprovado||0),0),
+    qtd:  projetos.filter(p=>p.planta_id===pl.id).length,
+  })).filter(x=>x.qtd>0).sort((a,b)=>b.sol-a.sol);
+
+  if(!total) return '<div class="hp-vazio">Nenhum projeto CAPEX cadastrado.</div>';
+
+  return`<div class="hp-sec">Resumo Geral</div>
     <div class="hp-row">
-      <div style="flex:1"><div class="hp-row-nome">Budget total aprovado</div></div>
-      <div class="hp-row-val">${fmtRKs(totalB)}</div>
+      <div style="flex:1"><div class="hp-row-nome">Projetos cadastrados</div></div>
+      <div class="hp-row-val">${total}</div>
     </div>
     <div class="hp-row">
-      <div style="flex:1"><div class="hp-row-nome">Executado</div></div>
-      ${hpBar(pct,cor)}
-      <div class="hp-row-val" style="color:${cor}">${fmtRKs(totalR)}</div>
+      <div style="flex:1"><div class="hp-row-nome">Aprovados / Em execução</div></div>
+      ${hpBar(pctApr,corApr)}
+      <div class="hp-row-val" style="color:${corApr}">${aprovados} de ${total}</div>
     </div>
     <div class="hp-row">
-      <div style="flex:1"><div class="hp-row-nome">Disponível</div></div>
-      <div class="hp-row-val" style="color:#1a7f4b">${fmtRKs(Math.max(totalB-totalR,0))}</div>
+      <div style="flex:1"><div class="hp-row-nome">Valor solicitado</div></div>
+      <div class="hp-row-val">${fmtRKs(solBRL)}</div>
     </div>
-    <div class="hp-sec">Por obra</div>`+
-  porObra.map(o=>{
-    const p=o.budget>0?Math.round(o.real/o.budget*100):0;
-    const c=p>=100?'#c0392b':p>=80?'#b07d00':'#2E5FA3';
+    <div class="hp-row">
+      <div style="flex:1"><div class="hp-row-nome">Valor aprovado</div></div>
+      <div class="hp-row-val" style="color:#1a7f4b">${fmtRKs(aprBRL)}</div>
+    </div>
+    <div class="hp-sec">Por Planta</div>`+
+  porPlanta.map(pl=>{
+    const p=pl.sol>0?Math.round(pl.apr/pl.sol*100):0;
+    const c=p>=80?'#1a7f4b':p>=40?'#b07d00':'#2E5FA3';
     return`<div class="hp-row">
-      <div style="flex:1;min-width:0"><div class="hp-row-nome">${o.nome}</div><div class="hp-row-sub">Budget: ${fmtRKs(o.budget)}</div></div>
+      <div style="flex:1;min-width:0"><div class="hp-row-nome">${pl.nome}</div><div class="hp-row-sub">Sol: ${fmtRKs(pl.sol)} · ${pl.qtd} projeto${pl.qtd>1?'s':''}</div></div>
       ${hpBar(p,c)}
-      <div class="hp-row-val" style="color:${c}">${fmtRKs(o.real)}</div>
+      <div class="hp-row-val" style="color:${c}">${fmtRKs(pl.apr)}</div>
     </div>`;
   }).join('');
 }
@@ -319,8 +329,9 @@ document.getElementById('hp-tabs').querySelectorAll('.hp-tab').forEach(btn=>{
 
 async function carregarPainel(){
   try{
-    const kpi=await API.kpi.dados();
+    const [kpi, capex] = await Promise.all([API.kpi.dados(), API.capex.listar()]);
     _painelDados=kpi;
+    _painelDados.capex=capex;
     renderPainel(_painelMod);
     renderAlertas(kpi);
   }catch(e){
