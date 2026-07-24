@@ -45,6 +45,32 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
   try{if(d.chamados)sessionStorage.setItem('_kpi_chamados',JSON.stringify(d.chamados));}catch(e){}
   try{if(d.codin)   sessionStorage.setItem('_kpi_codin',   JSON.stringify(d.codin));}catch(e){}
   try{if(d.conforto)sessionStorage.setItem('_kpi_conforto',JSON.stringify(d.conforto));}catch(e){}
+  try{
+    const capexRes = await fetch('/api/capex',{credentials:'include',headers:{'X-Ctrl-Token':localStorage.getItem('ctrl-token')||''}});
+    if(capexRes.ok){
+      const capexData = await capexRes.json();
+      try{ sessionStorage.setItem('_kpi_capex', JSON.stringify(capexData)); }catch(_){}
+      window._kpiDados_capex = capexData;
+      const dCapex = capexData;
+      if(dCapex){
+        const anoFiltro = new Date().getFullYear()+1;
+        const projs = (dCapex.projetos||[]).filter(p=>!p.ano_orcamento||p.ano_orcamento===anoFiltro);
+        const total  = projs.length;
+        const aprov  = projs.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído').length;
+        const analise= projs.filter(p=>p.status==='Em Análise').length;
+        const semArq = projs.filter(p=>!(p.arquivos||[]).length).length;
+        const solBRL = projs.reduce((s,p)=>s+(p.valor_solicitado||0),0);
+        const aprBRL = projs.reduce((s,p)=>s+(p.valor_aprovado||0),0);
+        const el = document.getElementById('mkpis-capex');
+        if(el) el.innerHTML=
+          mkMicro(total,'Total projetos','c-azul',"abrirModuloComDrill('capex','cx-total')")+
+          mkMicro(aprov,'Aprovados','c-verde',"abrirModuloComDrill('capex','cx-aprov')")+
+          mkMicro(analise,'Em análise','c-laranja',"abrirModuloComDrill('capex','cx-analise')")+
+          mkMicro(semArq,'Sem arquivo',semArq>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('capex','cx-docs')");
+        setTimeout(()=>desenharMicroBulletCapex('mcv-capex', solBRL, aprBRL),80);
+      }
+    }
+  }catch(e){ console.warn('[kpi] capex micro:', e); }
   const dOb=d.obras||null;
   const dCap=d.capex||null;
   const dCod=d.codin||null;
