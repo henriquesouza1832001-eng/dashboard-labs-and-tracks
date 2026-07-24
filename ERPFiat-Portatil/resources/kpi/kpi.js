@@ -523,6 +523,11 @@ function calcAvFis(o){
   const et=o.etapas||[];
   if(!et.length) return 0;
   const pesoTotalEtapas=et.reduce((s,e)=>s+(e.peso||1),0)||1;
+  const temItens=et.some(e=>(e.subtarefas||[]).some(s=>(s.itens||[]).length>0));
+  if(!temItens){
+    const exec=et.reduce((s,e)=>s+(e.peso||1)*(e.avancoFisico||0),0);
+    return exec/pesoTotalEtapas;
+  }
   let somaGlobal=0;
   et.forEach(e=>{
     const subs=e.subtarefas||[];
@@ -1042,9 +1047,11 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     return;
   }
   if (!etapas.length && !lancs.length) {
-    const dtIni = obra.dtInicioReal || obra.dtInicioPrev || obra.cronogramaIniData;
-    const dtFim = obra.dtFimReal    || obra.dtFimPrev    || obra.cronogramaFimData;
-    const afManual = (obra.etapas || []).reduce((s, e) => s + (e.avancoFisico || 0), 0) / Math.max((obra.etapas || []).length, 1);
+    const todasDatasEtapas = (obra.etapas||[]).flatMap(e=>[e.dtInicio,e.dtFim,e.dtInicioReal,e.dtFimReal].filter(Boolean)).sort();
+    const dtIni = obra.dtInicioReal || obra.dtInicioPrev || obra.cronogramaIniData || todasDatasEtapas[0];
+    const dtFim = obra.dtFimReal    || obra.dtFimPrev    || obra.cronogramaFimData || todasDatasEtapas[todasDatasEtapas.length-1];
+    const pesoTotalEtapas = (obra.etapas||[]).reduce((s,e)=>s+(e.peso||1),0)||1;
+    const afManual = (obra.etapas||[]).reduce((s,e)=>s+(e.peso||1)*(e.avancoFisico||0),0) / pesoTotalEtapas;
     if (!dtIni || !dtFim || !afManual) {
       ctx.fillStyle = 'var(--text-dim, #8b949e)';
       ctx.font = '12px var(--font, sans-serif)';
