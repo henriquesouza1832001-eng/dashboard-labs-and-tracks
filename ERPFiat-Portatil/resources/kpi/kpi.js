@@ -1,4 +1,4 @@
-﻿const CACHES = {obras:'obras',capex:'obras',chamados:'chamados',codin:'codin',conforto:'conforto',ergonomia:null,acesso:'codin'};
+﻿const CACHES = {obras:'obras',capex:'capex',chamados:'chamados',codin:'codin',conforto:'conforto',ergonomia:null,acesso:'codin'};
 function lerCache(mod){
   if(!mod)return null;
   if(window['_kpiDados_'+mod])return window['_kpiDados_'+mod];
@@ -144,6 +144,24 @@ if(dCh){
       mkMicro(andamento,'Em andamento',andamento>0?'c-laranja':'c-cinza',"abrirModuloComDrill('chamados','ch-sem')")+
       mkMicro(concluidos,'Concluídos','c-verde',"abrirModuloComDrill('chamados','ch-resol')")+
       mkMicro(criticos,'Críticos',criticos>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('chamados','ch-total')");
+      const dCapex = lerCache('capex');
+  if(dCapex){
+    const anoFiltro = new Date().getFullYear()+1;
+    const projs = (dCapex.projetos||[]).filter(p=>!p.ano_orcamento||p.ano_orcamento===anoFiltro);
+    const total  = projs.length;
+    const aprov  = projs.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído').length;
+    const analise= projs.filter(p=>p.status==='Em Análise').length;
+    const semArq = projs.filter(p=>!(p.arquivos||[]).length).length;
+    const solBRL = projs.reduce((s,p)=>s+(p.valor_solicitado||0),0);
+    const aprBRL = projs.reduce((s,p)=>s+(p.valor_aprovado||0),0);
+    const fmtM   = v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+    document.getElementById('mkpis-capex').innerHTML=
+      mkMicro(total,'Total projetos','c-azul',"abrirModuloComDrill('capex','cx-total')")+
+      mkMicro(aprov,'Aprovados','c-verde',"abrirModuloComDrill('capex','cx-aprov')")+
+      mkMicro(analise,'Em análise','c-laranja',"abrirModuloComDrill('capex','cx-analise')")+
+      mkMicro(semArq,'Sem arquivo',semArq>0?'c-vermelho':'c-cinza',"abrirModuloComDrill('capex','cx-docs')");
+    setTimeout(()=>desenharMicroBulletCapex('mcv-capex', solBRL, aprBRL),80);
+  }
     const tempoMedioMs = cham.filter(c=>c.dataFechamento&&c.dataAbertura).reduce((s,c)=>s+(new Date(c.dataFechamento)-new Date(c.dataAbertura)),0);
     const qtdFechados = cham.filter(c=>c.dataFechamento&&c.dataAbertura).length;
     const tmedDias = qtdFechados>0?Math.round(tempoMedioMs/qtdFechados/86400000):null;
@@ -214,6 +232,24 @@ function desenharMicroBullet(id, orcado, gasto, aprovado, aAprovar){
           <span style="color:#2E5FA3">▪ A Fat: ${fmtRK(Math.max(aprovado-gasto,0))}</span>
         </div>
       </div>`:''}
+    </div>`;
+}
+function desenharMicroBulletCapex(id, solicitado, aprovado){
+  const cv=document.getElementById(id);if(!cv)return;
+  const pai=cv.parentElement;
+  const pct=solicitado>0?Math.min(aprovado/solicitado,1):0;
+  const cor=pct>=0.8?'#1a7f4b':pct>=0.4?'#b07d00':'#2E5FA3';
+  const fmtM=v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+  pai.innerHTML=`
+    <div style="width:100%;display:flex;flex-direction:column;gap:6px;padding:4px 0">
+      <div style="font-size:10px;color:var(--text-dim);text-align:right;font-family:var(--mono)">Solicitado: ${fmtM(solicitado)}</div>
+      <div style="position:relative;height:8px;background:#e8edf5;border-radius:4px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:4px;transition:width 0.4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono)">
+        <span style="color:#1a7f4b">▪ Aprovado: ${fmtM(aprovado)}</span>
+        <span style="color:#8a9abf">${solicitado>0?Math.round(pct*100):0}%</span>
+      </div>
     </div>`;
 }
 (async function loadLogos(){
@@ -2200,43 +2236,108 @@ function drawModMiniCard(canvasId,labels,vals,cores){
   desenharDonutResponsivo(cv,labels,vals,cores);
 }
 function renderCapex(container,d){
-  if(!d){container.innerHTML='<div class="sem-dados">Nenhum arquivo CAPEX carregado.</div>';return;}
-  const obras=d.obras||[];
-  const budget=d.budget||[];
-  const lanc=d.lancamentos||[];
-  const budgTotal=budget.reduce((s,b)=>s+(b.budgetAprov||0),0);
-  const real=lanc.reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-  const A_Faturar=budgTotal-real;
-  const pct=budgTotal>0?Math.round(real/budgTotal*100):0;
-  const emAnd=obras.filter(o=>o.status==='Em Andamento');
-  const conc=obras.filter(o=>o.status==='Concluído');
-  const plan=obras.filter(o=>o.status==='Planejado');
-  const budgCx=cod=>budget.filter(b=>b.obraCod===cod).reduce((s,b)=>s+(b.budgetAprov||0),0);
-const realCx=cod=>lanc.filter(l=>l.obraCod===cod).reduce((s,l)=>s+l.qtd*l.precoUnit,0);
-const OrçadoCx=cod=>budgCx(cod)-realCx(cod);
-  const catMap={};lanc.forEach(l=>{const c=l.categoria||'Outros';catMap[c]=(catMap[c]||0)+l.qtd*l.precoUnit;});
-  const topCat=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  container.innerHTML=`<div class="obras-section"><div class="secao-titulo">CAPEX</div><div class="obras-cards-grid" id="capex-grid">
-    ${mkCard('cx-budget','BUDGET TOTAL',fmtRK(budgTotal),'c-azul','#2E5FA3',pct+'% realizado',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Realizado</span><span class="ob-mini-val c-laranja">${fmtRK(real)}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">A Faturar</span><span class="ob-mini-val ${A_Faturar<0?'c-vermelho':'c-verde'}">${fmtRK(A_Faturar)}</span></div>`)}
-    ${mkCard('cx-andamento','EM ANDAMENTO',emAnd.length,'c-laranja','#e3711a',fmtRK(emAnd.reduce((s,o)=>s+budgObra(o.cod),0))+' budget',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Realizado</span><span class="ob-mini-val c-laranja">${fmtRK(emAnd.reduce((s,o)=>s+realObra(o.cod),0))}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">A Faturar</span><span class="ob-mini-val c-verde">${fmtRK(emAnd.reduce((s,o)=>s+OrçadoObra(o.cod),0))}</span></div>`)}
-    ${mkCard('cx-conc','CONCLUÍDAS',conc.length,'c-verde','#3fb950',fmtRK(conc.reduce((s,o)=>s+realObra(o.cod),0))+' gasto',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">% do total</span><span class="ob-mini-val c-verde">${obras.length>0?Math.round(conc.length/obras.length*100):0}%</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">Obras</span><span class="ob-mini-val c-verde">${conc.length}</span></div>`)}
-    ${mkCard('cx-cat','POR CATEGORIA',topCat.length,'c-azul','#a371f7',topCat[0]?topCat[0][0]+': '+fmtRK(topCat[0][1]):'—',
-      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Top categoria</span><span class="ob-mini-val c-azul">${topCat[0]?topCat[0][0]:'—'}</span></div>
-       <div class="ob-mini-stat"><span class="ob-mini-lbl">Categorias</span><span class="ob-mini-val c-azul">${Object.keys(catMap).length}</span></div>`)}
-  </div></div>`;
+  if(!d||!d.projetos){container.innerHTML='<div class="sem-dados">Dados CAPEX não carregados.<br><span style="font-size:10px">Acesse o módulo CAPEX para carregar os dados.</span></div>';return;}
+  const anoFiltro = new Date().getFullYear()+1;
+  const projs  = (d.projetos||[]).filter(p=>!p.ano_orcamento||p.ano_orcamento===anoFiltro);
+  const plantas = d.plantas||[];
+  const total   = projs.length;
+  const aprov   = projs.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído');
+  const analise = projs.filter(p=>p.status==='Em Análise');
+  const rasc    = projs.filter(p=>p.status==='Rascunho');
+  const reprov  = projs.filter(p=>p.status==='Reprovado');
+  const semArq  = projs.filter(p=>!(p.arquivos||[]).length);
+  const solBRL  = projs.reduce((s,p)=>s+(p.valor_solicitado||0),0);
+  const aprBRL  = projs.reduce((s,p)=>s+(p.valor_aprovado||0),0);
+  const fmtM    = v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+  const pctAprov= total>0?Math.round(aprov.length/total*100):0;
+
+  // por planta
+  const porPlanta = plantas.map(pl=>({
+    nome: pl.nome,
+    sol:  projs.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+(p.valor_solicitado||0),0),
+    apr:  projs.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+(p.valor_aprovado||0),0),
+    qtd:  projs.filter(p=>p.planta_id===pl.id).length,
+  })).filter(x=>x.qtd>0).sort((a,b)=>b.sol-a.sol);
+
+  // por grupo (categoria)
+  const grupoMap={};
+  projs.forEach(p=>{ const g=p.categoria||'Sem grupo'; grupoMap[g]=(grupoMap[g]||0)+(p.valor_solicitado||0); });
+  const porGrupo=Object.entries(grupoMap).sort((a,b)=>b[1]-a[1]);
+
+  // sem documentos
+  const semOp  = projs.filter(p=>!(p.arquivos||[]).length);
+
+  container.innerHTML=`<div class="obras-section"><div class="secao-titulo">CAPEX ${anoFiltro}</div><div class="obras-cards-grid" id="capex-grid">
+    ${mkCard('cx-total','TOTAL PROJETOS',total,'c-azul','#2E5FA3',fmtM(solBRL)+' solicitado',
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Aprovados</span><span class="ob-mini-val c-verde">${aprov.length}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Em análise</span><span class="ob-mini-val c-laranja">${analise.length}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Reprovados</span><span class="ob-mini-val c-vermelho">${reprov.length}</span></div>`)}
+    ${mkCard('cx-aprov','APROVADOS',aprov.length,'c-verde','#1a7f4b',fmtM(aprBRL)+' aprovado',
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">% do total</span><span class="ob-mini-val c-verde">${pctAprov}%</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Valor aprov.</span><span class="ob-mini-val c-verde">${fmtM(aprBRL)}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Solicitado</span><span class="ob-mini-val c-azul">${fmtM(solBRL)}</span></div>`)}
+    ${mkCard('cx-analise','EM ANÁLISE',analise.length,'c-laranja','#e3711a',fmtM(analise.reduce((s,p)=>s+(p.valor_solicitado||0),0))+' sol.',
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Rascunhos</span><span class="ob-mini-val c-cinza">${rasc.length}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Plantas</span><span class="ob-mini-val c-azul">${new Set(analise.map(p=>p.planta_id)).size}</span></div>`)}
+    ${mkCard('cx-docs','SEM DOCUMENTOS',semArq.length,semArq.length>0?'c-vermelho':'c-verde',semArq.length>0?'#c0392b':'#1a7f4b',semArq.length>0?'one pager / orçamento ausente':'todos com documentos',
+      `<div class="ob-mini-stat"><span class="ob-mini-lbl">Com docs</span><span class="ob-mini-val c-verde">${total-semArq.length}</span></div>
+       <div class="ob-mini-stat"><span class="ob-mini-lbl">Sem docs</span><span class="ob-mini-val ${semArq.length>0?'c-vermelho':'c-cinza'}">${semArq.length}</span></div>`)}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Valor por Planta</div>
+      ${porPlanta.map(pl=>{
+        const pct=pl.sol>0?Math.min(pl.apr/pl.sol,1):0;
+        const cor=pct>=0.8?'#1a7f4b':pct>=0.4?'#b07d00':'#2E5FA3';
+        return`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span style="font-weight:600;color:var(--text)">${pl.nome}</span>
+            <span style="font-family:var(--mono);color:${cor}">${fmtM(pl.apr)} / ${fmtM(pl.sol)}</span>
+          </div>
+          <div style="position:relative;height:6px;background:#e8edf5;border-radius:3px;overflow:hidden">
+            <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:${cor};border-radius:3px;transition:width 0.4s"></div>
+          </div>
+          <div style="font-size:9px;color:var(--text-dim);margin-top:2px">${pl.qtd} projeto${pl.qtd>1?'s':''} · ${Math.round(pct*100)}% aprovado</div>
+        </div>`;
+      }).join('')||'<div style="color:var(--text-dim);font-size:11px">Nenhum projeto cadastrado</div>'}
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Valor por Grupo</div>
+      ${porGrupo.map(([nome,val])=>{
+        const pct=solBRL>0?val/solBRL:0;
+        return`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span style="font-weight:600;color:var(--text)">${nome}</span>
+            <span style="font-family:var(--mono);color:#2E5FA3">${fmtM(val)}</span>
+          </div>
+          <div style="position:relative;height:6px;background:#e8edf5;border-radius:3px;overflow:hidden">
+            <div style="position:absolute;left:0;top:0;height:100%;width:${pct*100}%;background:#2E5FA3;border-radius:3px;transition:width 0.4s"></div>
+          </div>
+        </div>`;
+      }).join('')||'<div style="color:var(--text-dim);font-size:11px">Nenhum projeto com grupo definido</div>'}
+    </div>
+  </div>
+
+  ${semArq.length>0?`
+  <div style="background:#fdf0ee;border:1px solid #f5c6c0;border-radius:10px;padding:14px;margin-top:14px">
+    <div style="font-size:10px;font-weight:700;color:#c0392b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">⚠ Projetos sem documentação</div>
+    ${semArq.map(p=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid #f5c6c0">
+      <span style="color:var(--text);font-weight:500">${p.titulo||'(sem título)'}</span>
+      <span style="font-family:var(--mono);color:#c0392b;font-size:10px">${p.status||'Rascunho'}</span>
+    </div>`).join('')}
+  </div>`:''}
+  </div>`;
+
   setTimeout(()=>{
-    const sm={};obras.forEach(o=>{sm[o.status]=(sm[o.status]||0)+1;});
-    const sl=Object.entries(sm).filter(x=>x[1]);
-    desenharDonutNaCanvas('cv-mini-cx-budget',sl.map(x=>x[0]),sl.map(x=>x[1]),['#e3711a','#3fb950','#2E5FA3','#f85149']);
-    desenharDonutNaCanvas('cv-mini-cx-andamento',emAnd.map(o=>tnome(o.nome)),emAnd.map(o=>Math.max(budgObra(o.cod),1)),['#e3711a','#d29922','#2E5FA3','#a371f7']);
-    desenharDonutNaCanvas('cv-mini-cx-conc',['Realizado','Budget restante'],[real||1,Math.max(budgTotal-real,0)||1],['#3fb950','#2E5FA3']);
-    desenharDonutNaCanvas('cv-mini-cx-cat',topCat.map(x=>x[0]),topCat.map(x=>x[1]),['#2E5FA3','#e3711a','#3fb950','#d29922','#a371f7']);
+    const statusMap={};projs.forEach(p=>{const s=p.status||'Rascunho';statusMap[s]=(statusMap[s]||0)+1;});
+    const sl=Object.entries(statusMap);
+    const coresStatus={'Aprovado':'#1a7f4b','Em Execução':'#1a7f4b','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b','Em Execução':'#2E5FA3'};
+    desenharDonutNaCanvas('cv-mini-cx-total',sl.map(x=>x[0]),sl.map(x=>x[1]),sl.map(x=>coresStatus[x[0]]||'#8a9abf'));
+    desenharDonutNaCanvas('cv-mini-cx-aprov',['Aprovados','Restantes'],[aprov.length||1,(total-aprov.length)||1],['#1a7f4b','#e8edf5']);
+    desenharDonutNaCanvas('cv-mini-cx-analise',['Em análise','Rascunho','Outros'],[analise.length||1,rasc.length||1,Math.max(total-analise.length-rasc.length,0)||1],['#e3711a','#8a9abf','#2E5FA3']);
+    desenharDonutNaCanvas('cv-mini-cx-docs',['Com docs','Sem docs'],[(total-semArq.length)||1,semArq.length||1],['#1a7f4b','#c0392b']);
   },60);
 }
 
