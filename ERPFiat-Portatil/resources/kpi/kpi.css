@@ -87,7 +87,7 @@
 .mod-footer{flex-shrink:0;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-top:6px}
 .mod-footer-hint{color:var(--blue-mid);font-size:9.5px;font-weight:600}
 
-.main-scroll{overflow-y:auto;overflow-x:hidden;flex:1;min-width:0;display:flex;flex-direction:column}
+.main-scroll{overflow-y:auto;overflow-x:hidden;flex:1;min-width:0;display:flex;flex-direction:column;height:calc(100vh - var(--topbar-h))}
 .detalhe-area{display:none}
 
 /* ── ANIMAÇÕES ── */
@@ -187,8 +187,7 @@
 .mod-section{display:flex;flex-direction:column;height:100%}
 
 /* ── OVERLAY ANÁLISE ── */
-.ob-overlay{background:var(--surface);border:1px solid var(--border);border-radius:12px;z-index:30;padding:18px 20px 22px;animation:obFadeIn 180ms ease;box-shadow:var(--shadow-hover);flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
-@keyframes obFadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.ob-overlay{background:var(--surface);border:1px solid var(--border);border-radius:12px;z-index:30;padding:18px 20px 22px;animation:obFadeIn 180ms ease;box-shadow:var(--shadow-hover);display:flex;flex-direction:column}@keyframes obFadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 
 .ob-ov-charts{display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:14px;width:100%;align-items:flex-start}
 .ob-ov-cbox{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;flex-shrink:0;min-width:0}

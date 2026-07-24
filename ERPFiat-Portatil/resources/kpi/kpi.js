@@ -321,7 +321,7 @@ function alternarModulo(id){
   const mainScroll=document.querySelector('.main-scroll');
   const painel=document.createElement('div');
   painel.id='painel-expandido-global';
-painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:column;min-height:0';
+painel.style.cssText='padding:16px 20px 20px;display:flex;flex-direction:column';
   const nomes={obras:'Obras',capex:'CAPEX',chamados:'Chamados',codin:'CODIN',conforto:'Conforto',ergonomia:'Ergonomia',acesso:'Controle de Acesso'};
   const header=document.createElement('div');
   header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0';
@@ -356,7 +356,7 @@ function abrirModuloComDrill(modulo,tipo){
     const mainScroll=document.querySelector('.main-scroll');
     const painel=document.createElement('div');
     painel.id='painel-expandido-global';
-    painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:column;min-height:0';
+    painel.style.cssText='padding:16px 20px 20px;display:flex;flex-direction:column';
     const nomes={obras:'Obras',capex:'CAPEX',chamados:'Chamados',codin:'CODIN',conforto:'Conforto',ergonomia:'Ergonomia'};
     const header=document.createElement('div');
     header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0';
@@ -2330,7 +2330,7 @@ function abrirDrillConforto(tipo,d){
   overlay.id='cnf-overlay';
   overlay.innerHTML=buildDrillConforto(tipo,d);
   conteudo.innerHTML='';
-  painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:column;min-height:0';
+  painel.style.cssText='padding:16px 20px 20px;display:flex;flex-direction:column';
   conteudo.appendChild(overlay);
   setTimeout(()=>drawDrillConfortoCharts(tipo,d),80);
 }
