@@ -565,8 +565,7 @@ function OrçadoObra(cod){return budgObra(cod)-realObra(cod);}
 function renderObras(container,d){
   _obrasData=d;_drillOb=null;
   if(!d){container.innerHTML='<div class="sem-dados">Nenhum arquivo de obras carregado.<br><span style="font-size:10px">Selecione o arquivo no hub principal antes de abrir este painel.</span></div>';return;}
-  container.style.cssText='';
-container.innerHTML='<div class="obras-section"><div class="secao-titulo">Obras</div>'+buildObrasCards(d)+'</div>';
+  container.innerHTML='<div class="obras-section"><div class="secao-titulo">Obras</div>'+buildObrasCards(d)+'</div>';
   setTimeout(()=>{
     drawMiniCard('total',d);
     drawMiniCard('andamento',d);
@@ -777,7 +776,6 @@ function toggleObCard(tipo){
   overlay.id='ob-overlay';
   overlay.innerHTML=buildOverlayHTML(tipo,_obrasData);
   conteudo.innerHTML='';
-  conteudo.style.cssText='';
   conteudo.appendChild(overlay);
   setTimeout(()=>drawOverlayCharts(tipo,_obrasData),60);
 }

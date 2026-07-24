@@ -134,6 +134,30 @@ O portal QR do Conforto tem uma autenticação à parte, mais simples: um PIN em
 
 ---
 
+## CAPEX
+
+**`GET /api/capex`** — devolve o payload completo do cache: projetos (cada um com seus itens de custo e metadados de arquivo aninhados), lista de plantas e versão do payload. O campo `conteudo_blob` nunca entra aqui; o cache guarda só o que o frontend precisa pra renderizar a matriz e o dashboard.
+
+**`GET /api/capex/projetos?planta=X`** — filtra os projetos do cache por planta. Se o parâmetro `planta` não vier, devolve todos.
+
+**`POST /api/capex/projetos`** — corpo esperado: `{projetos: [...]}`. Faz upsert dos projetos via MERGE e reescreve os itens de custo de cada projeto tocado (DELETE por `projeto_id` seguido de INSERT em lote). Depois da escrita, chama `_atualizar_cache_capex_parcial` com os ids tocados, seguindo o mesmo padrão das outras rotas de escrita do sistema.
+
+**`DELETE /api/capex/projetos/{pid}`** — exclui o projeto, seus itens e o registro de arquivo vinculado. Remove a entrada do cache em memória sem reler o banco.
+
+**`POST /api/capex/projetos/{pid}/arquivo`** — corpo: `{xlsx_b64, xlsx_nome, pptx_b64, pptx_nome}` ou `{zip_b64, nome}`. Se os arquivos vierem separados, compacta em ZIP com `zipfile.ZIP_DEFLATED` antes de gravar. Salva o ZIP no Databricks Volume via `PUT` na Files API (`{DATABRICKS_HOST}/api/2.0/fs/files{vol_path}`), grava os metadados no Delta e responde imediatamente com `{"ok": true, "extraindo": true}`. A extração do conteúdo interno (XLSX via `openpyxl`, PPTX via `python-pptx`) roda em background e preenche `extraido_json` quando termina.
+
+**`GET /api/capex/projetos/{pid}/arquivo`** — lê o arquivo do Databricks Volume via `GET` na Files API e devolve o conteúdo como base64, junto com os metadados e o `extraido_json` se já estiver disponível.
+
+**`GET /api/capex/projetos/{pid}/extraido`** — devolve só o `extraido_json`, sem o blob. Útil pro frontend buscar periodicamente enquanto a extração está em background. Se ainda não terminou, devolve `{"extraido": null, "status": "pendente"}`.
+
+**`DELETE /api/capex/projetos/{pid}/arquivo`** — remove o registro de arquivo do Delta. O arquivo físico no volume não é deletado automaticamente (limitação da implementação atual).
+
+**`GET /api/capex/plantas`** — lista as plantas ativas. Lê do cache se disponível, cai no banco só se o cache não existir.
+
+**`POST /api/capex/plantas`** — cria ou atualiza uma planta via MERGE. Invalida e recarrega o cache completo do módulo depois.
+
+---
+
 ## Restrições do Databricks SQL
 
 Três limitações do SQL Warehouse que moldaram boa parte de como as rotas de escrita são implementadas:

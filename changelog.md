@@ -6,6 +6,30 @@ Aqui vai o histórico de mudanças, bugs e decisões que foram tomadas ao longo 
 
 ---
 
+## Módulo CAPEX
+
+Adicionei um módulo novo de controle de CAPEX, pensado pra centralizar tudo que precisa de aprovação orçamentária para o próximo ano fiscal. A estrutura da tela principal é matricial: grupos de projeto nas linhas, plantas nas colunas, valor por célula. Tanto grupos quanto plantas são cadastráveis via modal de configuração, sem nada hardcoded.
+
+Cada projeto tem itens de custo, status de aprovação, moeda (com conversão em tempo real para BRL usando a API `open.er-api.com`) e dois arquivos opcionais: um one pager em PPTX e uma planilha em XLSX. Os dois são compactados num ZIP e armazenados num Databricks Volume via Files API, não no Delta Lake. Tentei guardar o blob como string base64 no Delta primeiro, mas o conector SQL quebra acima de certo tamanho de payload. Mover para volume resolveu de vez.
+
+O upload foi desenhado no padrão save-first: o arquivo físico é gravado no volume e a rota responde imediatamente. A extração do conteúdo do XLSX e PPTX roda em background com `asyncio.create_task` e preenche o campo `extraido_json` da tabela `arquivos` quando termina. O frontend busca esse campo sob demanda quando o usuário clica na aba "Dados Extraídos".
+
+Algumas complicações que apareceram no caminho. O schema do Delta Lake precisou de Column Mapping habilitado antes de conseguir dropar a coluna `conteudo_blob` que tinha sido criada na primeira versão da tabela (`ALTER TABLE ... SET TBLPROPERTIES ('delta.columnMapping.mode' = 'name')`). A constante `S_ATIVIDADES` tinha sido apagada por acidente do bloco de constantes durante a integração, o que derrubou o módulo de Atividades junto. E o `_startup_capex` tinha um `CREATE TABLE` duplicado e uma docstring fora do lugar que quebravam a inicialização silenciosamente, sem stack trace óbvio.
+
+O segundo tab do módulo é um dashboard com três gráficos: barras empilhadas por planta (solicitado vs aprovado), donut por status, e barras horizontais por grupo. Os totais e gráficos convertem tudo para BRL antes de renderizar.
+
+---
+
+## Avanço físico manual em etapas sem checklist
+
+Obras que não têm itens de checklist cadastrados nas sub-tarefas ficavam com avanço físico sempre em 0%, mesmo quando o responsável entrava com um percentual manual no campo da etapa. A causa era que `calcAvFis` no KPI pulava qualquer etapa sem itens de checklist, e no `obras.js` o salvamento da etapa sempre chamava `afEtapaLocal(subtarefasAtuais)` independente de haver subtarefas ou não, ignorando o campo manual.
+
+Corrigi os dois lados. No `obras.js`, o salvamento agora usa o valor manual quando não há subtarefas: `subtarefasAtuais.length ? afEtapaLocal(subtarefasAtuais) : parseFloat($('etapa-af-manual')?.value)||0`. No `calcAvFis` do KPI, quando nenhuma etapa tem itens de checklist, o cálculo usa diretamente `avancoFisico` de cada etapa, ponderado pelo peso, em vez de retornar zero.
+
+A curva S do KPI também foi adaptada: quando uma obra não tem etapas com datas, ela agora busca as datas nas próprias etapas como fallback (`dtInicioReal`, `dtFimReal`) e plota uma curva simplificada usando o avanço manual como ponto atual. O visual foi alinhado ao mesmo canvas padrão das outras obras: mesmas cores, mesmo grid, mesma suavização com `quadraticCurveTo`.
+
+---
+
 ## Credenciais removidas do repositório de verdade
 
 A entrada anterior deste changelog fala que eu tinha revogado e trocado os valores. O que faltou contar ali é que só trocar o valor não resolve: o `app.yaml` continuava versionado, com o `DATABRICKS_TOKEN` e o `JWT_SECRET` em texto puro desde o primeiro commit que criou o arquivo. O repositório sempre foi privado, então não houve exposição pública nesse tempo todo, mas pra poder abrir o repo (ou só dormir tranquilo sabendo que qualquer colaborador futuro não esbarra num token válido no histórico) não dava pra deixar assim.

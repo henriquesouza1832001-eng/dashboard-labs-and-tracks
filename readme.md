@@ -13,6 +13,7 @@ Esse é um ERP interno que comecei a construir pra resolver um problema bem prá
 - [Stack e por quê](#stack-e-por-quê)
 - [Como as peças se encaixam](#como-as-peças-se-encaixam)
 - [Os módulos, um por um](#os-módulos-um-por-um)
+  - [Hub](#hub), [KPI](#kpi), [Obras](#obras), [Chamados](#chamados), [Conforto](#conforto), [CAPEX](#capex), [CODIN](#codin), [Atividades](#atividades)
 - [Autenticação](#autenticação)
 - [Cache em memória](#cache-em-memória)
 - [Banco de dados e schema](#banco-de-dados-e-schema)
@@ -100,6 +101,16 @@ Não é um módulo separado, é uma porta de entrada mais simples para o mesmo C
 ### CODIN
 Controle de acesso físico. Cadastra pessoas, pontos de acesso (portas, catracas), quais leitores cada ponto usa, e um fluxo de solicitação: alguém pede liberação de acesso a um ponto, e isso vira uma solicitação pendente até ser aprovada ou rejeitada. Tem também uma página pública de solicitação via QR code, parecida em espírito com o portal do Conforto.
 
+### CAPEX
+
+Módulo de controle de orçamento e aprovações de investimento para o próximo ano fiscal. Tudo que precisa de aprovação orçamentária aparece aqui com os valores, e cada projeto pode ter dois documentos anexados: um one pager em PPTX e uma planilha de custo em XLSX.
+
+A tela principal é uma matriz: linhas são grupos de projeto (ESLM, Proving Grounds, Protótipo, EMAT, Safety Center, NVH), colunas são as plantas (Betim, Goiania-PE, Porto Real, Cordoba, Palomar). Cada célula mostra o valor solicitado para aquele grupo naquela planta, com badges indicando se já tem one pager e orçamento anexados. Grupos e plantas são cadastráveis, não hardcoded.
+
+Cada projeto tem itens de custo (descrição, fornecedor, quantidade, preço unitário), e os valores são exibidos sempre convertidos para BRL usando cotação em tempo real via `open.er-api.com`. Quando o projeto usa moeda estrangeira, a célula mostra o valor em BRL e a taxa usada embaixo, pra não perder a rastreabilidade da conversão.
+
+Os arquivos são armazenados num Databricks Volume via Files API, não como blob no Delta Lake. A tabela `capex.arquivos` guarda só os metadados e o caminho no volume. O upload salva o arquivo físico primeiro e responde imediatamente; a extração do conteúdo (via `openpyxl` e `python-pptx`) roda em background com `asyncio.create_task`. O segundo tab é um dashboard com gráficos: barras por planta, donut por status e barras por grupo.
+
 ### Atividades
 O mais simples dos módulos: uma lista de tarefas do time, com prioridade, responsável, prazo, vínculo opcional com uma obra, progresso e comentários. Tem visão em lista e em kanban. É o único módulo cujo JavaScript vive inteiro dentro do próprio HTML, em vez de um arquivo `.js` separado. Não é o padrão do resto do projeto, mas funciona porque o módulo é pequeno.
 
@@ -149,6 +160,7 @@ Cada módulo tem seu próprio schema dentro do catálogo `eng_lab`:
 - Conforto: `eng_lab.dashboard_labs_and_tracks_conforto`
 - Atividades: `eng_lab.dashboard_labs_and_tracks_atividades`
 - Hub (config compartilhada): `eng_lab.dashboard_labs_and_tracks_hub`
+- CAPEX: `eng_lab.dashboard_labs_and_tracks_capex`
 
 A maioria das tabelas já existia no Delta Lake antes do `app.py`. Foram criadas direto no workspace do Databricks, não por uma migração versionada no código. A única exceção é `etapas_avancos`, criada automaticamente no startup do app com `CREATE TABLE IF NOT EXISTS` porque foi adicionada depois, junto com o recurso de registrar avanço pontual de etapa.
 
@@ -236,6 +248,19 @@ Mesma lógica, para corretivas:
 | `manutencao_pecas` | `manutencao_id`, `peca_id`, `nome_peca`, `quantidade` |
 
 O tempo total gasto numa manutenção não é uma coluna. É calculado somando `duracao_min` de todas as sessões com `tipo_sessao = 'trabalho'` daquela manutenção (pausas não contam). Isso é o que permite um técnico pausar no meio de uma corretiva (foi almoçar, faltou peça) e o sistema continuar sabendo quanto tempo de trabalho efetivo foi gasto, sem contar o tempo parado.
+
+### Tabelas do CAPEX
+
+Diferente dos outros módulos, as quatro tabelas do CAPEX são criadas automaticamente no startup do app via `CREATE TABLE IF NOT EXISTS`, junto com a criação do schema se ele não existir. Isso porque o módulo é novo e não havia tabelas preexistentes no workspace.
+
+| Tabela | Colunas principais |
+|---|---|
+| `plantas` | `id`, `nome`, `ativo`, `criado_em`, `atualizado_em` |
+| `projetos` | `id`, `planta_id`, `titulo`, `descricao`, `ano_orcamento`, `categoria`, `responsavel`, `status`, `valor_solicitado`, `valor_aprovado`, `moeda`, `prioridade`, `justificativa`, `retorno_previsto`, `obs`, `criado_em`, `atualizado_em`, `atualizado_por` |
+| `itens` | `id`, `projeto_id`, `descricao`, `categoria`, `fornecedor`, `quantidade`, `unidade`, `preco_unitario`, `total`, `moeda`, `ordem`, `obs`, `atualizado_em`, `atualizado_por` |
+| `arquivos` | `id`, `projeto_id`, `nome`, `tipo`, `tamanho_bytes`, `vol_path`, `extraido_json`, `atualizado_em`, `atualizado_por` |
+
+A coluna `vol_path` em `arquivos` guarda o caminho físico do ZIP no Databricks Volume (`/Volumes/eng_lab/dashboard_labs_and_tracks_capex/arquivos/{id}.zip`). O campo `extraido_json` é preenchido em background depois do upload, com o resultado da leitura do XLSX e PPTX internos ao ZIP. O blob em si nunca entra no Delta Lake.
 
 ---
 
