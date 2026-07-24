@@ -34,9 +34,9 @@ async function _carregarCotacoes() {
     const res = await fetch('https://api.exchangerate-api.com/v4/latest/BRL');
     const data = await res.json();
     const r = data.rates;
-    _cotacoes.USD = r.BRL ? 1 : (1 / r.USD);
-    _cotacoes.EUR = 1 / r.EUR;
-    _cotacoes.ARS = 1 / r.ARS;
+    _cotacoes.USD = 1 / (r.USD || 1);
+    _cotacoes.EUR = 1 / (r.EUR || 1);
+    _cotacoes.ARS = 1 / (r.ARS || 1);
     _cotacoes.BRL = 1;
   } catch(e) {
     console.warn('[capex] cotações indisponíveis, usando 1:1');

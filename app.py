@@ -3198,8 +3198,16 @@ async def upload_arquivo(pid: str, request: Request):
 
     try:
         zip_bytes = base64.b64decode(zip_b64)
-        with open(vol_path, "wb") as f:
-            f.write(zip_bytes)
+        host  = os.environ.get("DATABRICKS_HOST", "").rstrip("/")
+        token = os.environ.get("DATABRICKS_TOKEN", "")
+        api_url = f"{host}/api/2.0/fs/files{vol_path}"
+        import requests as _requests
+        resp = _requests.put(api_url, data=zip_bytes, headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/octet-stream",
+        })
+        if not resp.ok:
+            raise Exception(f"Files API: {resp.status_code} {resp.text}")
     except Exception as e:
         print(f"[capex][arquivo] erro salvar volume: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -3257,8 +3265,12 @@ async def download_arquivo(pid: str, request: Request):
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
     r = rows[0]
     try:
-        with open(r["vol_path"], "rb") as f:
-            zip_b64 = base64.b64encode(f.read()).decode("utf-8")
+        host  = os.environ.get("DATABRICKS_HOST", "").rstrip("/")
+        token = os.environ.get("DATABRICKS_TOKEN", "")
+        import requests as _requests
+        api_url = f"{host}/api/2.0/fs/files{r['vol_path']}"
+        resp = _requests.get(api_url, headers={"Authorization": f"Bearer {token}"})
+        zip_b64 = base64.b64encode(resp.content).decode("utf-8") if resp.ok else None
     except Exception as e:
         zip_b64 = None
     return JSONResponse({
