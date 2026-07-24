@@ -152,8 +152,14 @@ async function init() {
 function _processar() {
   _plantas = (_dados?.plantas||[]).filter(p=>p.ativo!==false);
   if(!_plantas.length) _plantas = [{id:'betim',nome:'Betim'},{id:'goiania_pe',nome:'Goiania-PE'},{id:'porto_real',nome:'Porto Real'},{id:'cordoba',nome:'Cordoba'},{id:'palomar',nome:'Palomar'}];
+  try {
+    const saved = localStorage.getItem('capex_grupos');
+    if(saved) _grupos = JSON.parse(saved);
+  } catch(_){}
   const gruposSet = new Set(_dados?.projetos?.map(p=>p.categoria).filter(Boolean));
-  _grupos = [...gruposSet].map(g=>({id:g.toLowerCase().replace(/\s/g,'_'),nome:g}));
+  const gruposDosDados = [...gruposSet].map(g=>({id:g.toLowerCase().replace(/\s/g,'_'),nome:g}));
+  const nomesExistentes = new Set(_grupos.map(g=>g.nome));
+  gruposDosDados.forEach(g=>{ if(!nomesExistentes.has(g.nome)) _grupos.push(g); });
   if(!_grupos.length) _grupos = GRUPOS_PADRAO.map(g=>({id:g.toLowerCase().replace(/\s/g,'_'),nome:g}));
 
   renderTudo();
@@ -657,7 +663,6 @@ window.removerConfigItem = function(tipo,idx) {
 };
 
 async function salvarConfig() {
-  // ler valores editados
   document.querySelectorAll('#grupos-list .config-item').forEach((el,i)=>{
     const v=el.querySelector('input').value.trim();
     if(_grupos[i]) { _grupos[i].nome=v; _grupos[i].id=v.toLowerCase().replace(/\s/g,'_'); }
@@ -668,10 +673,16 @@ async function salvarConfig() {
   });
   _grupos  = _grupos.filter(g=>g.nome.trim());
   _plantas = _plantas.filter(p=>p.nome.trim());
+  try { localStorage.setItem('capex_grupos', JSON.stringify(_grupos)); } catch(_){}
+  const plantasServidor = (_dados?.plantas||[]);
+  const idsServidor = new Set(plantasServidor.map(p=>p.id));
+  const nomesServidor = new Map(plantasServidor.map(p=>[p.id, p.nome]));
+  const plantasParaSalvar = _plantas.filter(p=>
+    !idsServidor.has(p.id) || nomesServidor.get(p.id) !== p.nome
+  );
 
   try {
-    // salvar plantas no servidor
-    for(const pl of _plantas) {
+    for(const pl of plantasParaSalvar) {
       await CAPEX_API.salvarPlanta(pl);
     }
     CAPEX_API.invalida();
