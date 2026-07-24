@@ -3188,7 +3188,38 @@ async def upload_arquivo(pid: str, request: Request):
     pdf_nome  = body.get("pdf_nome", "orcamento.pdf")
 
     if not zip_b64 and (xlsx_b64 or pptx_b64 or pdf_b64):
-        zip_b64, tamanho = _compactar_arquivos(xlsx_b64, pptx_b64, pdf_b64, xlsx_nome, pptx_nome, pdf_nome)
+        arquivos_existentes = run_query(
+            f"SELECT vol_path FROM {S_CAPEX}.arquivos WHERE projeto_id=? LIMIT 1", [pid]
+        )
+        conteudo_atual = {}
+        if arquivos_existentes and arquivos_existentes[0].get("vol_path"):
+            try:
+                host  = os.environ.get("DATABRICKS_HOST", "").rstrip("/")
+                token = os.environ.get("DATABRICKS_TOKEN", "")
+                import requests as _requests
+                r = _requests.get(
+                    f"{host}/api/2.0/fs/files{arquivos_existentes[0]['vol_path']}",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                if r.ok:
+                    buf_existente = io.BytesIO(r.content)
+                    with zipfile.ZipFile(buf_existente, "r") as zf_existente:
+                        for nome_arq in zf_existente.namelist():
+                            conteudo_atual[nome_arq] = zf_existente.read(nome_arq)
+            except Exception as e:
+                print(f"[capex][arquivo] aviso ao ler zip existente: {e}")
+
+        if xlsx_b64: conteudo_atual[xlsx_nome] = base64.b64decode(xlsx_b64)
+        if pptx_b64: conteudo_atual[pptx_nome] = base64.b64decode(pptx_b64)
+        if pdf_b64:  conteudo_atual[pdf_nome]  = base64.b64decode(pdf_b64)
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+            for nome_arq, conteudo in conteudo_atual.items():
+                zf.writestr(nome_arq, conteudo)
+        raw = buf.getvalue()
+        zip_b64 = base64.b64encode(raw).decode("utf-8")
+        tamanho = len(raw)
     elif zip_b64:
         tamanho = len(base64.b64decode(zip_b64))
     else:
