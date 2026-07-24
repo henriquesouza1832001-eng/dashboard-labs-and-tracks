@@ -31,13 +31,14 @@ let _cotacoes = { USD: 1, EUR: 1, ARS: 1, BRL: 1 };
 
 async function _carregarCotacoes() {
   try {
-    const res = await fetch('https://api.exchangerate-api.com/v4/latest/BRL');
+    const res = await fetch('https://open.er-api.com/v6/latest/BRL');
     const data = await res.json();
-    const r = data.rates;
+    const r = data.rates || data;
     _cotacoes.USD = 1 / (r.USD || 1);
     _cotacoes.EUR = 1 / (r.EUR || 1);
     _cotacoes.ARS = 1 / (r.ARS || 1);
     _cotacoes.BRL = 1;
+    console.log('[capex] cotações carregadas:', _cotacoes);
   } catch(e) {
     console.warn('[capex] cotações indisponíveis, usando 1:1');
   }
@@ -299,10 +300,10 @@ function renderMatriz() {
   });
   tbody.innerHTML = html;
 
-  // tfoot — totais por planta
+
   const tfoot = document.getElementById('matriz-tfoot');
   const totPlanta = plantas.map(pl=>{
-    const s = lista.filter(p=>p.planta_id===pl.id).reduce((a,p)=>a+(p.valor_solicitado||0),0);
+    const s = lista.filter(p=>p.planta_id===pl.id).reduce((a,p)=>a+_toBRL(p.valor_solicitado||0, p.moeda),0);
     return `<td class="cell-planta" style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);text-align:center">${fmtR(s)}</td>`;
   }).join('');
   tfoot.innerHTML = `<tr class="total-row">
