@@ -323,8 +323,8 @@ function renderDashboard() {
   const aprov = lista.filter(p=>p.status==='Aprovado'||p.status==='Concluído'||p.status==='Em Execução').length;
 
   document.getElementById('kpi-total').textContent = lista.length;
-  document.getElementById('kpi-sol').textContent   = fmtR(sol);
-  document.getElementById('kpi-apr').textContent   = fmtR(apr);
+  document.getElementById('kpi-sol').textContent   = fmtR(lista.reduce((s,p)=>s+_toBRL(p.valor_solicitado||0, p.moeda),0));
+  document.getElementById('kpi-apr').textContent   = fmtR(lista.reduce((s,p)=>s+_toBRL(p.valor_aprovado||0,   p.moeda),0));
   document.getElementById('kpi-taxa').textContent  = lista.length ? Math.round(aprov/lista.length*100)+'%' : '0%';
 
   // cores
@@ -337,8 +337,8 @@ function renderDashboard() {
   // 1. Barras por planta
   const dadosPlantas = _plantas.map(pl=>({
     nome: pl.nome,
-    sol:  lista.filter(p=>p.planta_id===pl.id).reduce((a,p)=>a+(p.valor_solicitado||0),0),
-    apr:  lista.filter(p=>p.planta_id===pl.id).reduce((a,p)=>a+(p.valor_aprovado||0),0),
+    sol:  lista.filter(p=>p.planta_id===pl.id).reduce((a,p)=>a+_toBRL(p.valor_solicitado||0, p.moeda),0),
+    apr:  lista.filter(p=>p.planta_id===pl.id).reduce((a,p)=>a+_toBRL(p.valor_aprovado||0,   p.moeda),0),
   }));
   _renderChart('chart-plantas','bar',{
     labels: dadosPlantas.map(d=>d.nome),
@@ -368,8 +368,8 @@ function renderDashboard() {
   // 3. Barras horizontais por grupo
   const dadosGrupos = _grupos.map(g=>({
     nome: g.nome,
-    sol:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+(p.valor_solicitado||0),0),
-    apr:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+(p.valor_aprovado||0),0),
+    sol:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+_toBRL(p.valor_solicitado||0, p.moeda),0),
+    apr:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+_toBRL(p.valor_aprovado||0,   p.moeda),0),
   })).filter(d=>d.sol>0||d.apr>0);
   _renderChart('chart-grupos','bar',{
     labels: dadosGrupos.map(d=>d.nome),
