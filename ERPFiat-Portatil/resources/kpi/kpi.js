@@ -2237,8 +2237,8 @@ function toggleObCardGenerico(modulo, tipo){
   const card=document.getElementById('ob-card-'+tipo);
   if(card)card.click();
 }
-function mkModCard(id,label,val,valCls,accent,sub,statsHtml){
-  return`<div class="ob-card" id="ob-card-${id}">
+function mkModCard(id,label,val,valCls,accent,sub,statsHtml,modulo='capex'){
+  return`<div class="ob-card" id="ob-card-${id}" onclick="toggleObCardGenerico('${modulo}','${id}')" style="cursor:pointer">
     <div class="ob-card-head">
       <div class="ob-card-accent" style="background:${accent}"></div>
       <div class="ob-card-label">${label}</div>
@@ -2276,8 +2276,6 @@ function renderCapex(container,d){
   const aprBRL  = projs.reduce((s,p)=>s+(p.valor_aprovado||0),0);
   const fmtM    = v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
   const pctAprov= total>0?Math.round(aprov.length/total*100):0;
-
-  // por planta
   const porPlanta = plantas.map(pl=>({
     nome: pl.nome,
     sol:  projs.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+(p.valor_solicitado||0),0),
