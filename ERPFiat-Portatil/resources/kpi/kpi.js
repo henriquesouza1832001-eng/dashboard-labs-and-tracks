@@ -2284,28 +2284,24 @@ function renderCapex(container,d){
     apr:  projs.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+(p.valor_aprovado||0),0),
     qtd:  projs.filter(p=>p.planta_id===pl.id).length,
   })).filter(x=>x.qtd>0).sort((a,b)=>b.sol-a.sol);
-
-  // por grupo (categoria)
   const grupoMap={};
   projs.forEach(p=>{ const g=p.categoria||'Sem grupo'; grupoMap[g]=(grupoMap[g]||0)+(p.valor_solicitado||0); });
   const porGrupo=Object.entries(grupoMap).sort((a,b)=>b[1]-a[1]);
-
-  // sem documentos
   const semOp  = projs.filter(p=>!(p.arquivos||[]).length);
 
   container.innerHTML=`<div class="obras-section"><div class="secao-titulo">CAPEX ${anoFiltro}</div><div class="obras-cards-grid" id="capex-grid">
-    ${mkCard('cx-total','TOTAL PROJETOS',total,'c-azul','#2E5FA3',fmtM(solBRL)+' solicitado',
+    ${mkModCard('cx-total','TOTAL PROJETOS',total,'c-azul','#2E5FA3',fmtM(solBRL)+' solicitado',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">Aprovados</span><span class="ob-mini-val c-verde">${aprov.length}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Em análise</span><span class="ob-mini-val c-laranja">${analise.length}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Reprovados</span><span class="ob-mini-val c-vermelho">${reprov.length}</span></div>`)}
-    ${mkCard('cx-aprov','APROVADOS',aprov.length,'c-verde','#1a7f4b',fmtM(aprBRL)+' aprovado',
+    ${mkModCard('cx-aprov','APROVADOS',aprov.length,'c-verde','#1a7f4b',fmtM(aprBRL)+' aprovado',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">% do total</span><span class="ob-mini-val c-verde">${pctAprov}%</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Valor aprov.</span><span class="ob-mini-val c-verde">${fmtM(aprBRL)}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Solicitado</span><span class="ob-mini-val c-azul">${fmtM(solBRL)}</span></div>`)}
-    ${mkCard('cx-analise','EM ANÁLISE',analise.length,'c-laranja','#e3711a',fmtM(analise.reduce((s,p)=>s+(p.valor_solicitado||0),0))+' sol.',
+    ${mkModCard('cx-analise','EM ANÁLISE',analise.length,'c-laranja','#e3711a',fmtM(analise.reduce((s,p)=>s+(p.valor_solicitado||0),0))+' sol.',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">Rascunhos</span><span class="ob-mini-val c-cinza">${rasc.length}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Plantas</span><span class="ob-mini-val c-azul">${new Set(analise.map(p=>p.planta_id)).size}</span></div>`)}
-    ${mkCard('cx-docs','SEM DOCUMENTOS',semArq.length,semArq.length>0?'c-vermelho':'c-verde',semArq.length>0?'#c0392b':'#1a7f4b',semArq.length>0?'one pager / orçamento ausente':'todos com documentos',
+    ${mkModCard('cx-docs','SEM DOCUMENTOS',semArq.length,semArq.length>0?'c-vermelho':'c-verde',semArq.length>0?'#c0392b':'#1a7f4b',semArq.length>0?'one pager / orçamento ausente':'todos com documentos',
       `<div class="ob-mini-stat"><span class="ob-mini-lbl">Com docs</span><span class="ob-mini-val c-verde">${total-semArq.length}</span></div>
        <div class="ob-mini-stat"><span class="ob-mini-lbl">Sem docs</span><span class="ob-mini-val ${semArq.length>0?'c-vermelho':'c-cinza'}">${semArq.length}</span></div>`)}
   </div>
@@ -2360,10 +2356,10 @@ function renderCapex(container,d){
     const statusMap={};projs.forEach(p=>{const s=p.status||'Rascunho';statusMap[s]=(statusMap[s]||0)+1;});
     const sl=Object.entries(statusMap);
     const coresStatus={'Aprovado':'#1a7f4b','Em Execução':'#1a7f4b','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b','Em Execução':'#2E5FA3'};
-    desenharDonutNaCanvas('cv-mini-cx-total',sl.map(x=>x[0]),sl.map(x=>x[1]),sl.map(x=>coresStatus[x[0]]||'#8a9abf'));
-    desenharDonutNaCanvas('cv-mini-cx-aprov',['Aprovados','Restantes'],[aprov.length||1,(total-aprov.length)||1],['#1a7f4b','#e8edf5']);
-    desenharDonutNaCanvas('cv-mini-cx-analise',['Em análise','Rascunho','Outros'],[analise.length||1,rasc.length||1,Math.max(total-analise.length-rasc.length,0)||1],['#e3711a','#8a9abf','#2E5FA3']);
-    desenharDonutNaCanvas('cv-mini-cx-docs',['Com docs','Sem docs'],[(total-semArq.length)||1,semArq.length||1],['#1a7f4b','#c0392b']);
+    desenharDonutNaCanvas('cv-mod-cx-total',sl.map(x=>x[0]),sl.map(x=>x[1]),sl.map(x=>coresStatus[x[0]]||'#8a9abf'));
+    desenharDonutNaCanvas('cv-mod-cx-aprov',['Aprovados','Restantes'],[aprov.length||1,(total-aprov.length)||1],['#1a7f4b','#e8edf5']);
+    desenharDonutNaCanvas('cv-mod-cx-analise',['Em análise','Rascunho','Outros'],[analise.length||1,rasc.length||1,Math.max(total-analise.length-rasc.length,0)||1],['#e3711a','#8a9abf','#2E5FA3']);
+    desenharDonutNaCanvas('cv-mod-cx-docs',['Com docs','Sem docs'],[(total-semArq.length)||1,semArq.length||1],['#1a7f4b','#c0392b']);
   },60);
 }
 
