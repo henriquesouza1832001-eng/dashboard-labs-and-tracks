@@ -2916,7 +2916,7 @@ async def _startup_capex():
             ordem INT, obs STRING, atualizado_em TIMESTAMP, atualizado_por STRING)""",
         f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.arquivos (
             id STRING, projeto_id STRING, nome STRING, tipo STRING,
-            tamanho_bytes LONG, conteudo_blob STRING, extraido_json STRING,
+            tamanho_bytes LONG, vol_path STRING, extraido_json STRING,
             atualizado_em TIMESTAMP, atualizado_por STRING)""",
     ]:
         try:
@@ -3193,25 +3193,34 @@ async def upload_arquivo(pid: str, request: Request):
     else:
         return JSONResponse({"erro": "Nenhum arquivo recebido"}, status_code=400)
 
-    arq_id = f"arq_{pid}_{int(_time.time() * 1000)}"
+    arq_id   = f"arq_{pid}_{int(_time.time() * 1000)}"
+    vol_path = f"/Volumes/eng_lab/dashboard_labs_and_tracks_capex/arquivos/{arq_id}.zip"
+
+    try:
+        zip_bytes = base64.b64decode(zip_b64)
+        with open(vol_path, "wb") as f:
+            f.write(zip_bytes)
+    except Exception as e:
+        print(f"[capex][arquivo] erro salvar volume: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
 
     try:
         await arun_exec_retry(f"""
             MERGE INTO {S_CAPEX}.arquivos AS t
             USING (SELECT ? AS id, ? AS projeto_id, ? AS nome, ? AS tipo,
-                          ? AS tamanho_bytes, ? AS conteudo_blob,
+                          ? AS tamanho_bytes, ? AS vol_path,
                           NULL AS extraido_json, ? AS atualizado_por) AS s
             ON t.id = s.id
             WHEN MATCHED THEN UPDATE SET
-                id=s.id, nome=s.nome, tipo=s.tipo, tamanho_bytes=s.tamanho_bytes,
-                conteudo_blob=s.conteudo_blob, extraido_json=NULL,
+                nome=s.nome, tipo=s.tipo, tamanho_bytes=s.tamanho_bytes,
+                vol_path=s.vol_path, extraido_json=NULL,
                 atualizado_em=current_timestamp(), atualizado_por=s.atualizado_por
             WHEN NOT MATCHED THEN INSERT
-                (id,projeto_id,nome,tipo,tamanho_bytes,conteudo_blob,extraido_json,atualizado_em,atualizado_por)
-            VALUES (s.id,s.projeto_id,s.nome,'zip',s.tamanho_bytes,s.conteudo_blob,NULL,current_timestamp(),s.atualizado_por)
-        """, [arq_id, pid, nome, "zip", tamanho, zip_b64, u])
+                (id,projeto_id,nome,tipo,tamanho_bytes,vol_path,extraido_json,atualizado_em,atualizado_por)
+            VALUES (s.id,s.projeto_id,s.nome,'zip',s.tamanho_bytes,s.vol_path,NULL,current_timestamp(),s.atualizado_por)
+        """, [arq_id, pid, nome, "zip", tamanho, vol_path, u])
     except Exception as e:
-        print(f"[capex][arquivo] erro salvar blob: {e}")
+        print(f"[capex][arquivo] erro salvar meta: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
     
     async def _extrair_e_atualizar():
@@ -3241,18 +3250,23 @@ async def download_arquivo(pid: str, request: Request):
     """
     exigir_auth(request)
     rows = run_query(
-        f"SELECT id, nome, tipo, tamanho_bytes, conteudo_blob, extraido_json FROM {S_CAPEX}.arquivos WHERE projeto_id=? LIMIT 1",
+        f"SELECT id, nome, tipo, tamanho_bytes, vol_path, extraido_json FROM {S_CAPEX}.arquivos WHERE projeto_id=? LIMIT 1",
         [pid]
     )
     if not rows:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
     r = rows[0]
+    try:
+        with open(r["vol_path"], "rb") as f:
+            zip_b64 = base64.b64encode(f.read()).decode("utf-8")
+    except Exception as e:
+        zip_b64 = None
     return JSONResponse({
         "id":            r["id"],
         "nome":          r["nome"],
         "tipo":          r["tipo"],
         "tamanho_bytes": r["tamanho_bytes"],
-        "zip_b64":       r["conteudo_blob"],
+        "zip_b64":       zip_b64,
         "extraido":      json.loads(r["extraido_json"]) if r.get("extraido_json") else None,
     })
 

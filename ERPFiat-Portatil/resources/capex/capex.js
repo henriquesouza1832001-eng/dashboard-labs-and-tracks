@@ -19,20 +19,44 @@ const CAPEX_API = {
 // ESTADO
 // ══════════════════════════════════════════
 let _dados      = null;
-let _grupos     = [];   // [{ id, nome }]
-let _plantas    = [];   // [{ id, nome }]
+let _grupos     = [];  
+let _plantas    = [];   
 let _projetoEd  = null;
 let _itensEd    = [];
 let _arquivoLocal = { xlsx: null, pptx: null };
 let _plantaFiltro = 'all';
 let _charts     = {};
 
-// grupos padrão (seed local — sincroniza com servidor via campo categoria do projeto)
+let _cotacoes = { USD: 1, EUR: 1, ARS: 1, BRL: 1 };
+
+async function _carregarCotacoes() {
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/BRL');
+    const data = await res.json();
+    const r = data.rates;
+    _cotacoes.USD = r.BRL ? 1 : (1 / r.USD);
+    _cotacoes.EUR = 1 / r.EUR;
+    _cotacoes.ARS = 1 / r.ARS;
+    _cotacoes.BRL = 1;
+  } catch(e) {
+    console.warn('[capex] cotações indisponíveis, usando 1:1');
+  }
+}
+
+function _toBRL(valor, moeda) {
+  if (!valor || moeda === 'BRL' || !moeda) return valor || 0;
+  return valor * (_cotacoes[moeda] || 1);
+}
+
+function _fmtCambio(moeda) {
+  if (!moeda || moeda === 'BRL') return '';
+  const taxa = _cotacoes[moeda] || 1;
+  return `1 ${moeda} = ${fmtR(taxa)}`;
+}
+
+
 const GRUPOS_PADRAO = ['ESLM','Proving Grounds','Protótipo','EMAT','Safety Center','NVH'];
 
-// ══════════════════════════════════════════
-// UTILS
-// ══════════════════════════════════════════
 function fmtR(v, moeda='BRL') {
   if (v==null||isNaN(v)) return '—';
   return new Intl.NumberFormat('pt-BR',{style:'currency',currency:moeda||'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(v);
@@ -56,6 +80,7 @@ function setSaveStatus(s,t) {
 // ══════════════════════════════════════════
 async function init() {
   document.getElementById('tt-ano').textContent = new Date().getFullYear()+1;
+  await _carregarCotacoes();
 
   // anos
   const selAno = document.getElementById('sel-ano');
@@ -153,8 +178,8 @@ function _filtrarProjetos() {
 }
 
 function _atualizarTotais(lista) {
-  const sol = lista.reduce((s,p)=>s+(p.valor_solicitado||0),0);
-  const apr = lista.reduce((s,p)=>s+(p.valor_aprovado||0),0);
+  const sol = lista.reduce((s,p)=>s+_toBRL(p.valor_solicitado||0, p.moeda),0);
+  const apr = lista.reduce((s,p)=>s+_toBRL(p.valor_aprovado||0,   p.moeda),0);
   document.getElementById('tot-qtd').textContent = lista.length;
   document.getElementById('tot-sol').textContent = fmtR(sol);
   document.getElementById('tot-apr').textContent = fmtR(apr);
@@ -245,14 +270,16 @@ function renderMatriz() {
         ${plantas.map(pl=>{
           const match = p.planta_id===pl.id;
           if(match) {
-            const sol = p.valor_solicitado||0;
-            const apr = p.valor_aprovado||0;
+            const sol    = p.valor_solicitado||0;
+            const apr    = p.valor_aprovado||0;
+            const solBRL = _toBRL(sol, p.moeda);
             const itensHtml = (p.itens||[]).slice(0,3).map(it=>
               `<div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc(it.descricao||'')} — ${fmtR((it.quantidade||1)*(it.preco_unitario||0), it.moeda)}</div>`
             ).join('');
             return `<td class="cell-planta">
               <div class="cell-inner">
-                <div class="cell-valor">${fmtR(sol, p.moeda)}</div>
+                <div class="cell-valor">${fmtR(solBRL)}</div>
+                ${p.moeda && p.moeda !== 'BRL' ? `<div style="font-size:10px;color:var(--text-muted);font-family:var(--mono)">${p.moeda} ${sol.toLocaleString('pt-BR')} · ${_fmtCambio(p.moeda)}</div>` : ''}
                 <div class="cell-badges">
                   ${arq?'<span class="cell-badge cb-op">OP</span>':''}
                   ${apr>0?'<span class="cell-badge cb-orc">ORC</span>':''}
