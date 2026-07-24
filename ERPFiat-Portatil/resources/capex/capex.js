@@ -134,15 +134,11 @@ async function init() {
       if(tab.dataset.tab==='extraido'&&_projetoEd?.id) carregarExtraido(_projetoEd.id);
     });
   });
-
-  // arquivos
   document.getElementById('inp-xlsx').addEventListener('change',e=>selecionarArquivo(e,'xlsx'));
   document.getElementById('inp-pptx').addEventListener('change',e=>selecionarArquivo(e,'pptx'));
   document.getElementById('btn-upload').addEventListener('click', uploadArquivos);
   document.getElementById('btn-download-arq').addEventListener('click', downloadArquivo);
   document.getElementById('btn-del-arq').addEventListener('click', deletarArquivo);
-
-  // modal config
   document.getElementById('config-close').addEventListener('click', ()=>{ document.getElementById('modal-config').style.display='none'; });
   document.getElementById('config-cancelar').addEventListener('click', ()=>{ document.getElementById('modal-config').style.display='none'; });
   document.getElementById('btn-salvar-config').addEventListener('click', salvarConfig);
@@ -156,8 +152,6 @@ async function init() {
 function _processar() {
   _plantas = (_dados?.plantas||[]).filter(p=>p.ativo!==false);
   if(!_plantas.length) _plantas = [{id:'betim',nome:'Betim'},{id:'goiania_pe',nome:'Goiania-PE'},{id:'porto_real',nome:'Porto Real'},{id:'cordoba',nome:'Cordoba'},{id:'palomar',nome:'Palomar'}];
-
-  // extrair grupos únicos dos projetos (campo categoria)
   const gruposSet = new Set(_dados?.projetos?.map(p=>p.categoria).filter(Boolean));
   _grupos = [...gruposSet].map(g=>({id:g.toLowerCase().replace(/\s/g,'_'),nome:g}));
   if(!_grupos.length) _grupos = GRUPOS_PADRAO.map(g=>({id:g.toLowerCase().replace(/\s/g,'_'),nome:g}));
@@ -196,7 +190,6 @@ function renderTudo() {
 
 function renderAtivo() {
   renderMatriz();
-  // se dashboard visível, atualiza
   if(document.getElementById('pane-dashboard').classList.contains('active')) renderDashboard();
 }
 
@@ -224,11 +217,7 @@ function renderPills() {
 function renderMatriz() {
   const lista = _filtrarProjetos();
   _atualizarTotais(lista);
-
-  // plantas a mostrar
   const plantas = _plantaFiltro==='all' ? _plantas : _plantas.filter(pl=>pl.id===_plantaFiltro);
-
-  // thead
   const thead = document.getElementById('matriz-thead');
   thead.innerHTML = `<tr>
     <th style="min-width:220px">Projeto</th>
@@ -236,8 +225,6 @@ function renderMatriz() {
     ${plantas.map(pl=>`<th class="th-planta">${pl.nome}</th>`).join('')}
     <th style="width:40px"></th>
   </tr>`;
-
-  // agrupar projetos por grupo (categoria)
   const gruposOrdem = _grupos.map(g=>g.nome);
   const semGrupo = lista.filter(p=>!gruposOrdem.includes(p.categoria));
   const grupos = _grupos.map(g=>({
@@ -245,8 +232,6 @@ function renderMatriz() {
     projetos: lista.filter(p=>p.categoria===g.nome)
   })).filter(g=>g.projetos.length>0);
   if(semGrupo.length) grupos.push({id:'_outros',nome:'Outros',projetos:semGrupo});
-
-  // tbody
   const tbody = document.getElementById('matriz-tbody');
   if(!lista.length) {
     tbody.innerHTML = `<tr><td colspan="${2+plantas.length+1}" style="text-align:center;padding:40px;color:var(--text-muted)">Nenhum projeto encontrado. Clique em "+ Novo Projeto".</td></tr>`;
@@ -327,14 +312,12 @@ function renderDashboard() {
   document.getElementById('kpi-apr').textContent   = fmtR(lista.reduce((s,p)=>s+_toBRL(p.valor_aprovado||0,   p.moeda),0));
   document.getElementById('kpi-taxa').textContent  = lista.length ? Math.round(aprov/lista.length*100)+'%' : '0%';
 
-  // cores
   const CORES = ['#243782','#2E5FA3','#3a6bc7','#6b8fd4','#9db5e6','#c5d4f0'];
   const CORES_STATUS = {
     'Rascunho':'#d0d8e8','Em Análise':'#b07d00','Aprovado':'#1a7f4b',
     'Reprovado':'#c0392b','Em Execução':'#2E5FA3','Concluído':'#4ade80'
   };
 
-  // 1. Barras por planta
   const dadosPlantas = _plantas.map(pl=>({
     nome: pl.nome,
     sol:  lista.filter(p=>p.planta_id===pl.id).reduce((a,p)=>a+_toBRL(p.valor_solicitado||0, p.moeda),0),
@@ -352,7 +335,6 @@ function renderDashboard() {
     scales:{ y:{ ticks:{ callback:v=>fmtR(v), font:{size:10} }, grid:{ color:'#e8edf5' } }, x:{ grid:{display:false} } }
   });
 
-  // 2. Donut status
   const statusMap = {};
   lista.forEach(p=>{ statusMap[p.status||'Rascunho']=(statusMap[p.status||'Rascunho']||0)+1; });
   const statusLabels = Object.keys(statusMap);
@@ -365,7 +347,6 @@ function renderDashboard() {
     cutout:'65%'
   });
 
-  // 3. Barras horizontais por grupo
   const dadosGrupos = _grupos.map(g=>({
     nome: g.nome,
     sol:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+_toBRL(p.valor_solicitado||0, p.moeda),0),

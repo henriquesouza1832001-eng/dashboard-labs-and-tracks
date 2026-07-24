@@ -1047,7 +1047,7 @@ $('_placeholder_vincular')?.addEventListener('click', () => {
       orcamento:    parseFloat($('etapa-orcamento')?.value||0)||0,
       responsavel:  $('etapa-resp').value,
       peso:         parseFloat($('etapa-peso').value)||1,
-      avancoFisico: afEtapaLocal(subtarefasAtuais),
+      avancoFisico: subtarefasAtuais.length ? afEtapaLocal(subtarefasAtuais) : (parseFloat($('etapa-af-manual')?.value)||0),
       obs:          $('etapa-obs').value.trim(),
       subtarefas:   subtarefasAtuais
     };
