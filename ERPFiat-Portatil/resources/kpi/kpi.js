@@ -1042,10 +1042,40 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     return;
   }
   if (!etapas.length && !lancs.length) {
-    ctx.fillStyle = 'var(--text-dim, #8b949e)';
-    ctx.font = '12px var(--font, sans-serif)';
-    ctx.textAlign = 'center';
-    ctx.fillText('Sem datas cadastradas nas etapas', W/2, H/2);
+    const dtIni = obra.dtInicioReal || obra.dtInicioPrev || obra.cronogramaIniData;
+    const dtFim = obra.dtFimReal    || obra.dtFimPrev    || obra.cronogramaFimData;
+    const afManual = (obra.etapas || []).reduce((s, e) => s + (e.avancoFisico || 0), 0) / Math.max((obra.etapas || []).length, 1);
+    if (!dtIni || !dtFim || !afManual) {
+      ctx.fillStyle = 'var(--text-dim, #8b949e)';
+      ctx.font = '12px var(--font, sans-serif)';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sem datas cadastradas nas etapas', W/2, H/2);
+      return;
+    }
+    const toMs = d => new Date(d).getTime();
+    const ini = toMs(dtIni), fim = toMs(dtFim), hoje = Date.now();
+    const progTempo = Math.min(Math.max((hoje - ini) / (fim - ini), 0), 1);
+    const pad = { t: 20, r: 20, b: 36, l: 44 };
+    const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+    const xp = p => pad.l + p * iw;
+    const yp = v => pad.t + ih - (v / 100) * ih;
+    ctx.clearRect(0, 0, W, H);
+    [0, 25, 50, 75, 100].forEach(v => {
+      ctx.beginPath(); ctx.strokeStyle = '#e8edf5'; ctx.lineWidth = 1;
+      ctx.moveTo(pad.l, yp(v)); ctx.lineTo(pad.l + iw, yp(v)); ctx.stroke();
+      ctx.fillStyle = '#8a9abf'; ctx.font = '9px IBM Plex Mono'; ctx.textAlign = 'right';
+      ctx.fillText(v + '%', pad.l - 4, yp(v) + 3);
+    });
+    ctx.beginPath(); ctx.strokeStyle = '#3a6bc7'; ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
+    ctx.moveTo(xp(0), yp(0)); ctx.lineTo(xp(1), yp(100)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.strokeStyle = '#1a7f4b'; ctx.lineWidth = 2.5;
+    ctx.moveTo(xp(0), yp(0)); ctx.lineTo(xp(progTempo), yp(afManual)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(xp(progTempo), yp(afManual), 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a7f4b'; ctx.fill();
+    ctx.fillStyle = '#8a9abf'; ctx.font = '9px IBM Plex Mono'; ctx.textAlign = 'center';
+    ctx.fillText(new Date(dtIni).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }), xp(0), H - 6);
+    ctx.fillText(new Date(dtFim).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }), xp(1), H - 6);
+    ctx.fillText('Hoje ' + afManual.toFixed(1) + '%', xp(progTempo), yp(afManual) - 10);
     return;
   }
   const toMs = d => new Date(d).getTime();
