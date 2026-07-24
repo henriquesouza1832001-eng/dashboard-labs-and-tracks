@@ -356,7 +356,7 @@ function abrirModuloComDrill(modulo,tipo){
     const mainScroll=document.querySelector('.main-scroll');
     const painel=document.createElement('div');
     painel.id='painel-expandido-global';
-    painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:column;overflow-y:auto';
+    painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:column;min-height:0';
     const nomes={obras:'Obras',capex:'CAPEX',chamados:'Chamados',codin:'CODIN',conforto:'Conforto',ergonomia:'Ergonomia'};
     const header=document.createElement('div');
     header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0';
@@ -1093,7 +1093,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.beginPath();
     ctx.strokeStyle = '#58a6ff';
     ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    curvaPlan2.forEach((v,i) => { const x=xPos2(i),y=yPos2(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    curvaPlan2.forEach((v,i) => { const x=xPos2(i),y=yPos2(v); if(i===0){ctx.moveTo(x,y);}else{const xp=xPos2(i-1),yp=yPos2(curvaPlan2[i-1]);ctx.quadraticCurveTo((xp+x)/2,yp,x,y);} });
     ctx.stroke();
     const mesHoje = new Date().toISOString().slice(0,7);
     const idxHoje = Math.min(meses2.findIndex(m2=>m2>=mesHoje), meses2.length-1);
@@ -1109,7 +1109,7 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.beginPath();
     ctx.strokeStyle = '#e3711a';
     ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    curvaReal2.forEach((v,i) => { if(v===null) return; const x=xPos2(i),y=yPos2(v); i===0||curvaReal2[i-1]===null?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    curvaReal2.forEach((v,i) => { if(v===null) return; const x=xPos2(i),y=yPos2(v); if(i===0||curvaReal2[i-1]===null){ctx.moveTo(x,y);}else{const xp=xPos2(i-1),yp=yPos2(curvaReal2[i-1]);ctx.quadraticCurveTo((xp+x)/2,yp,x,y);} });
     ctx.stroke();
     const px = xPos2(idxReal), py = yPos2(afManual);
     ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI*2);
@@ -1892,7 +1892,7 @@ function abrirDrillChamados(tipo){
   const conteudo=document.querySelector('#painel-expandido-global > div:last-child');
   if(!conteudo||!window._chamData)return;
   _chamDrillAtivo=tipo;
-  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden';
+  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column';
   const overlay=document.createElement('div');
   overlay.className='ob-overlay';
   overlay.id='ch-overlay';
@@ -2332,7 +2332,7 @@ function abrirDrillConforto(tipo,d){
   overlay.id='cnf-overlay';
   overlay.innerHTML=buildDrillConforto(tipo,d);
   conteudo.innerHTML='';
-  conteudo.style.cssText='flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden';
+  painel.style.cssText='padding:16px 20px 20px;flex:1;display:flex;flex-direction:column;min-height:0';
   conteudo.appendChild(overlay);
   setTimeout(()=>drawDrillConfortoCharts(tipo,d),80);
 }
