@@ -254,7 +254,7 @@
         <table class="tbl-itens">
           <thead><tr>
             <th>Descrição</th><th>Categoria</th><th>Fornecedor</th>
-            <th class="num">Qtd</th><th>Un</th>
+            <th class="num">Qtd</th><th>Un</th><th>Moeda</th>
             <th class="num">Preço Unit.</th><th class="num">Total</th><th></th>
           </tr></thead>
           <tbody id="itens-body"></tbody>
@@ -281,6 +281,12 @@
               <div class="arq-pick-nome" id="nome-pptx">Nenhum arquivo</div>
               <input type="file" accept=".pptx,.ppt" id="inp-pptx" hidden>
               <button class="btn-sm" onclick="document.getElementById('inp-pptx').click()">Selecionar</button>
+            </div>
+            <div class="arq-pick">
+              <div class="arq-pick-label">📄 Orçamento (.pdf)</div>
+              <div class="arq-pick-nome" id="nome-pdf">Nenhum arquivo</div>
+              <input type="file" accept=".pdf" id="inp-pdf" hidden>
+              <button class="btn-sm" onclick="document.getElementById('inp-pdf').click()">Selecionar</button>
             </div>
           </div>
           <div class="arq-actions">

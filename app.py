@@ -2927,19 +2927,18 @@ async def _startup_capex():
 
 
 def _compactar_arquivos(xlsx_b64: str | None, pptx_b64: str | None,
+                         pdf_b64: str | None = None,
                          nome_xlsx: str = "capex.xlsx",
-                         nome_pptx: str = "one_pager.pptx") -> tuple[str, int]:
-    """
-    Empacota xlsx + pptx em um único ZIP e retorna (base64_do_zip, tamanho_bytes).
-    Usa ZIP_DEFLATED para máxima compressão.
-    Ambos os arquivos são opcionais — inclui só os que existem.
-    """
+                         nome_pptx: str = "one_pager.pptx",
+                         nome_pdf: str = "orcamento.pdf") -> tuple[str, int]:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         if xlsx_b64:
             zf.writestr(nome_xlsx, base64.b64decode(xlsx_b64))
         if pptx_b64:
             zf.writestr(nome_pptx, base64.b64decode(pptx_b64))
+        if pdf_b64:
+            zf.writestr(nome_pdf, base64.b64decode(pdf_b64))
     raw = buf.getvalue()
     return base64.b64encode(raw).decode("utf-8"), len(raw)
 
@@ -3181,13 +3180,15 @@ async def upload_arquivo(pid: str, request: Request):
 
     xlsx_b64  = body.get("xlsx_b64")
     pptx_b64  = body.get("pptx_b64")
+    pdf_b64   = body.get("pdf_b64")
     zip_b64   = body.get("zip_b64")
     nome      = body.get("nome", f"capex_{pid}.zip")
     xlsx_nome = body.get("xlsx_nome", "capex.xlsx")
     pptx_nome = body.get("pptx_nome", "one_pager.pptx")
+    pdf_nome  = body.get("pdf_nome", "orcamento.pdf")
 
-    if not zip_b64 and (xlsx_b64 or pptx_b64):
-        zip_b64, tamanho = _compactar_arquivos(xlsx_b64, pptx_b64, xlsx_nome, pptx_nome)
+    if not zip_b64 and (xlsx_b64 or pptx_b64 or pdf_b64):
+        zip_b64, tamanho = _compactar_arquivos(xlsx_b64, pptx_b64, pdf_b64, xlsx_nome, pptx_nome, pdf_nome)
     elif zip_b64:
         tamanho = len(base64.b64decode(zip_b64))
     else:

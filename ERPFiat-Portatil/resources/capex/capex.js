@@ -23,7 +23,7 @@ let _grupos     = [];
 let _plantas    = [];   
 let _projetoEd  = null;
 let _itensEd    = [];
-let _arquivoLocal = { xlsx: null, pptx: null };
+let _arquivoLocal = { xlsx: null, pptx: null, pdf: null };
 let _plantaFiltro = 'all';
 let _charts     = {};
 
@@ -136,6 +136,7 @@ async function init() {
   });
   document.getElementById('inp-xlsx').addEventListener('change',e=>selecionarArquivo(e,'xlsx'));
   document.getElementById('inp-pptx').addEventListener('change',e=>selecionarArquivo(e,'pptx'));
+  document.getElementById('inp-pdf').addEventListener('change',e=>selecionarArquivo(e,'pdf'));
   document.getElementById('btn-upload').addEventListener('click', uploadArquivos);
   document.getElementById('btn-download-arq').addEventListener('click', downloadArquivo);
   document.getElementById('btn-del-arq').addEventListener('click', deletarArquivo);
@@ -513,12 +514,18 @@ function renderItens() {
       <td><input value="${esc(it.fornecedor)}"   onchange="editItem(${i},'fornecedor',this.value)"  placeholder="Fornecedor"></td>
       <td><input class="num" type="number" value="${it.quantidade||1}" onchange="editItem(${i},'quantidade',+this.value)" style="width:60px"></td>
       <td><input value="${esc(it.unidade)}"      onchange="editItem(${i},'unidade',this.value)"     placeholder="un" style="width:48px"></td>
+      <td><select onchange="editItem(${i},'moeda',this.value)" style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 4px">
+        <option ${(it.moeda||'BRL')==='BRL'?'selected':''}>BRL</option>
+        <option ${it.moeda==='USD'?'selected':''}>USD</option>
+        <option ${it.moeda==='EUR'?'selected':''}>EUR</option>
+        <option ${it.moeda==='ARS'?'selected':''}>ARS</option>
+      </select></td>
       <td><input class="num" type="number" value="${it.preco_unitario||0}" onchange="editItem(${i},'preco_unitario',+this.value)" style="width:100px"></td>
-      <td class="num">${fmtR((it.quantidade||1)*(it.preco_unitario||0))}</td>
+      <td class="num">${fmtR(_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda))}</td>
       <td><button class="btn-rm-item" onclick="rmItem(${i})">×</button></td>
     </tr>`).join('');
-  const total = _itensEd.reduce((s,it)=>s+(it.quantidade||1)*(it.preco_unitario||0),0);
-  document.getElementById('itens-total').textContent='Total: '+fmtR(total);
+  const total = _itensEd.reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda),0);
+  document.getElementById('itens-total').textContent='Total em BRL: '+fmtR(total);
 }
 
 window.editItem = function(idx,campo,valor) {
@@ -550,6 +557,7 @@ function renderArquivos() {
   } else { ex.style.display='none'; }
   document.getElementById('nome-xlsx').textContent='Nenhum arquivo';
   document.getElementById('nome-pptx').textContent='Nenhum arquivo';
+  document.getElementById('nome-pdf').textContent='Nenhum arquivo';
   document.getElementById('btn-upload').disabled=true;
   document.getElementById('arq-status').textContent='';
 }
@@ -558,7 +566,7 @@ function selecionarArquivo(e,tipo) {
   const f=e.target.files[0]; if(!f) return;
   _arquivoLocal[tipo]=f;
   document.getElementById('nome-'+tipo).textContent=f.name;
-  document.getElementById('btn-upload').disabled=!(_arquivoLocal.xlsx||_arquivoLocal.pptx);
+  document.getElementById('btn-upload').disabled=!(_arquivoLocal.xlsx||_arquivoLocal.pptx||_arquivoLocal.pdf);
 }
 
 async function lerBase64(file) {
@@ -574,6 +582,7 @@ async function uploadArquivos() {
     const body={};
     if(_arquivoLocal.xlsx) { body.xlsx_b64=await lerBase64(_arquivoLocal.xlsx); body.xlsx_nome=_arquivoLocal.xlsx.name; }
     if(_arquivoLocal.pptx) { body.pptx_b64=await lerBase64(_arquivoLocal.pptx); body.pptx_nome=_arquivoLocal.pptx.name; }
+    if(_arquivoLocal.pdf)  { body.pdf_b64=await lerBase64(_arquivoLocal.pdf);   body.pdf_nome=_arquivoLocal.pdf.name; }
     st.textContent='Salvando no Delta Lake...';
     const t0=performance.now();
     const res=await CAPEX_API.uploadArquivo(_projetoEd.id,body);
