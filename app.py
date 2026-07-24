@@ -2899,7 +2899,6 @@ async def _startup_capex():
         await arun_exec_retry("CREATE SCHEMA IF NOT EXISTS eng_lab.dashboard_labs_and_tracks_capex")
     except Exception as e:
         print(f"[startup][capex] schema: {e}")
-    """Chamado dentro de _prefetch_body() no startup do app."""
     for ddl in [
         f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.plantas (
             id STRING, nome STRING, ativo BOOLEAN,
@@ -2924,15 +2923,6 @@ async def _startup_capex():
             await arun_exec_retry(ddl)
         except Exception as e:
             print(f"[startup][capex] ddl erro: {e}")
-    await arun_exec_retry(f"""
-        CREATE TABLE IF NOT EXISTS {S_CAPEX}.plantas (
-            id     STRING,
-            nome   STRING,
-            ativo  BOOLEAN,
-            criado_em   TIMESTAMP,
-            atualizado_em TIMESTAMP
-        )
-    """)
     print("[startup][capex] tabelas ok")
 
 
@@ -3211,7 +3201,7 @@ async def upload_arquivo(pid: str, request: Request):
             USING (SELECT ? AS id, ? AS projeto_id, ? AS nome, ? AS tipo,
                           ? AS tamanho_bytes, ? AS conteudo_blob,
                           NULL AS extraido_json, ? AS atualizado_por) AS s
-            ON t.projeto_id = s.projeto_id
+            ON t.id = s.id
             WHEN MATCHED THEN UPDATE SET
                 id=s.id, nome=s.nome, tipo=s.tipo, tamanho_bytes=s.tamanho_bytes,
                 conteudo_blob=s.conteudo_blob, extraido_json=NULL,

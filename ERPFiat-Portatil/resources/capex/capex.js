@@ -147,6 +147,7 @@ function _filtrarProjetos() {
     if(ano    && String(p.ano_orcamento)!==ano)       return false;
     if(status && p.status!==status)                   return false;
     if(busca  && !`${p.titulo} ${p.responsavel} ${p.categoria}`.toLowerCase().includes(busca)) return false;
+    if(_plantaFiltro !== 'all' && p.planta_id !== _plantaFiltro) return false;
     return true;
   });
 }
@@ -246,14 +247,18 @@ function renderMatriz() {
           if(match) {
             const sol = p.valor_solicitado||0;
             const apr = p.valor_aprovado||0;
+            const itensHtml = (p.itens||[]).slice(0,3).map(it=>
+              `<div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc(it.descricao||'')} — ${fmtR((it.quantidade||1)*(it.preco_unitario||0), it.moeda)}</div>`
+            ).join('');
             return `<td class="cell-planta">
               <div class="cell-inner">
-                <div class="cell-valor">${fmtR(sol)}</div>
+                <div class="cell-valor">${fmtR(sol, p.moeda)}</div>
                 <div class="cell-badges">
                   ${arq?'<span class="cell-badge cb-op">OP</span>':''}
                   ${apr>0?'<span class="cell-badge cb-orc">ORC</span>':''}
                 </div>
               </div>
+              ${itensHtml}
             </td>`;
           } else {
             return `<td class="cell-planta"><div class="cell-inner"><span class="cell-valor empty">—</span></div></td>`;
