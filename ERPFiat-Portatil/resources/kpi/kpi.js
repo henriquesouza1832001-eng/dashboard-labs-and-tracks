@@ -2292,7 +2292,7 @@ function abrirDrillCapex(tipo){
     const pct=sol>0?Math.min(apr/sol,1)*100:0;
     const temArq=(p.arquivos||[]).length>0;
     const moedaStr=p.moeda&&p.moeda!=='BRL'?`<span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)">${p.moeda}</span>`:'';
-    return`<tr style="cursor:default">
+    return`<tr style="cursor:pointer" onclick="abrirDrillCapexProjeto('${p.id}')" title="Ver detalhes">
       <td style="font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo||''}">${p.titulo||'(sem título)'}</td>
       <td>${nomePlanta(p.planta_id)}</td>
       <td>${p.categoria||'—'}</td>
@@ -2323,7 +2323,7 @@ function abrirDrillCapex(tipo){
   const html=`
   <div class="ob-ov-header">
     <div class="ob-ov-title">${titulos[tipo]||'CAPEX'} — Análise Gerencial (${lista.length} projeto${lista.length!==1?'s':''})</div>
-    <div class="ob-ov-header-btns"><button class="ob-ov-close" onclick="voltarParaSubCards()">← voltar</button></div>
+    <div class="ob-ov-header-btns"></div>
   </div>
 
   <div class="ob-ov-kpis">
@@ -2410,6 +2410,61 @@ function abrirDrillCapex(tipo){
       }
     }
   },80);
+}
+function abrirDrillCapexProjeto(id){
+  const d = window._kpiDados_capex||(()=>{try{return JSON.parse(sessionStorage.getItem('_kpi_capex'));}catch{return null;}})();
+  if(!d) return;
+  const p = (d.projetos||[]).find(x=>x.id===id);
+  if(!p) return;
+  const plantas = d.plantas||[];
+  const nomePlanta = pid => plantas.find(pl=>pl.id===pid)?.nome||pid||'—';
+  const corStatus={'Aprovado':'#1a7f4b','Em Execução':'#2E5FA3','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b'};
+  const fmtK=v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+  const sol=_cxToBRL(p.valor_solicitado||0,p.moeda);
+  const apr=_cxToBRL(p.valor_aprovado||0,p.moeda);
+  const cor=corStatus[p.status]||'#8a9abf';
+  const conteudo=document.querySelector('#painel-expandido-global > div:last-child');
+  if(!conteudo) return;
+  conteudo.innerHTML='';
+  const overlay=document.createElement('div');
+  overlay.className='ob-overlay';
+  overlay.innerHTML=`
+    <div class="ob-ov-header">
+      <div class="ob-ov-title">${p.titulo||'(sem título)'}</div>
+      <button class="ob-ov-close" onclick="abrirDrillCapex(window._cxDrillTipo||'cx-total')">← voltar</button>
+    </div>
+    <div class="ob-ov-kpis">
+      <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Planta</div><div class="ob-ov-kpi-val" style="font-size:16px">${nomePlanta(p.planta_id)}</div></div>
+      <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Grupo</div><div class="ob-ov-kpi-val" style="font-size:16px">${p.categoria||'—'}</div></div>
+      <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Status</div><div class="ob-ov-kpi-val" style="font-size:16px;color:${cor}">${p.status||'Rascunho'}</div></div>
+      <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Responsável</div><div class="ob-ov-kpi-val" style="font-size:16px">${p.responsavel||'—'}</div></div>
+      <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Solicitado</div><div class="ob-ov-kpi-val c-azul">${fmtK(sol)}${p.moeda&&p.moeda!=='BRL'?`<span style="font-size:11px;color:var(--text-muted);margin-left:4px">${p.moeda} ${fmtK(p.valor_solicitado||0)}</span>`:''}</div></div>
+      <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Aprovado</div><div class="ob-ov-kpi-val c-verde">${apr>0?fmtK(apr):'—'}</div></div>
+    </div>
+    ${p.justificativa?`<div class="ob-ov-tbox" style="margin-bottom:12px"><div class="ob-ov-ctit">Justificativa</div><div style="font-size:12px;color:var(--text);line-height:1.6">${p.justificativa}</div></div>`:''}
+    ${(p.itens||[]).length?`<div class="ob-ov-tbox" style="margin-bottom:12px">
+      <div class="ob-ov-ctit" style="margin-bottom:8px">Itens de Custo (${p.itens.length})</div>
+      <table class="ob-ov-table">
+        <thead><tr><th>Descrição</th><th>Fornecedor</th><th>Qtd</th><th>Un</th><th>Preço Unit.</th><th>Total</th><th>Moeda</th></tr></thead>
+        <tbody>${(p.itens||[]).map(it=>`<tr>
+          <td style="font-weight:500">${it.descricao||'—'}</td>
+          <td>${it.fornecedor||'—'}</td>
+          <td style="font-family:var(--mono)">${it.quantidade||1}</td>
+          <td>${it.unidade||'un'}</td>
+          <td style="font-family:var(--mono)">${fmtK(_cxToBRL((it.preco_unitario||0),it.moeda))}</td>
+          <td style="font-family:var(--mono);font-weight:600;color:var(--blue-mid)">${fmtK(_cxToBRL((it.quantidade||1)*(it.preco_unitario||0),it.moeda))}</td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">${it.moeda||'BRL'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`:''}
+    ${(p.arquivos||[]).length?`<div class="ob-ov-tbox"><div class="ob-ov-ctit">Documentos</div>
+      ${p.arquivos.map(a=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px">📎</span>
+        <span style="font-size:12px;font-weight:500">${a.nome||'arquivo.zip'}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">${a.tamanho_bytes?(a.tamanho_bytes/1024/1024).toFixed(1)+' MB':''}</span>
+      </div>`).join('')}
+    </div>`:''}`;
+  conteudo.appendChild(overlay);
 }
 function mkModCard(id,label,val,valCls,accent,sub,statsHtml,modulo='capex'){
   return`<div class="ob-card" id="ob-card-${id}" onclick="toggleObCardGenerico('${modulo}','${id}')" style="cursor:pointer">

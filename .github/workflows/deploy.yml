@@ -28,9 +28,6 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           BASE=/Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks
-          
-          # pega arquivos modificados vs commit anterior
-          # se não tiver HEAD~1 (primeiro commit), sobe tudo
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
             FILES=$(git diff --name-only HEAD~1 HEAD)
           else
