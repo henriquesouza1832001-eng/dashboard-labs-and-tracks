@@ -1776,7 +1776,82 @@ document.addEventListener('DOMContentLoaded', () => {
   $('cfg-alerta-prev')?.addEventListener('change', e => { state.config.alertaPreventivaDias = parseInt(e.target.value) || 7; agendarSalvamento(); });
   $('cfg-alerta-limp')?.addEventListener('change', e => { state.config.alertaLimpezaDias = parseInt(e.target.value) || 2; agendarSalvamento(); });
   $('cfg-alerta-man')?.addEventListener('change', e => { state.config.alertaManutencaoDias = parseInt(e.target.value) || 3; agendarSalvamento(); });
-  $('btn-add-checklist')?.addEventListener('click', () => {
+  $('btn-checklist-por-uc')?.addEventListener('click', () => {
+    // popular select de UCs
+    const opts = state.ucs.map(u =>
+      `<option value="${u.id}">${u.codigo} — ${u.nome}</option>`
+    ).join('');
+
+    // criar modal inline
+    const existing = document.getElementById('modal-cl-uc');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-cl-uc';
+    modal.className = 'modal-overlay open';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:560px">
+        <div class="modal-header">
+          <span class="modal-title">Checklist por UC</span>
+          <button class="modal-close" onclick="document.getElementById('modal-cl-uc').remove()">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="field" style="margin-bottom:14px">
+            <label>Selecione a UC</label>
+            <select id="cl-uc-select" style="width:100%"><option value="">— Selecione —</option>${opts}</select>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
+            Itens do checklist (um por linha, ou edite abaixo)
+          </div>
+          <div id="cl-uc-itens" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="cl-uc-novo" placeholder="Novo item..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;outline:none">
+            <button class="btn btn-secondary btn-sm" onclick="
+              const v=document.getElementById('cl-uc-novo').value.trim();
+              if(!v) return;
+              const wrap=document.getElementById('cl-uc-itens');
+              const i=wrap.children.length;
+              wrap.insertAdjacentHTML('beforeend',\`<div style='display:flex;gap:6px;align-items:center'><input type='text' value='\${v}' data-idx='\${i}' style='flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none'><button onclick='this.parentElement.remove()' style='background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1'>×</button></div>\`);
+              document.getElementById('cl-uc-novo').value='';
+            ">+ Adicionar</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-cl-uc').remove()">Cancelar</button>
+          <button class="btn btn-primary" onclick="
+            const ucId=document.getElementById('cl-uc-select').value;
+            if(!ucId){alert('Selecione uma UC.');return;}
+            const uc=window._stateConforto?.ucs?.find(u=>u.id===ucId)||state.ucs.find(u=>u.id===ucId);
+            if(!uc){alert('UC não encontrada.');return;}
+            const itens=[...document.getElementById('cl-uc-itens').querySelectorAll('input[type=text]')].map(i=>i.value.trim()).filter(Boolean);
+            uc.checklistProprio=itens;
+            agendarSalvamento();
+            document.getElementById('modal-cl-uc').remove();
+            alert('Checklist salvo para '+uc.codigo+' — '+uc.nome);
+          ">Salvar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    // quando UC muda, pré-popula com checklist existente ou global
+    document.getElementById('cl-uc-select').addEventListener('change', function() {
+      const uc = state.ucs.find(u => u.id === this.value);
+      const itens = uc?.checklistProprio?.length
+        ? uc.checklistProprio
+        : state.config.checklistPreventiva || [];
+      const wrap = document.getElementById('cl-uc-itens');
+      wrap.innerHTML = itens.map((item, i) => `
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" value="${item.replace(/"/g,'&quot;')}" data-idx="${i}"
+            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none">
+          <button onclick="this.parentElement.remove()"
+            style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1">×</button>
+        </div>`).join('');
+    });
+  });
+    $('btn-add-checklist')?.addEventListener('click', () => {
     const val = prompt('Nome do item do checklist:');
     if (!val?.trim()) return;
     state.config.checklistPreventiva.push(val.trim());
