@@ -512,6 +512,24 @@ _MAPPER_UCS = lambda u: {
     "intervaloPrevDias": u.get("intervalo_prev_dias") or 0,
     "ultimaLimpezaFiltro": str(u.get("ultima_limpeza_filtro") or ""),
 }
+def _enrich_ucs_checklist(ucs):
+    if not ucs:
+        return ucs
+    ids = [u["id"] for u in ucs]
+    ph = ",".join(["?" for _ in ids])
+    try:
+        rows = run_query(
+            f"SELECT uc_id, item FROM {S_CONFORTO}.uc_checklist WHERE uc_id IN ({ph}) ORDER BY ordem",
+            ids
+        )
+    except:
+        rows = []
+    by_uc = {}
+    for r in rows:
+        by_uc.setdefault(r["uc_id"], []).append(r["item"])
+    for u in ucs:
+        u["checklistProprio"] = by_uc.get(u["id"], [])
+    return ucs
 _MAPPER_ORDENS = lambda o: {
     "id": o.get("id"), "tipo": o.get("tipo"), "areaId": o.get("area_id"), "responsavelId": o.get("responsavel_id"),
     "dataPrevista": str(o.get("data_prevista") or ""), "dataRealizada": str(o.get("data_realizada") or ""),
@@ -569,7 +587,7 @@ def _load_conforto():
             print(f"[conforto] erro ao carregar {tabela}: {e}")
             return []
 
-    ucs = load_table("ucs", _MAPPER_UCS)
+    ucs = _enrich_ucs_checklist(load_table("ucs", _MAPPER_UCS))
     ordens = load_table("ordens", _MAPPER_ORDENS)
     pecas = load_table("pecas", _MAPPER_PECAS)
     requisicoes = load_table("requisicoes", _MAPPER_REQUISICOES)
@@ -627,9 +645,10 @@ def _atualizar_cache_conforto_lista(chave, tabela, mapper, ids):
         _load_conforto()
         return
     ph = ",".join(["?" for _ in ids])
-    rows_novos = _transformar_conforto_simples(
+    rows_base = _transformar_conforto_simples(
         run_query(f"SELECT * FROM {S_CONFORTO}.{tabela} WHERE id IN ({ph})", ids), mapper
     )
+    rows_novos = _enrich_ucs_checklist(rows_base) if tabela == "ucs" else rows_base
     ids_set = set(ids)
     payload[chave] = [x for x in payload.get(chave, []) if x["id"] not in ids_set] + rows_novos
     cache_set("conforto", payload)
