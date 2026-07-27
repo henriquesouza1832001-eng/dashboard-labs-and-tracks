@@ -1,5 +1,4 @@
 'use strict';
-
 // ══════════════════════════════════════════
 // API CAPEX (estende api.js existente)
 // ══════════════════════════════════════════
@@ -14,7 +13,6 @@ const CAPEX_API = {
   salvarPlanta:    (d)       => req('/capex/plantas',                       { method:'POST', body:JSON.stringify(d) }),
   invalida: () => { ['/capex','/capex/projetos','/capex/plantas'].forEach(k=>{ if(typeof API!=='undefined'&&API.invalidar) API.invalidar(k); }); },
 };
-
 // ══════════════════════════════════════════
 // ESTADO
 // ══════════════════════════════════════════
@@ -26,38 +24,28 @@ let _itensEd    = [];
 let _arquivoLocal = { xlsx: null, pptx: null, pdf: null };
 let _plantaFiltro = 'all';
 let _charts     = {};
-
-let _cotacoes = { USD: 1, EUR: 1, ARS: 1, BRL: 1 };
-
+let _cotacoes = { USD: 5.325, EUR: 6.294, ARS: 1, BRL: 1 };
 async function _carregarCotacoes() {
   try {
-    const res = await fetch('https://open.er-api.com/v6/latest/BRL');
+    const res  = await fetch('https://open.er-api.com/v6/latest/BRL');
     const data = await res.json();
-    const r = data.rates || data;
-    _cotacoes.USD = 1 / (r.USD || 1);
-    _cotacoes.EUR = 1 / (r.EUR || 1);
+    const r    = data.rates || data;
     _cotacoes.ARS = 1 / (r.ARS || 1);
-    _cotacoes.BRL = 1;
     console.log('[capex] cotações carregadas:', _cotacoes);
   } catch(e) {
     console.warn('[capex] cotações indisponíveis, usando 1:1');
   }
 }
-
 function _toBRL(valor, moeda) {
   if (!valor || moeda === 'BRL' || !moeda) return valor || 0;
   return valor * (_cotacoes[moeda] || 1);
 }
-
 function _fmtCambio(moeda) {
   if (!moeda || moeda === 'BRL') return '';
   const taxa = _cotacoes[moeda] || 1;
   return `1 ${moeda} = ${fmtR(taxa)}`;
 }
-
-
 const GRUPOS_PADRAO = ['ESLM','Proving Grounds','Protótipo','EMAT','Safety Center','NVH'];
-
 function fmtR(v, moeda='BRL') {
   if (v==null||isNaN(v)) return '—';
   return new Intl.NumberFormat('pt-BR',{style:'currency',currency:moeda||'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(v);
@@ -75,36 +63,27 @@ function setSaveStatus(s,t) {
   el.className='save-status '+s;
   document.getElementById('save-txt').textContent=t;
 }
-
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 async function init() {
   document.getElementById('tt-ano').textContent = new Date().getFullYear()+1;
   await _carregarCotacoes();
-
-  // anos
   const selAno = document.getElementById('sel-ano');
   const base = new Date().getFullYear();
   selAno.innerHTML = '<option value="">Todos os Anos</option>';
   for(let a=base-1;a<=base+3;a++) {
     selAno.innerHTML += `<option value="${a}" ${a===base+1?'selected':''}>${a}</option>`;
   }
-
-  // carregar dados do servidor ou injetados
   if(window.__DADOS__) { _dados=window.__DADOS__; _processar(); }
   try {
     const fresh = await CAPEX_API.listar();
     _dados = fresh;
     _processar();
   } catch(e) { console.error('[capex]',e); }
-
-  // eventos filtros
   ['sel-ano','sel-status','inp-busca'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderAtivo);
   });
-
-  // abas principais
   document.querySelectorAll('.main-tab').forEach(tab=>{
     tab.addEventListener('click',()=>{
       document.querySelectorAll('.main-tab').forEach(t=>t.classList.remove('active'));
@@ -114,12 +93,8 @@ async function init() {
       if(tab.dataset.tab==='dashboard') renderDashboard();
     });
   });
-
-  // botões topbar
   document.getElementById('btn-novo').addEventListener('click', abrirNovo);
   document.getElementById('btn-config').addEventListener('click', abrirConfig);
-
-  // modal projeto
   document.getElementById('modal-close').addEventListener('click', fecharModal);
   document.getElementById('btn-cancelar').addEventListener('click', fecharModal);
   document.getElementById('btn-salvar').addEventListener('click', salvarProjeto);
@@ -435,7 +410,6 @@ function _preencherModal() {
   document.getElementById('f-retorno').value     = p.retorno_previsto||'';
   document.getElementById('f-justificativa').value = p.justificativa||'';
   document.getElementById('f-obs').value         = p.obs||'';
-  // reset tabs
   document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));
   document.querySelector('.mtab[data-tab="geral"]').classList.add('active');
