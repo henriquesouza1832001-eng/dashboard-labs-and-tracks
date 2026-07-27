@@ -1719,17 +1719,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-salvar-area')?.addEventListener('click', salvarArea);
   $('btn-salvar-forn')?.addEventListener('click', salvarFornecedor);
   $('btn-salvar-tec')?.addEventListener('click', salvarTecnico);
-
-  // 6. Fechar modais
   ['os', 'uc', 'preventiva', 'manutencao', 'peca', 'requisicao', 'area', 'fornecedor', 'tecnico'].forEach(nome => {
     $(`modal-${nome}-close`)?.addEventListener('click', () => fecharModal(`modal-${nome}`));
     $(`modal-${nome}-cancel`)?.addEventListener('click', () => fecharModal(`modal-${nome}`));
   });
   document.querySelectorAll('.modal-overlay').forEach(ov => {
+    if (ov.id === 'modal-uc') return;
     ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
   });
-
-  // 7. Filtros e search
   $('civil-search')?.addEventListener('input', () => renderOrdens('civil'));
   $('civil-filtro-status')?.addEventListener('change', () => renderOrdens('civil'));
   $('civil-filtro-area')?.addEventListener('change', () => renderOrdens('civil'));
@@ -1755,8 +1752,6 @@ document.addEventListener('DOMContentLoaded', () => {
   $('tec-agenda-prev')?.addEventListener('click', () => moverAgenda('tecnica', -1));
   $('tec-agenda-next')?.addEventListener('click', () => moverAgenda('tecnica', 1));
   $('tec-agenda-hoje')?.addEventListener('click', () => { state.agendaTecData = hoje(); renderAgenda('tecnica'); });
-
-  // 8. Config
   $('cfg-ciclo-filtro')?.addEventListener('change', e => { state.config.cicloFiltroDias = parseInt(e.target.value) || 90; agendarSalvamento(); });
   $('cfg-alerta-prev')?.addEventListener('change', e => { state.config.alertaPreventivaDias = parseInt(e.target.value) || 7; agendarSalvamento(); });
   $('cfg-alerta-limp')?.addEventListener('change', e => { state.config.alertaLimpezaDias = parseInt(e.target.value) || 2; agendarSalvamento(); });
