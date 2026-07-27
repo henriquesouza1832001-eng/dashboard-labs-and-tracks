@@ -1268,9 +1268,11 @@ function abrirModalPreventiva(idx = -1) {
   if (cl) {
     const ucId = p?.ucId || $('prev-uc').value;
     const uc = state.ucs.find(u => u.id === ucId);
-    const itensUC     = uc?.checklistProprio?.length ? uc.checklistProprio : null;
+    const itensUC    = uc?.checklistProprio?.length ? uc.checklistProprio : null;
+    const itensTipo  = uc?.tipo && state.config.checklistPorTipo?.[uc.tipo]?.length
+      ? state.config.checklistPorTipo[uc.tipo] : null;
     const itensGlobal = state.config.checklistPreventiva || [];
-    const itens       = itensUC || itensGlobal;
+    const itens       = itensUC || itensTipo || itensGlobal;
     cl.innerHTML = itens.map((item, i) => {
       const checked = p?.checklist?.find(c => c.item === item)?.concluido ? 'checked' : '';
       return `<div class="checklist-item">
@@ -1301,8 +1303,10 @@ function salvarPreventiva() {
   if (!ucId || !dataPrevista) { alert('UC e data prevista são obrigatórios.'); return; }
 
   const ucSel   = state.ucs.find(u => u.id === ucId);
-  const itensUC = ucSel?.checklistProprio?.length ? ucSel.checklistProprio : null;
-  const itens   = itensUC || state.config.checklistPreventiva || [];
+  const itensUC   = ucSel?.checklistProprio?.length ? ucSel.checklistProprio : null;
+  const itensTipo = ucSel?.tipo && state.config.checklistPorTipo?.[ucSel.tipo]?.length
+      ? state.config.checklistPorTipo[ucSel.tipo] : null;
+  const itens     = itensUC || itensTipo || state.config.checklistPreventiva || [];
   const checklist = itens.map((item, i) => ({
     item,
     concluido: !!document.getElementById('clitem-' + i)?.checked
@@ -1776,44 +1780,49 @@ document.addEventListener('DOMContentLoaded', () => {
   $('cfg-alerta-prev')?.addEventListener('change', e => { state.config.alertaPreventivaDias = parseInt(e.target.value) || 7; agendarSalvamento(); });
   $('cfg-alerta-limp')?.addEventListener('change', e => { state.config.alertaLimpezaDias = parseInt(e.target.value) || 2; agendarSalvamento(); });
   $('cfg-alerta-man')?.addEventListener('change', e => { state.config.alertaManutencaoDias = parseInt(e.target.value) || 3; agendarSalvamento(); });
-  $('btn-checklist-por-uc')?.addEventListener('click', () => {
-    // popular select de UCs
-    const opts = state.ucs.map(u =>
-      `<option value="${u.id}">${u.codigo} — ${u.nome}</option>`
-    ).join('');
-
-    // criar modal inline
+$('btn-checklist-por-uc')?.addEventListener('click', () => {
+    const TIPOS = [
+      'Split','Splitão','VRF','Aparelho de Janela','Cassete','Chiller',
+      'Fan Coil','Central','Bebedouro Pressão','Bebedouro Refrigerado',
+      'Climatizador Evaporativo','Climatizador Industrial'
+    ];
+    const opts = TIPOS.map(t => `<option value="${t}">${t}</option>`).join('');
     const existing = document.getElementById('modal-cl-uc');
     if (existing) existing.remove();
-
     const modal = document.createElement('div');
     modal.id = 'modal-cl-uc';
     modal.className = 'modal-overlay open';
     modal.innerHTML = `
       <div class="modal" style="max-width:560px">
         <div class="modal-header">
-          <span class="modal-title">Checklist por UC</span>
+          <span class="modal-title">Checklist por Tipo de UC</span>
           <button class="modal-close" onclick="document.getElementById('modal-cl-uc').remove()">
             <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
         <div class="modal-body">
           <div class="field" style="margin-bottom:14px">
-            <label>Selecione a UC</label>
-            <select id="cl-uc-select" style="width:100%"><option value="">— Selecione —</option>${opts}</select>
+            <label>Tipo de UC</label>
+            <select id="cl-tipo-select" style="width:100%">
+              <option value="">— Selecione —</option>${opts}
+            </select>
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
-            Itens do checklist (um por linha, ou edite abaixo)
+            Itens do checklist para este tipo (pré-carregado com o global como base)
           </div>
           <div id="cl-uc-itens" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
           <div style="display:flex;gap:8px">
-            <input type="text" id="cl-uc-novo" placeholder="Novo item..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;outline:none">
+            <input type="text" id="cl-uc-novo" placeholder="Novo item..."
+              style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;outline:none">
             <button class="btn btn-secondary btn-sm" onclick="
               const v=document.getElementById('cl-uc-novo').value.trim();
-              if(!v) return;
+              if(!v)return;
               const wrap=document.getElementById('cl-uc-itens');
               const i=wrap.children.length;
-              wrap.insertAdjacentHTML('beforeend',\`<div style='display:flex;gap:6px;align-items:center'><input type='text' value='\${v}' data-idx='\${i}' style='flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none'><button onclick='this.parentElement.remove()' style='background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1'>×</button></div>\`);
+              wrap.insertAdjacentHTML('beforeend',\`<div style='display:flex;gap:6px;align-items:center'>
+                <input type='text' value='\${v}' style='flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none'>
+                <button onclick='this.parentElement.remove()' style='background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1'>×</button>
+              </div>\`);
               document.getElementById('cl-uc-novo').value='';
             ">+ Adicionar</button>
           </div>
@@ -1821,30 +1830,34 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="document.getElementById('modal-cl-uc').remove()">Cancelar</button>
           <button class="btn btn-primary" onclick="
-            const ucId=document.getElementById('cl-uc-select').value;
-            if(!ucId){alert('Selecione uma UC.');return;}
-            const uc=window._stateConforto?.ucs?.find(u=>u.id===ucId)||state.ucs.find(u=>u.id===ucId);
-            if(!uc){alert('UC não encontrada.');return;}
-            const itens=[...document.getElementById('cl-uc-itens').querySelectorAll('input[type=text]')].map(i=>i.value.trim()).filter(Boolean);
-            uc.checklistProprio=itens;
+            const tipo=document.getElementById('cl-tipo-select').value;
+            if(!tipo){alert('Selecione um tipo.');return;}
+            const itens=[...document.getElementById('cl-uc-itens').querySelectorAll('input[type=text]')]
+              .map(i=>i.value.trim()).filter(Boolean);
+            if(!state.config.checklistPorTipo) state.config.checklistPorTipo={};
+            state.config.checklistPorTipo[tipo]=itens;
+            // aplica a todas as UCs desse tipo que não têm checklist próprio
+            state.ucs.forEach(u=>{
+              if((u.tipo||'')=== tipo && !u.checklistProprio?.length){
+                u.checklistProprio=itens;
+              }
+            });
             agendarSalvamento();
             document.getElementById('modal-cl-uc').remove();
-            alert('Checklist salvo para '+uc.codigo+' — '+uc.nome);
+            alert('Checklist salvo para o tipo: '+tipo);
           ">Salvar</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
-
-    // quando UC muda, pré-popula com checklist existente ou global
-    document.getElementById('cl-uc-select').addEventListener('change', function() {
-      const uc = state.ucs.find(u => u.id === this.value);
-      const itens = uc?.checklistProprio?.length
-        ? uc.checklistProprio
+    document.getElementById('cl-tipo-select').addEventListener('change', function() {
+      const tipo = this.value;
+      const itens = (state.config.checklistPorTipo?.[tipo]?.length)
+        ? state.config.checklistPorTipo[tipo]
         : state.config.checklistPreventiva || [];
       const wrap = document.getElementById('cl-uc-itens');
-      wrap.innerHTML = itens.map((item, i) => `
+      wrap.innerHTML = itens.map(item => `
         <div style="display:flex;gap:6px;align-items:center">
-          <input type="text" value="${item.replace(/"/g,'&quot;')}" data-idx="${i}"
+          <input type="text" value="${item.replace(/"/g,'&quot;')}"
             style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none">
           <button onclick="this.parentElement.remove()"
             style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1">×</button>
