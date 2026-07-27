@@ -1264,18 +1264,35 @@ function abrirModalPreventiva(idx = -1) {
   $('prev-status').value = p?.status || 'Programada';
   $('prev-obs').value = p?.obs || '';
 
-  // Checklist dinâmico
   const cl = $('prev-checklist-wrap');
   if (cl) {
-    cl.innerHTML = state.config.checklistPreventiva.map((item, i) => {
+    const ucId = p?.ucId || $('prev-uc').value;
+    const uc = state.ucs.find(u => u.id === ucId);
+    const itensUC     = uc?.checklistProprio?.length ? uc.checklistProprio : null;
+    const itensGlobal = state.config.checklistPreventiva || [];
+    const itens       = itensUC || itensGlobal;
+    cl.innerHTML = itens.map((item, i) => {
       const checked = p?.checklist?.find(c => c.item === item)?.concluido ? 'checked' : '';
       return `<div class="checklist-item">
         <input type="checkbox" id="clitem-${i}" ${checked} data-item="${item.replace(/"/g, '&quot;')}">
         <label for="clitem-${i}">${item}</label>
       </div>`;
-    }).join('');
+    }).join('') || '<div style="color:var(--text-muted);font-size:12px">Nenhum item de checklist configurado.</div>';
   }
   abrirModal('modal-preventiva');
+  $('prev-uc')?.addEventListener('change', function() {
+    const ucSel = state.ucs.find(u => u.id === this.value);
+    const itens = ucSel?.checklistProprio?.length
+      ? ucSel.checklistProprio
+      : (state.config.checklistPreventiva || []);
+    const cl = $('prev-checklist-wrap');
+    if (cl) cl.innerHTML = itens.map((item, i) =>
+      `<div class="checklist-item">
+        <input type="checkbox" id="clitem-${i}" data-item="${item.replace(/"/g,'&quot;')}">
+        <label for="clitem-${i}">${item}</label>
+      </div>`
+    ).join('') || '<div style="color:var(--text-muted);font-size:12px">Nenhum item configurado.</div>';
+  });
 }
 
 function salvarPreventiva() {
@@ -1283,7 +1300,10 @@ function salvarPreventiva() {
   const dataPrevista = $('prev-data-prev').value;
   if (!ucId || !dataPrevista) { alert('UC e data prevista são obrigatórios.'); return; }
 
-  const checklist = state.config.checklistPreventiva.map((item, i) => ({
+  const ucSel   = state.ucs.find(u => u.id === ucId);
+  const itensUC = ucSel?.checklistProprio?.length ? ucSel.checklistProprio : null;
+  const itens   = itensUC || state.config.checklistPreventiva || [];
+  const checklist = itens.map((item, i) => ({
     item,
     concluido: !!document.getElementById('clitem-' + i)?.checked
   }));
