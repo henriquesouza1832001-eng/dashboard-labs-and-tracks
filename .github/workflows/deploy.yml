@@ -49,7 +49,7 @@ jobs:
             if [ "$dir" != "." ]; then
               databricks workspace mkdirs "$BASE/$dir" 2>/dev/null || true
             fi
-            databricks workspace import "$f" "$BASE/$f" --overwrite --format AUTO
+            databricks workspace import "$BASE/$f" --file "$f" --overwrite --format AUTO
             echo "✓ $f"
           done
 
