@@ -1279,6 +1279,7 @@ function salvarPreventiva() {
     concluido: !!document.getElementById('clitem-' + i)?.checked
   }));
 
+  const prevExistente = state.editIdx.preventiva >= 0 ? state.preventivas[state.editIdx.preventiva] : null;
   const obj = {
     ucId,
     tecnicoId: $('prev-tec').value,
@@ -1286,7 +1287,11 @@ function salvarPreventiva() {
     dataRealizada: $('prev-data-real').value,
     status: $('prev-status').value,
     checklist,
-    obs: $('prev-obs').value.trim()
+    obs: $('prev-obs').value.trim(),
+    duracaoMin: prevExistente?.duracaoMin ?? null,
+    numPessoas: prevExistente?.numPessoas ?? null,
+    inicioEm:   prevExistente?.inicioEm ?? null,
+    fimEm:      prevExistente?.fimEm ?? null,
   };
   if (state.editIdx.preventiva >= 0) {
     obj.id = state.preventivas[state.editIdx.preventiva].id;
@@ -1301,15 +1306,21 @@ function salvarPreventiva() {
 }
 
 function editarPreventiva(idx) { abrirModalPreventiva(idx); }
-function excluirPreventiva(idx) {
+async function excluirPreventiva(idx) {
   if (!confirm('Excluir esta preventiva?')) return;
   const p = state.preventivas[idx];
-  fetch(`/api/conforto/preventivas/${p.id}`, { method: 'DELETE' })
-    .then(r => { if (!r.ok) throw new Error(r.status); })
-    .catch(e => alert('Erro ao excluir: ' + e));
-  state.preventivas.splice(idx, 1);
-  agendarSalvamento();
-  renderTudo();
+  try {
+    const r = await fetch(`/api/conforto/preventivas/${p.id}`, {
+      method: 'DELETE',
+      headers: { 'X-Ctrl-Token': localStorage.getItem('ctrl-token') || '' }
+    });
+    if (!r.ok) throw new Error(r.status);
+    state.preventivas.splice(idx, 1);
+    agendarSalvamento();
+    renderTudo();
+  } catch(e) {
+    alert('Erro ao excluir: ' + e);
+  }
 }
 
 function abrirModalManutencao(idx = -1) {

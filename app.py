@@ -507,6 +507,10 @@ _MAPPER_UCS = lambda u: {
     "modelo": u.get("modelo"), "categoria": u.get("categoria") or "Ar-Condicionado", "tipo": u.get("tipo"),
     "capacidadeBtu": u.get("capacidade_btu"), "dataInstalacao": str(u.get("data_instalacao") or ""),
     "cicloFiltroDias": u.get("ciclo_filtro_dias"), "responsavelId": u.get("responsavel_id"), "obs": u.get("obs") or "",
+    "fabricante": u.get("fabricante") or "", "serie": u.get("serie") or "",
+    "statusOp": u.get("status_op") or "Operacional",
+    "intervaloPrevDias": u.get("intervalo_prev_dias") or 0,
+    "ultimaLimpezaFiltro": str(u.get("ultima_limpeza_filtro") or ""),
 }
 _MAPPER_ORDENS = lambda o: {
     "id": o.get("id"), "tipo": o.get("tipo"), "areaId": o.get("area_id"), "responsavelId": o.get("responsavel_id"),
@@ -1586,12 +1590,14 @@ async def _salvar_preventivas(body, u):
             selects.append(
                 "SELECT ? AS id, ? AS uc_id, ? AS tecnico_id, "
                 "? AS data_prevista, ? AS data_realizada, ? AS status, "
-                "? AS obs, ? AS origem, ? AS atualizado_por"
+                "? AS obs, ? AS origem, ? AS atualizado_por, "
+                "? AS duracao_min, ? AS num_pessoas"
             )
             params += [
                 p["id"], p.get("ucId"), p.get("tecnicoId"),
                 to_date_or_none(p.get("dataPrevista")), to_date_or_none(p.get("dataRealizada")),
-                p.get("status"), p.get("obs"), p.get("origem", "manual"), u
+                p.get("status"), p.get("obs"), p.get("origem", "manual"), u,
+                p.get("duracaoMin"), p.get("numPessoas")
             ]
         origem = " UNION ALL ".join(selects)
         await arun_exec_retry(f"""
@@ -1600,13 +1606,14 @@ async def _salvar_preventivas(body, u):
             WHEN MATCHED THEN UPDATE SET
                 uc_id=s.uc_id, tecnico_id=s.tecnico_id,
                 data_prevista=s.data_prevista, data_realizada=s.data_realizada,
-                status=s.status, obs=s.obs,
-                origem=s.origem, atualizado_por=s.atualizado_por
+                status=s.status, obs=s.obs, origem=s.origem,
+                duracao_min=s.duracao_min, num_pessoas=s.num_pessoas,
+                atualizado_por=s.atualizado_por
             WHEN NOT MATCHED THEN INSERT
                 (id,uc_id,tecnico_id,data_prevista,data_realizada,
-                 status,obs,origem,atualizado_por)
+                 status,obs,origem,duracao_min,num_pessoas,atualizado_por)
             VALUES (s.id,s.uc_id,s.tecnico_id,s.data_prevista,s.data_realizada,
-                 s.status,s.obs,s.origem,s.atualizado_por)
+                 s.status,s.obs,s.origem,s.duracao_min,s.num_pessoas,s.atualizado_por)
         """, params)
 
     # checklist em lote
