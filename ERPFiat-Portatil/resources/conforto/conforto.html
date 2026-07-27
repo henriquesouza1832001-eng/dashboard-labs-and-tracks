@@ -209,8 +209,32 @@
           <button class="tab-btn" data-tab="tab-uc-man-abertas">Abertas <span class="badge badge-red" id="badge-man-abertas" style="margin-left:4px">0</span></button>
         </div>
         <div class="tab-pane active" id="tab-uc-list">
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+            <input type="text" id="uc-busca" placeholder="🔍 Buscar por nome, galpão, modelo..." style="flex:1;min-width:200px;max-width:360px;height:32px;border:1px solid var(--border);border-radius:7px;padding:0 12px;font-size:13px;color:var(--text);background:var(--surface2);outline:none">
+            <select id="uc-filtro-tipo" style="height:32px;border:1px solid var(--border);border-radius:7px;padding:0 10px;font-size:13px;color:var(--text);background:var(--surface);outline:none">
+              <option value="">Todos os tipos</option>
+              <option>Split</option>
+              <option>Splitão</option>
+              <option>VRF</option>
+              <option>Cassete</option>
+              <option>Chiller</option>
+              <option>Fan Coil</option>
+              <option>Central</option>
+              <option>Aparelho de Janela</option>
+              <option>Bebedouro Pressão</option>
+              <option>Bebedouro Refrigerado</option>
+              <option>Climatizador Industrial</option>
+            </select>
+            <select id="uc-filtro-status" style="height:32px;border:1px solid var(--border);border-radius:7px;padding:0 10px;font-size:13px;color:var(--text);background:var(--surface);outline:none">
+              <option value="">Todos os status</option>
+              <option>Operacional</option>
+              <option>Em Manutenção</option>
+              <option>Desativada</option>
+              <option>Em Instalação</option>
+            </select>
+          </div>
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm uc-filtro-cat active" data-cat="">Todos</button>
+            <button class="btn btn-secondary btn-sm uc-filtro-cat active" data-cat="">Todas</button>
             <button class="btn btn-secondary btn-sm uc-filtro-cat" data-cat="Ar-Condicionado">Ar-Condicionado</button>
             <button class="btn btn-secondary btn-sm uc-filtro-cat" data-cat="Bebedouro">Bebedouros</button>
             <button class="btn btn-secondary btn-sm uc-filtro-cat" data-cat="Climatizador">Climatizadores</button>
@@ -513,10 +537,11 @@
         <div class="field">
           <label>Tipo</label>
           <select id="uc-tipo">
-            <option>Split</option><option>Cassete</option><option>Chiller</option>
-            <option>Fan Coil</option><option>Central</option>
-            <option>Bebedouro Pressão</option><option>Bebedouro Refrigerado</option>
-            <option>Climatizador Evaporativo</option><option>Climatizador Industrial</option>
+            <option>Split</option><option>Splitão</option><option>VRF</option>
+              <option>Aparelho de Janela</option><option>Cassete</option><option>Chiller</option>
+              <option>Fan Coil</option><option>Central</option>
+              <option>Bebedouro Pressão</option><option>Bebedouro Refrigerado</option>
+              <option>Climatizador Evaporativo</option>
           </select>
         </div>
         <div class="field">

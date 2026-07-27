@@ -544,8 +544,17 @@ function renderAC() {
 function renderUCGrid() {
   const grid = $('uc-grid');
   if (!grid) return;
-  const catAtiva = document.querySelector('.uc-filtro-cat.active')?.dataset.cat || '';
-  const lista = catAtiva ? state.ucs.filter(u => (u.categoria || 'Ar-Condicionado') === catAtiva) : state.ucs;
+  const catAtiva  = document.querySelector('.uc-filtro-cat.active')?.dataset.cat || '';
+  const busca     = ($('uc-busca')?.value || '').toLowerCase().trim();
+  const tipoFiltro= $('uc-filtro-tipo')?.value || '';
+  const stFiltro  = $('uc-filtro-status')?.value || '';
+  const lista = state.ucs.filter(u => {
+    if (catAtiva   && (u.categoria||'Ar-Condicionado') !== catAtiva) return false;
+    if (tipoFiltro && (u.tipo||'') !== tipoFiltro) return false;
+    if (stFiltro   && (u.statusOp||'Operacional') !== stFiltro) return false;
+    if (busca && !`${u.nome} ${u.local} ${u.modelo} ${u.codigo} ${u.fabricante}`.toLowerCase().includes(busca)) return false;
+    return true;
+  });
   grid.innerHTML = lista.length
     ? lista.map(u => {
         const idxReal = state.ucs.indexOf(u);
@@ -1682,14 +1691,9 @@ document.addEventListener('DOMContentLoaded', () => {
       renderUCGrid();
     });
   });
-  document.querySelectorAll('.uc-filtro-cat').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.uc-filtro-cat').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderUCGrid();
-    });
-  });
-
+  $('uc-busca')?.addEventListener('input', renderUCGrid);
+  $('uc-filtro-tipo')?.addEventListener('change', renderUCGrid);
+  $('uc-filtro-status')?.addEventListener('change', renderUCGrid);
   $('btn-salvar-os')?.addEventListener('click', salvarOS);
   $('btn-salvar-uc')?.addEventListener('click', salvarUC);
   $('btn-salvar-prev')?.addEventListener('click', salvarPreventiva);
