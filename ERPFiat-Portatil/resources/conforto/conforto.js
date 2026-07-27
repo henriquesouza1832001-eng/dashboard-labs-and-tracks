@@ -1836,13 +1836,28 @@ $('btn-checklist-por-uc')?.addEventListener('click', () => {
               .map(i=>i.value.trim()).filter(Boolean);
             if(!state.config.checklistPorTipo) state.config.checklistPorTipo={};
             state.config.checklistPorTipo[tipo]=itens;
-            // aplica a todas as UCs desse tipo que não têm checklist próprio
             state.ucs.forEach(u=>{
               if((u.tipo||'')=== tipo && !u.checklistProprio?.length){
                 u.checklistProprio=itens;
               }
             });
             agendarSalvamento();
+            // persiste na tabela tipos_uc para o conforto-prev ler
+            fetch('/api/conforto/tipos-uc', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Ctrl-Token': localStorage.getItem('ctrl-token') || ''
+              },
+              body: JSON.stringify({
+                id: tipo.toLowerCase().replace(/\s/g,'_').replace(/[^a-z0-9_]/g,''),
+                nome: tipo,
+                checklist: JSON.stringify(itens),
+                ordem: 0
+              })
+            }).then(r => {
+              if (!r.ok) console.warn('[checklist tipo] erro ao salvar tipos_uc:', r.status);
+            });
             document.getElementById('modal-cl-uc').remove();
             alert('Checklist salvo para o tipo: '+tipo);
           ">Salvar</button>
