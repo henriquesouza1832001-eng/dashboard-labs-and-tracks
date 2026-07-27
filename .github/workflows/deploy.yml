@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Install Databricks CLI
         run: curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -28,20 +30,22 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           BASE=/Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks
-          if git rev-parse HEAD~1 >/dev/null 2>&1; then
-            FILES=$(git diff --name-only HEAD~1 HEAD)
-          else
-            FILES=$(git ls-files)
+
+          FILES=$(git diff --name-only --diff-filter=ACM HEAD~1 HEAD)
+
+          if [ -z "$FILES" ]; then
+            echo "Nenhum arquivo modificado, nada a subir."
+            exit 0
           fi
-          
+
           echo "Arquivos a subir:"
           echo "$FILES"
-          
+
           echo "$FILES" | while read f; do
             [ -z "$f" ] && continue
             [ -f "$f" ] || continue
             [ "$f" = "app.yaml" ] && continue
-            
+
             dir=$(dirname "$f")
             if [ "$dir" != "." ]; then
               databricks workspace mkdirs "$BASE/$dir" 2>/dev/null || true
