@@ -2331,6 +2331,53 @@ function abrirDrillCapex(tipo){
     }).join('')}`;
 
   conteudo.appendChild(overlay);
+
+  const solTotal = lista.reduce((s,p)=>s+_cxToBRL(p.valor_solicitado||0,p.moeda),0);
+  const aprTotal = lista.reduce((s,p)=>s+_cxToBRL(p.valor_aprovado||0,p.moeda),0);
+  const pctAprov = lista.length>0?Math.round(lista.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído').length/lista.length*100):0;
+  const porPlantaG = (d.plantas||[]).map(pl=>({
+    nome: pl.nome,
+    sol: lista.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+_cxToBRL(p.valor_solicitado||0,p.moeda),0),
+  })).filter(x=>x.sol>0);
+  const statusMap={};
+  lista.forEach(p=>{const s=p.status||'Rascunho';statusMap[s]=(statusMap[s]||0)+1;});
+  const corStatus2={'Aprovado':'#1a7f4b','Em Execução':'#1a7f4b','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b'};
+  const grafDiv = document.createElement('div');
+  grafDiv.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px';
+  grafDiv.innerHTML=`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:6px">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Taxa de Aprovação</div>
+      <canvas id="cx-gauge" width="140" height="80"></canvas>
+      <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:${pctAprov>=80?'#1a7f4b':pctAprov>=40?'#b07d00':'#2E5FA3'}">${pctAprov}%</div>
+      <div style="font-size:10px;color:var(--text-muted)">R$${(aprTotal/1e3).toFixed(0)}k de R$${(solTotal/1e3).toFixed(0)}k</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Por Planta (BRL)</div>
+      <canvas id="cx-barras" height="110"></canvas>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Por Status</div>
+      <canvas id="cx-donut" width="120" height="120" style="max-width:120px"></canvas>
+      <div style="margin-top:8px;font-size:10px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">
+        ${Object.entries(statusMap).map(([s,n])=>`<span style="background:${corStatus2[s]||'#8a9abf'}22;color:${corStatus2[s]||'#8a9abf'};padding:1px 6px;border-radius:3px;font-family:var(--mono)">${s}: ${n}</span>`).join('')}
+      </div>
+    </div>`;
+  overlay.insertBefore(grafDiv, overlay.children[1]);
+
+  setTimeout(()=>{
+    const gauge=document.getElementById('cx-gauge');
+    if(gauge){
+      const gc=gauge.getContext('2d'),cx=70,cy=72,r=52,sw=12;
+      const ang=Math.PI+(pctAprov/100)*Math.PI;
+      const cor=pctAprov>=80?'#1a7f4b':pctAprov>=40?'#b07d00':'#2E5FA3';
+      gc.clearRect(0,0,140,80);
+      gc.beginPath();gc.arc(cx,cy,r,Math.PI,2*Math.PI);gc.strokeStyle='#e8edf5';gc.lineWidth=sw;gc.lineCap='round';gc.stroke();
+      gc.beginPath();gc.arc(cx,cy,r,Math.PI,ang);gc.strokeStyle=cor;gc.lineWidth=sw;gc.lineCap='round';gc.stroke();
+    }
+    if(porPlantaG.length) desenharBarrasH('cx-barras',porPlantaG.map(x=>x.nome),porPlantaG.map(x=>x.sol),['#3a6bc7']);
+    const sl=Object.entries(statusMap);
+    if(sl.length) desenharDonutNaCanvas('cx-donut',sl.map(x=>x[0]),sl.map(x=>x[1]),sl.map(x=>corStatus2[x[0]]||'#8a9abf'));
+  },80);
 }
 function mkModCard(id,label,val,valCls,accent,sub,statsHtml,modulo='capex'){
   return`<div class="ob-card" id="ob-card-${id}" onclick="toggleObCardGenerico('${modulo}','${id}')" style="cursor:pointer">
