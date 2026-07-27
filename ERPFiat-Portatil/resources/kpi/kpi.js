@@ -2262,121 +2262,153 @@ function abrirDrillCapex(tipo){
   const todos = (d.projetos||[]).filter(p=>!p.ano_orcamento||p.ano_orcamento===anoFiltro);
   const filtros = {
     'cx-total':   todos,
-    'cx-aprov':   todos.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído'),
-    'cx-analise': todos.filter(p=>p.status==='Em Análise'||p.status==='Rascunho'),
+    'cx-aprov':   todos.filter(p=>['Aprovado','Em Execução','Concluído'].includes(p.status)),
+    'cx-analise': todos.filter(p=>['Em Análise','Rascunho'].includes(p.status)),
     'cx-docs':    todos.filter(p=>!(p.arquivos||[]).length),
   };
+  const titulos = {'cx-total':'Todos os Projetos','cx-aprov':'Aprovados / Em Execução','cx-analise':'Em Análise / Rascunho','cx-docs':'Sem Documentação'};
   const lista = filtros[tipo] || todos;
-  const titulos = {
-    'cx-total':'Todos os Projetos','cx-aprov':'Projetos Aprovados',
-    'cx-analise':'Em Análise / Rascunho','cx-docs':'Sem Documentação',
-  };
-  const fmtM = v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
-  const corStatus = {'Aprovado':'#1a7f4b','Em Execução':'#1a7f4b','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b'};
   const plantas = d.plantas||[];
-  const nomePlanta = id => plantas.find(p=>p.id===id)?.nome || id || '—';
-
-  const conteudo = document.querySelector('#painel-expandido-global > div:last-child');
-  if(!conteudo) return;
-  conteudo.innerHTML='';
-
-  const overlay = document.createElement('div');
-  overlay.className='ob-overlay';
-  overlay.id='capex-drill-overlay';
-
-  overlay.innerHTML=`
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px">
-      CAPEX ${anoFiltro} — ${titulos[tipo]||'Projetos'} <span style="font-family:var(--mono);color:var(--blue-mid)">(${lista.length})</span>
-    </div>
-    ${!lista.length ? '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center">Nenhum projeto nesta categoria.</div>' :
-    lista.map(p=>{
-      const sol = p.valor_solicitado||0;
-      const apr = p.valor_aprovado||0;
-      const pct = sol>0?Math.min(apr/sol,1):0;
-      const cor = corStatus[p.status]||'#8a9abf';
-      const itens = (p.itens||[]);
-      const temArq = (p.arquivos||[]).length>0;
-      return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.titulo||'(sem título)'}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${p.responsavel||'—'} · ${nomePlanta(p.planta_id)} · ${p.categoria||'—'}</div>
-          </div>
-          <span style="font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:${cor}22;color:${cor};white-space:nowrap;font-family:var(--mono)">${p.status||'Rascunho'}</span>
-        </div>
-        <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Solicitado</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blue-mid)">${fmtM(sol)}</span>
-          </div>
-          ${apr>0?`<div style="display:flex;flex-direction:column;gap:2px">
-            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Aprovado</span>
-            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:#1a7f4b">${fmtM(apr)}</span>
-          </div>`:''}
-          ${p.moeda&&p.moeda!=='BRL'?`<div style="display:flex;flex-direction:column;gap:2px">
-            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Moeda</span>
-            <span style="font-family:var(--mono);font-size:12px;color:var(--text)">${p.moeda}</span>
-          </div>`:''}
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Docs</span>
-            <span style="font-size:12px;font-weight:600;color:${temArq?'#1a7f4b':'#c0392b'}">${temArq?'✓ OK':'✗ Faltando'}</span>
-          </div>
-        </div>
-        ${sol>0?`<div style="height:5px;background:#e8edf5;border-radius:3px;overflow:hidden;margin-bottom:6px">
-          <div style="height:100%;width:${pct*100}%;background:#1a7f4b;border-radius:3px;transition:width .4s"></div>
-        </div>`:''}
-        ${itens.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">${itens.length} item${itens.length>1?'s':''} de custo · Total: ${fmtM(itens.reduce((s,it)=>s+(it.quantidade||1)*(it.preco_unitario||0),0))}</div>`:''}
-        ${p.justificativa?`<div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;border-left:2px solid var(--border);padding-left:8px">${p.justificativa}</div>`:''}
-      </div>`;
-    }).join('')}`;
-
-  conteudo.appendChild(overlay);
-
+  const nomePlanta = id => plantas.find(p=>p.id===id)?.nome||id||'—';
   const solTotal = lista.reduce((s,p)=>s+_cxToBRL(p.valor_solicitado||0,p.moeda),0);
   const aprTotal = lista.reduce((s,p)=>s+_cxToBRL(p.valor_aprovado||0,p.moeda),0);
-  const pctAprov = lista.length>0?Math.round(lista.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído').length/lista.length*100):0;
-  const porPlantaG = (d.plantas||[]).map(pl=>({
-    nome: pl.nome,
-    sol: lista.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+_cxToBRL(p.valor_solicitado||0,p.moeda),0),
-  })).filter(x=>x.sol>0);
+  const aFaturar = solTotal - aprTotal;
+  const aprov    = lista.filter(p=>['Aprovado','Em Execução','Concluído'].includes(p.status));
+  const pctAprov = lista.length>0?Math.round(aprov.length/lista.length*100):0;
+  const semDocs  = lista.filter(p=>!(p.arquivos||[]).length).length;
+  if(!window._cxDrillTipo||window._cxDrillTipo!==tipo) window._cxDrillPag=1;
+  window._cxDrillTipo=tipo;
+  window._cxDrillLista=lista;
+  const perPag=10, pagAtual=window._cxDrillPag||1, inicio=(pagAtual-1)*perPag;
+  const pagina=lista.slice(inicio,inicio+perPag);
+  const totalPags=Math.ceil(lista.length/perPag);
+  const corStatus={'Aprovado':'#1a7f4b','Em Execução':'#2E5FA3','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b'};
+  const badgeSt=s=>`<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:${corStatus[s]||'#8a9abf'}22;color:${corStatus[s]||'#8a9abf'};font-family:var(--mono)">${s}</span>`;
+  const pb=(v,c)=>`<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:5px;background:#e8edf5;border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(v,100)}%;background:${c};border-radius:3px"></div></div><span style="font-size:9px;font-family:var(--mono);color:var(--text-muted);min-width:28px">${Math.round(v)}%</span></div>`;
+  const fmtK=v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+  const linhas=pagina.map(p=>{
+    const sol=_cxToBRL(p.valor_solicitado||0,p.moeda);
+    const apr=_cxToBRL(p.valor_aprovado||0,p.moeda);
+    const pct=sol>0?Math.min(apr/sol,1)*100:0;
+    const temArq=(p.arquivos||[]).length>0;
+    const moedaStr=p.moeda&&p.moeda!=='BRL'?`<span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)">${p.moeda}</span>`:'';
+    return`<tr style="cursor:default">
+      <td style="font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.titulo||''}">${p.titulo||'(sem título)'}</td>
+      <td>${nomePlanta(p.planta_id)}</td>
+      <td>${p.categoria||'—'}</td>
+      <td>${badgeSt(p.status||'Rascunho')}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--blue-mid)">${fmtK(sol)} ${moedaStr}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:#1a7f4b">${apr>0?fmtK(apr):'—'}</td>
+      <td style="min-width:120px">${pb(pct,'#1a7f4b')}</td>
+      <td style="text-align:center;font-size:13px">${temArq?'<span style="color:#1a7f4b">✓</span>':'<span style="color:#c0392b">✗</span>'}</td>
+    </tr>`;
+  }).join('');
+  const btnSt=ativo=>`cursor:pointer;padding:4px 10px;border-radius:5px;font-family:var(--mono);font-size:11px;border:1px solid ${ativo?'var(--blue-mid)':'var(--border)'};background:${ativo?'var(--blue-pale)':'var(--surface)'};color:${ativo?'var(--blue-mid)':'var(--text-muted)'}`;
+  let pagHtml=`<button style="${btnSt(false)}" onclick="window._cxIrPag(${pagAtual-1})" ${pagAtual===1?'disabled':''}>← ant</button>`;
+  for(let i=1;i<=totalPags;i++){
+    if(totalPags<=7||i===1||i===totalPags||Math.abs(i-pagAtual)<=1) pagHtml+=`<button style="${btnSt(i===pagAtual)}" onclick="window._cxIrPag(${i})">${i}</button>`;
+    else if(Math.abs(i-pagAtual)===2) pagHtml+=`<span style="color:var(--text-muted);padding:0 2px">…</span>`;
+  }
+  pagHtml+=`<button style="${btnSt(false)}" onclick="window._cxIrPag(${pagAtual+1})" ${pagAtual===totalPags?'disabled':''}>próx →</button>`;
+  pagHtml+=`<span style="font-size:10px;color:var(--text-muted);margin-left:6px">${inicio+1}–${Math.min(inicio+perPag,lista.length)} de ${lista.length}</span>`;
+  window._cxIrPag=function(p){ if(p<1||p>totalPags)return; window._cxDrillPag=p; abrirDrillCapex(tipo); };
+  const porPlantaG=plantas.map(pl=>({
+    nome:pl.nome,
+    sol:lista.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+_cxToBRL(p.valor_solicitado||0,p.moeda),0),
+    apr:lista.filter(p=>p.planta_id===pl.id).reduce((s,p)=>s+_cxToBRL(p.valor_aprovado||0,p.moeda),0),
+  })).filter(x=>x.sol>0||x.apr>0);
   const statusMap={};
   lista.forEach(p=>{const s=p.status||'Rascunho';statusMap[s]=(statusMap[s]||0)+1;});
-  const corStatus2={'Aprovado':'#1a7f4b','Em Execução':'#1a7f4b','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b'};
-  const grafDiv = document.createElement('div');
-  grafDiv.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px';
-  grafDiv.innerHTML=`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:6px">
-      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Taxa de Aprovação</div>
-      <canvas id="cx-gauge" width="140" height="80"></canvas>
-      <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:${pctAprov>=80?'#1a7f4b':pctAprov>=40?'#b07d00':'#2E5FA3'}">${pctAprov}%</div>
-      <div style="font-size:10px;color:var(--text-muted)">R$${(aprTotal/1e3).toFixed(0)}k de R$${(solTotal/1e3).toFixed(0)}k</div>
+
+  const html=`
+  <div class="ob-ov-header">
+    <div class="ob-ov-title">${titulos[tipo]||'CAPEX'} — Análise Gerencial (${lista.length} projeto${lista.length!==1?'s':''})</div>
+    <div class="ob-ov-header-btns"><button class="ob-ov-close" onclick="voltarParaSubCards()">← voltar</button></div>
+  </div>
+
+  <div class="ob-ov-kpis">
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Valor Solicitado</div><div class="ob-ov-kpi-val c-azul">${fmtK(solTotal)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Valor Aprovado</div><div class="ob-ov-kpi-val c-verde">${fmtK(aprTotal)}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">A Aprovar</div><div class="ob-ov-kpi-val ${aFaturar>0?'c-amarelo':'c-verde'}">${fmtK(Math.max(aFaturar,0))}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Taxa de Aprovação</div><div class="ob-ov-kpi-val ${pctAprov>=80?'c-verde':pctAprov>=40?'c-amarelo':'c-laranja'}">${pctAprov}%</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Aprovados</div><div class="ob-ov-kpi-val c-verde">${aprov.length}</div></div>
+    <div class="ob-ov-kpi"><div class="ob-ov-kpi-lbl">Sem Documentos</div><div class="ob-ov-kpi-val ${semDocs>0?'c-vermelho':'c-verde'}">${semDocs}</div></div>
+  </div>
+
+  <div class="ob-ov-tbox" style="margin-bottom:16px">
+    <div class="ob-ov-ctit" style="margin-bottom:8px">Detalhamento dos ${lista.length} projeto${lista.length!==1?'s':''}</div>
+    <table class="ob-ov-table">
+      <thead><tr>
+        <th>Projeto</th><th>Planta</th><th>Grupo</th><th>Status</th>
+        <th>Solicitado</th><th>Aprovado</th><th>% Aprovação</th><th>Docs</th>
+      </tr></thead>
+      <tbody>${linhas||'<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:16px">Nenhum projeto</td></tr>'}</tbody>
+    </table>
+    <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;flex-wrap:wrap">${pagHtml}</div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:14px">
+    <div class="ob-ov-cbox" style="flex:1.4;min-width:0">
+      <div class="ob-ov-ctit">Solicitado vs Aprovado por Planta (BRL)</div>
+      <canvas id="cx-chart-plantas" width="400" height="200" style="width:100%;height:200px;display:block"></canvas>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
-      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Por Planta (BRL)</div>
-      <canvas id="cx-barras" height="110"></canvas>
+    <div class="ob-ov-cbox" style="flex:1;min-width:0">
+      <div class="ob-ov-ctit">Distribuição por Status</div>
+      <canvas id="cx-chart-status" width="300" height="200" style="width:100%;height:200px;display:block"></canvas>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center">
-      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Por Status</div>
-      <canvas id="cx-donut" width="120" height="120" style="max-width:120px"></canvas>
-      <div style="margin-top:8px;font-size:10px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">
-        ${Object.entries(statusMap).map(([s,n])=>`<span style="background:${corStatus2[s]||'#8a9abf'}22;color:${corStatus2[s]||'#8a9abf'};padding:1px 6px;border-radius:3px;font-family:var(--mono)">${s}: ${n}</span>`).join('')}
-      </div>
-    </div>`;
-  overlay.insertBefore(grafDiv, overlay.children[1]);
+  </div>`;
+
+  const conteudo=document.querySelector('#painel-expandido-global > div:last-child');
+  if(!conteudo) return;
+  conteudo.innerHTML='';
+  const overlay=document.createElement('div');
+  overlay.className='ob-overlay';
+  overlay.id='capex-drill-overlay';
+  overlay.innerHTML=html;
+  conteudo.appendChild(overlay);
 
   setTimeout(()=>{
-    const gauge=document.getElementById('cx-gauge');
-    if(gauge){
-      const gc=gauge.getContext('2d'),cx=70,cy=72,r=52,sw=12;
-      const ang=Math.PI+(pctAprov/100)*Math.PI;
-      const cor=pctAprov>=80?'#1a7f4b':pctAprov>=40?'#b07d00':'#2E5FA3';
-      gc.clearRect(0,0,140,80);
-      gc.beginPath();gc.arc(cx,cy,r,Math.PI,2*Math.PI);gc.strokeStyle='#e8edf5';gc.lineWidth=sw;gc.lineCap='round';gc.stroke();
-      gc.beginPath();gc.arc(cx,cy,r,Math.PI,ang);gc.strokeStyle=cor;gc.lineWidth=sw;gc.lineCap='round';gc.stroke();
+    if(porPlantaG.length){
+      const cv=document.getElementById('cx-chart-plantas');
+      if(cv){
+        const W=cv.clientWidth||400,H=200;
+        cv.width=W; cv.height=H;
+        const ctx=cv.getContext('2d');
+        const m={t:16,r:16,b:40,l:56};
+        const cw=W-m.l-m.r, ch=H-m.t-m.b;
+        const maxV=Math.max(...porPlantaG.map(x=>x.sol),1);
+        const bH=Math.min(20,ch/porPlantaG.length-6);
+        const gap=(ch-bH*porPlantaG.length)/(porPlantaG.length+1);
+        ctx.clearRect(0,0,W,H);
+        porPlantaG.forEach((pl,i)=>{
+          const y=m.t+gap+(bH+gap)*i;
+          const wSol=(pl.sol/maxV)*cw;
+          const wApr=(pl.apr/maxV)*cw;
+          ctx.fillStyle='#e8edf5'; ctx.beginPath(); ctx.roundRect(m.l,y,cw,bH,3); ctx.fill();
+          ctx.fillStyle='#3a6bc7'; ctx.beginPath(); ctx.roundRect(m.l,y,wSol,bH,3); ctx.fill();
+          if(pl.apr>0){ ctx.fillStyle='#1a7f4b'; ctx.beginPath(); ctx.roundRect(m.l,y+bH*0.35,wApr,bH*0.3,2); ctx.fill(); }
+          ctx.fillStyle='var(--text-muted)'; ctx.font=`600 10px var(--font,sans-serif)`; ctx.textAlign='right';
+          ctx.fillText(pl.nome,m.l-4,y+bH/2+4);
+          ctx.fillStyle='#2E5FA3'; ctx.font=`600 9px var(--mono,monospace)`; ctx.textAlign='left';
+          const fK=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':Math.round(v).toString();
+          ctx.fillText('R$'+fK(pl.sol),m.l+wSol+4,y+bH/2+4);
+        });
+        ctx.fillStyle='#3a6bc7'; ctx.fillRect(m.l,H-14,10,6);
+        ctx.fillStyle='var(--text-muted)'; ctx.font='9px var(--font,sans-serif)'; ctx.textAlign='left';
+        ctx.fillText('Solicitado',m.l+13,H-9);
+        ctx.fillStyle='#1a7f4b'; ctx.fillRect(m.l+80,H-14,10,6);
+        ctx.fillText('Aprovado',m.l+93,H-9);
+      }
     }
-    if(porPlantaG.length) desenharBarrasH('cx-barras',porPlantaG.map(x=>x.nome),porPlantaG.map(x=>x.sol),['#3a6bc7']);
     const sl=Object.entries(statusMap);
-    if(sl.length) desenharDonutNaCanvas('cx-donut',sl.map(x=>x[0]),sl.map(x=>x[1]),sl.map(x=>corStatus2[x[0]]||'#8a9abf'));
+    if(sl.length){
+      const cv=document.getElementById('cx-chart-status');
+      if(cv){
+        const W=cv.clientWidth||300, H=200;
+        cv.width=W; cv.height=H;
+        desenharDonutNaCanvas('cx-chart-status',sl.map(x=>x[0]),sl.map(x=>x[1]),sl.map(x=>corStatus[x[0]]||'#8a9abf'));
+      }
+    }
   },80);
 }
 function mkModCard(id,label,val,valCls,accent,sub,statsHtml,modulo='capex'){

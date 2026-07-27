@@ -22,15 +22,36 @@ jobs:
       - name: Remove app.yaml before upload
         run: rm -f app.yaml
 
-      - name: Upload source files
+      - name: Upload changed files
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          rm -rf .databricks
-          databricks workspace import-dir . \
-            /Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks \
-            --overwrite
+          BASE=/Workspace/Users/${{ secrets.DATABRICKS_USER }}/dashboard-labs-and-tracks
+          
+          # pega arquivos modificados vs commit anterior
+          # se não tiver HEAD~1 (primeiro commit), sobe tudo
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            FILES=$(git diff --name-only HEAD~1 HEAD)
+          else
+            FILES=$(git ls-files)
+          fi
+          
+          echo "Arquivos a subir:"
+          echo "$FILES"
+          
+          echo "$FILES" | while read f; do
+            [ -z "$f" ] && continue
+            [ -f "$f" ] || continue
+            [ "$f" = "app.yaml" ] && continue
+            
+            dir=$(dirname "$f")
+            if [ "$dir" != "." ]; then
+              databricks workspace mkdirs "$BASE/$dir" 2>/dev/null || true
+            fi
+            databricks workspace import "$f" "$BASE/$f" --overwrite --format AUTO
+            echo "✓ $f"
+          done
 
       - name: Deploy app
         env:
