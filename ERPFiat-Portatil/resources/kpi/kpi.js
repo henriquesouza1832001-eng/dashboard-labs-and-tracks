@@ -2234,8 +2234,86 @@ function voltarParaListaGeral(){
   voltarParaLista();
 }
 function toggleObCardGenerico(modulo, tipo){
+  if(modulo==='capex'){ abrirDrillCapex(tipo); return; }
   const card=document.getElementById('ob-card-'+tipo);
   if(card)card.click();
+}
+function abrirDrillCapex(tipo){
+  const d = window._kpiDados_capex || (()=>{try{return JSON.parse(sessionStorage.getItem('_kpi_capex'));}catch{return null;}})();
+  if(!d) return;
+  const anoFiltro = new Date().getFullYear()+1;
+  const todos = (d.projetos||[]).filter(p=>!p.ano_orcamento||p.ano_orcamento===anoFiltro);
+  const filtros = {
+    'cx-total':   todos,
+    'cx-aprov':   todos.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído'),
+    'cx-analise': todos.filter(p=>p.status==='Em Análise'||p.status==='Rascunho'),
+    'cx-docs':    todos.filter(p=>!(p.arquivos||[]).length),
+  };
+  const lista = filtros[tipo] || todos;
+  const titulos = {
+    'cx-total':'Todos os Projetos','cx-aprov':'Projetos Aprovados',
+    'cx-analise':'Em Análise / Rascunho','cx-docs':'Sem Documentação',
+  };
+  const fmtM = v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+  const corStatus = {'Aprovado':'#1a7f4b','Em Execução':'#1a7f4b','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b'};
+  const plantas = d.plantas||[];
+  const nomePlanta = id => plantas.find(p=>p.id===id)?.nome || id || '—';
+
+  const conteudo = document.querySelector('#painel-expandido-global > div:last-child');
+  if(!conteudo) return;
+  conteudo.innerHTML='';
+
+  const overlay = document.createElement('div');
+  overlay.className='ob-overlay';
+  overlay.id='capex-drill-overlay';
+
+  overlay.innerHTML=`
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px">
+      CAPEX ${anoFiltro} — ${titulos[tipo]||'Projetos'} <span style="font-family:var(--mono);color:var(--blue-mid)">(${lista.length})</span>
+    </div>
+    ${!lista.length ? '<div style="color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center">Nenhum projeto nesta categoria.</div>' :
+    lista.map(p=>{
+      const sol = p.valor_solicitado||0;
+      const apr = p.valor_aprovado||0;
+      const pct = sol>0?Math.min(apr/sol,1):0;
+      const cor = corStatus[p.status]||'#8a9abf';
+      const itens = (p.itens||[]);
+      const temArq = (p.arquivos||[]).length>0;
+      return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.titulo||'(sem título)'}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${p.responsavel||'—'} · ${nomePlanta(p.planta_id)} · ${p.categoria||'—'}</div>
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:${cor}22;color:${cor};white-space:nowrap;font-family:var(--mono)">${p.status||'Rascunho'}</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Solicitado</span>
+            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blue-mid)">${fmtM(sol)}</span>
+          </div>
+          ${apr>0?`<div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Aprovado</span>
+            <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:#1a7f4b">${fmtM(apr)}</span>
+          </div>`:''}
+          ${p.moeda&&p.moeda!=='BRL'?`<div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Moeda</span>
+            <span style="font-family:var(--mono);font-size:12px;color:var(--text)">${p.moeda}</span>
+          </div>`:''}
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Docs</span>
+            <span style="font-size:12px;font-weight:600;color:${temArq?'#1a7f4b':'#c0392b'}">${temArq?'✓ OK':'✗ Faltando'}</span>
+          </div>
+        </div>
+        ${sol>0?`<div style="height:5px;background:#e8edf5;border-radius:3px;overflow:hidden;margin-bottom:6px">
+          <div style="height:100%;width:${pct*100}%;background:#1a7f4b;border-radius:3px;transition:width .4s"></div>
+        </div>`:''}
+        ${itens.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">${itens.length} item${itens.length>1?'s':''} de custo · Total: ${fmtM(itens.reduce((s,it)=>s+(it.quantidade||1)*(it.preco_unitario||0),0))}</div>`:''}
+        ${p.justificativa?`<div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;border-left:2px solid var(--border);padding-left:8px">${p.justificativa}</div>`:''}
+      </div>`;
+    }).join('')}`;
+
+  conteudo.appendChild(overlay);
 }
 function mkModCard(id,label,val,valCls,accent,sub,statsHtml,modulo='capex'){
   return`<div class="ob-card" id="ob-card-${id}" onclick="toggleObCardGenerico('${modulo}','${id}')" style="cursor:pointer">
