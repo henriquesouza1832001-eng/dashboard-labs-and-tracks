@@ -1160,7 +1160,7 @@ function abrirModalUC(idx = -1) {
   popularSelects();
   $('uc-categoria').value = u?.categoria || 'Ar-Condicionado';
   const displayCodigo = document.getElementById('uc-codigo-display');
-  if(displayCodigo) displayCodigo.value = u?.codigo || '(novo — gerado ao salvar)';
+  if(displayCodigo) displayCodigo.value = u?.codigo || '';
   $('uc-nome').value = u?.nome || '';
   $('uc-modelo').value = u?.modelo || '';
   $('uc-btu').value = u?.capacidadeBtu || '';
@@ -1236,11 +1236,9 @@ function salvarUC() {
   };
   if (state.editIdx.uc >= 0) {
     obj.id = state.ucs[state.editIdx.uc].id;
-    obj.codigo = state.ucs[state.editIdx.uc].codigo;
-    state.ucs[state.editIdx.uc] = obj;
+    obj.codigo = ($('uc-codigo-display').value || '').trim().toUpperCase() || state.ucs[state.editIdx.uc].codigo;
   } else {
-    obj.id = gerarId('UC', state.ucs, 'id');
-    obj.codigo = gerarCodigoUC(categoria);
+    obj.codigo = ($('uc-codigo-display').value || '').trim().toUpperCase() || gerarCodigoUC(categoria);
     state.ucs.push(obj);
   }
   fecharModal('modal-uc');
