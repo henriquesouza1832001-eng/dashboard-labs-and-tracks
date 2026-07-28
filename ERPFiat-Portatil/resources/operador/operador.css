@@ -1,4 +1,4 @@
-/* ── extras operador ── */
+﻿/* ── extras operador ── */
 .notif-banner {
   display: none;
   position: fixed; top: 52px; left: 0; right: 0; z-index: 300;
@@ -80,12 +80,7 @@
   background: var(--blue-mid); border: none; color: #fff;
   font-size: 11px; font-family: var(--font); cursor: pointer; white-space: nowrap;
 }
-[data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
-}
+
+[data-theme="dark"] { color-scheme: dark; }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: var(--surface2); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }

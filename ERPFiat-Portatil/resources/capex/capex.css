@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   --bg:         #f0f4f8;
@@ -288,12 +288,15 @@ canvas { display: block; width: 100% !important; }
 
 /* loading */
 .loading-msg { text-align: center; color: var(--text-muted); padding: 60px 0; font-size: 13px; }
+
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+  --blue: #388bfd; --blue-mid: #58a6ff; --blue-light: #79c0ff; --blue-pale: #1f3358;
+  --green: #3fb950; --green-pale: #0d2b1a; --yellow: #d29922; --yellow-pale: #2b260d;
+  --red: #f85149; --red-pale: #2b0d0d; --orange: #e3834a;
+  --text: #e6edf3; --text-muted: #8b949e; --text-dim: #484f58; color-scheme: dark;
 }
+[data-theme="dark"] .modal { background: var(--surface); border-color: var(--border); }
+[data-theme="dark"] .modal-overlay { background: rgba(0,0,0,.75); }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: var(--surface2); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }

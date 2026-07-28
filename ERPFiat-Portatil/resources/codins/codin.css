@@ -1,4 +1,4 @@
-/* =============================================
+﻿/* =============================================
    CONTROLE DE ACESSO — TEMA INDUSTRIAL
    ============================================= */
 
@@ -862,12 +862,12 @@ select:focus-visible {
 }
 .qr-ponto-card .qpc-nome{ font-weight:500; font-size:13px; }
 .qr-ponto-card .qpc-codin{ font-family:var(--mono); font-size:11px; color:var(--text2); }
+
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d; --border: #30363d; --border2: #484f58;
+  --text: #e6edf3; --text2: #8b949e; --text3: #484f58;
+  --blue: #58a6ff; --blue-dark: #388bfd; --blue-bg: #1f3358;
+  --green: #3fb950; --green-bg: #0d2b1a; --red: #f85149; --red-dark: #da3633; color-scheme: dark;
 }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: var(--bg3); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }

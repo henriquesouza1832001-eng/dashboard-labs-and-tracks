@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
   --bg:        #f0f4f8;
@@ -241,12 +241,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   font-size: 12px;
   color: var(--text2);
 }
+
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
+  --bg: #0d1117; --surface: #161b22; --border: #30363d; --border2: #484f58;
+  --blue: #58a6ff; --blue-dark: #388bfd; --blue-bg: #1f3358;
+  --green: #3fb950; --green-bg: #0d2b1a; --red: #f85149; --red-bg: #2b0d0d;
+  --text: #e6edf3; --text2: #8b949e; --text3: #484f58; color-scheme: dark;
 }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: #21262d; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }

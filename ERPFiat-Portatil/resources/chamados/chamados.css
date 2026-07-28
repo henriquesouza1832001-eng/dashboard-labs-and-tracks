@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #f0f4f8;
   --surface: #ffffff;
   --surface2: #e8edf5;
@@ -525,12 +525,15 @@ select.form-control option { background: var(--surface2); }
 .qr-acoes{display:flex;gap:8px;width:100%}
 .qr-acoes button{flex:1;font-size:11px;padding:6px 10px}
 .qr-vazio,.qr-erro{text-align:center;color:var(--text-muted);padding:40px 0;grid-column:1/-1}
+
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --surface3: #2d333b; --border: #30363d;
+  --blue: #388bfd; --blue-mid: #58a6ff; --blue-light: #79c0ff;
+  --green: #3fb950; --yellow: #d29922; --red: #f85149; --orange: #e3834a;
+  --text: #e6edf3; --text-muted: #8b949e; --text-dim: #484f58; color-scheme: dark;
 }
+[data-theme="dark"] .qr-canvas-wrap { background: var(--surface2); }
+[data-theme="dark"] .modal { background: var(--surface); }
+[data-theme="dark"] .modal-overlay { background: rgba(0,0,0,.75); }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: var(--surface2); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }

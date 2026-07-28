@@ -1,4 +1,4 @@
-*{box-sizing:border-box;margin:0;padding:0}
+﻿*{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#f0f4f8;
   --surface:#ffffff;
@@ -520,12 +520,16 @@
 .topbar .user-pill{background:rgba(255,255,255,.1)}
 .topbar .user-name{color:#fff}
 .topbar .user-role{color:rgba(255,255,255,.6)}
+
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+  --blue: #388bfd; --blue-mid: #58a6ff; --blue-light: #79c0ff; --blue-pale: #1f3358;
+  --green: #3fb950; --yellow: #d29922; --red: #f85149; --orange: #e3834a; --purple: #bc8cff;
+  --green-bg: #0d2b1a; --yellow-bg: #2b260d; --red-bg: #2b0d0d; --orange-bg: #2b1a0d;
+  --text: #e6edf3; --text-muted: #8b949e; --text-dim: #484f58; color-scheme: dark;
 }
+[data-theme="dark"] .donut-leg-pct,[data-theme="dark"] .ob-leg-val { color: var(--text); }
+[data-theme="dark"] .donut-leg-txt,[data-theme="dark"] .ob-leg-txt { color: var(--text-muted); }
+[data-theme="dark"] .equipe-offline { background: var(--border); }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: var(--surface2); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }

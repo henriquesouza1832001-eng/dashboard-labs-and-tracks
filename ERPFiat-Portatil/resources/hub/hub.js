@@ -448,5 +448,17 @@ const _initTimeout = setTimeout(()=>{
 }, 15000);
 
 Promise.all([loadCache(), carregarPainel()]).then(()=>clearTimeout(_initTimeout));
-function toggleTema(){const html=document.documentElement;const novo=html.getAttribute('data-theme')==='dark'?'light':'dark';html.setAttribute('data-theme',novo);localStorage.setItem('erp-theme',novo);const btn=document.getElementById('btn-tema');if(btn)btn.textContent=novo==='dark'?'☀️':'🌙';}
-(function(){const t=localStorage.getItem('erp-theme');const btn=document.getElementById('btn-tema');if(btn)btn.textContent=t==='dark'?'☀️':'🌙';})();
+
+function toggleTema(){
+  var html=document.documentElement;
+  var novo=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',novo);
+  localStorage.setItem('erp-theme',novo);
+  var btn=document.getElementById('btn-tema');
+  if(btn)btn.textContent=novo==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
+}
+(function(){
+  var t=localStorage.getItem('erp-theme');
+  var btn=document.getElementById('btn-tema');
+  if(btn)btn.textContent=t==='dark'?'\u2600\ufe0f':'\ud83c\udf19';
+})();

@@ -1,4 +1,4 @@
-:root{
+﻿:root{
   --bg:#f0f4f8;
   --surface:#ffffff;
   --surface2:#e8edf5;
@@ -205,25 +205,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .kpi-grid,.modulos-grid{grid-template-columns:repeat(2,1fr)}
   .section-row{grid-template-columns:1fr}
 }
+
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
-  --blue-light: #58a6ff;
-  --blue-mid: #388bfd;
-  --blue-pale: #1f3358;
-  --shadow: 0 2px 8px rgba(0,0,0,0.4);
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+  --blue: #388bfd; --blue-mid: #58a6ff; --blue-light: #79c0ff; --blue-pale: #1f3358;
+  --gn: #3fb950; --yw: #d29922; --rd: #f85149; --or: #e3834a;
+  --text: #e6edf3; --text-muted: #8b949e; --text-dim: #484f58;
+  --shadow: 0 2px 8px rgba(0,0,0,.5); color-scheme: dark;
 }
-[data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
-}
+[data-theme="dark"] .mod-card { background: var(--surface); border-color: var(--border); }
+[data-theme="dark"] .acard { background: var(--surface2); border-color: var(--border); }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: var(--surface2); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }

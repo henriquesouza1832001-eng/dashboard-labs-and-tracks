@@ -1,4 +1,4 @@
-:root{
+﻿:root{
   --bg:#f0f4f8;
   --surface:#ffffff;
   --surface2:#e8edf5;
@@ -67,12 +67,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
 .btn-reset{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:11px;font-family:var(--mono);padding:2px 8px;margin-left:4px}
 .btn-reset:hover{color:var(--yw)}
+
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --text-dim: #484f58;
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+  --blue: #388bfd; --blue-mid: #58a6ff; --blue-light: #79c0ff; --blue-pale: #1f3358;
+  --gn: #3fb950; --yw: #d29922; --rd: #f85149;
+  --text: #e6edf3; --text-muted: #8b949e; --text-dim: #484f58; color-scheme: dark;
 }
+[data-theme="dark"] .badge-role.admin { background: #2b0d0d; color: #f85149; }
+[data-theme="dark"] .badge-role.operador { background: #0d2b1a; color: #3fb950; }
+[data-theme="dark"] select,[data-theme="dark"] input,[data-theme="dark"] textarea { background: var(--surface2); color: var(--text); border-color: var(--border); }
+[data-theme="dark"] option { background: #21262d; color: #e6edf3; }
