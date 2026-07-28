@@ -97,6 +97,7 @@ async function init() {
   document.getElementById('btn-salvar').addEventListener('click', salvarProjeto);
   document.getElementById('btn-excluir').addEventListener('click', excluirProjeto);
   document.getElementById('btn-add-item').addEventListener('click', addItem);
+  document.getElementById('f-moeda').addEventListener('change', e => _atualizarPrefixoMoeda(e.target.value));
   document.querySelectorAll('.mtab').forEach(tab=>{
     tab.addEventListener('click',()=>{
       document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
@@ -404,6 +405,7 @@ function _preencherModal() {
   document.getElementById('f-val-sol').value     = p.valor_solicitado||0;
   document.getElementById('f-val-apr').value     = p.valor_aprovado||0;
   document.getElementById('f-moeda').value       = p.moeda||'BRL';
+  _atualizarPrefixoMoeda(p.moeda||'BRL');
   document.getElementById('f-retorno').value     = p.retorno_previsto||'';
   document.getElementById('f-justificativa').value = p.justificativa||'';
   document.getElementById('f-obs').value         = p.obs||'';
@@ -417,6 +419,14 @@ function _preencherModal() {
 }
 
 function fecharModal() { document.getElementById('modal').style.display='none'; _projetoEd=null; }
+
+function _atualizarPrefixoMoeda(moeda) {
+  const simb = { BRL: 'R$', USD: 'US$', EUR: '€', ARS: '$' }[moeda] || '$';
+  const sol = document.getElementById('prefix-val-sol');
+  const apr = document.getElementById('prefix-val-apr');
+  if (sol) sol.textContent = simb;
+  if (apr) apr.textContent = simb;
+}
 
 async function salvarProjeto() {
   const p = _projetoEd;
@@ -496,16 +506,16 @@ function renderItens() {
       <td><button class="btn-rm-item" onclick="rmItem(${i})">×</button></td>
     </tr>`).join('');
   const total = _itensEd.reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda),0);
-  document.getElementById('itens-total').textContent = 'Total: R$' + (total>=1e6?(total/1e6).toFixed(1)+'M':total>=1e3?(total/1e3).toFixed(0)+'k':Math.round(total));
+  document.getElementById('itens-total').textContent = 'Total BRL: ' + fmtR(total);
 }
 
 window.editItem = function(idx,campo,valor) {
   _itensEd[idx][campo]=valor;
   const total=(_itensEd[idx].quantidade||1)*(_itensEd[idx].preco_unitario||0);
   const cells=document.querySelectorAll(`[data-idx="${idx}"] td.num`);
-  if(cells[0]) cells[0].textContent=fmtR(total);
-  const gt=_itensEd.reduce((s,it)=>s+(it.quantidade||1)*(it.preco_unitario||0),0);
-  document.getElementById('itens-total').textContent='Total: '+fmtR(gt);
+  if(cells[0]) cells[0].textContent=fmtR(_toBRL(total, _itensEd[idx].moeda));
+  const gt=_itensEd.reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda),0);
+  document.getElementById('itens-total').textContent='Total BRL: '+fmtR(gt);
 };
 
 function addItem() {

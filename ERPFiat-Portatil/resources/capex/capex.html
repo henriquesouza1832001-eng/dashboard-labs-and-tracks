@@ -210,11 +210,11 @@
           <div class="fg-row">
             <div class="fg-col">
               <label>Valor Solicitado</label>
-              <div class="inp-money"><span>R$</span><input type="number" id="f-val-sol" min="0" step="0.01"></div>
+              <div class="inp-money"><span id="prefix-val-sol">R$</span><input type="number" id="f-val-sol" min="0" step="0.01"></div>
             </div>
             <div class="fg-col">
               <label>Valor Aprovado</label>
-              <div class="inp-money"><span>R$</span><input type="number" id="f-val-apr" min="0" step="0.01"></div>
+              <div class="inp-money"><span id="prefix-val-apr">R$</span><input type="number" id="f-val-apr" min="0" step="0.01"></div>
             </div>
             <div class="fg-col">
               <label>Moeda</label>
@@ -248,7 +248,7 @@
       <!-- ITENS -->
       <div class="tab-pane" id="tab-itens">
         <div class="itens-hdr">
-          <span class="itens-total" id="itens-total">Total: R$ 0,00</span>
+          <span class="itens-total" id="itens-total">Total BRL: R$0</span>
           <button class="btn-sm" id="btn-add-item">+ Item</button>
         </div>
         <table class="tbl-itens">

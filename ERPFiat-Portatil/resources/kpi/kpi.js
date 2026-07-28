@@ -59,8 +59,8 @@ try{if(d.obras)   sessionStorage.setItem('_kpi_obras',   JSON.stringify(d.obras)
         const aprov  = projs.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído').length;
         const analise= projs.filter(p=>p.status==='Em Análise').length;
         const semArq = projs.filter(p=>!(p.arquivos||[]).length).length;
-        const solBRL = projs.reduce((s,p)=>s+(p.valor_solicitado||0),0);
-        const aprBRL = projs.reduce((s,p)=>s+(p.valor_aprovado||0),0);
+        const solBRL = projs.reduce((s,p)=>s+_cxToBRL(p.valor_solicitado||0, p.moeda),0);
+        const aprBRL = projs.reduce((s,p)=>s+_cxToBRL(p.valor_aprovado||0,   p.moeda),0);
         const el = document.getElementById('mkpis-capex');
         if(el) el.innerHTML=
           mkMicro(total,'Total projetos','c-azul',"abrirModuloComDrill('capex','cx-total')")+
@@ -178,8 +178,8 @@ if(dCh){
     const aprov  = projs.filter(p=>p.status==='Aprovado'||p.status==='Em Execução'||p.status==='Concluído').length;
     const analise= projs.filter(p=>p.status==='Em Análise').length;
     const semArq = projs.filter(p=>!(p.arquivos||[]).length).length;
-    const solBRL = projs.reduce((s,p)=>s+(p.valor_solicitado||0),0);
-    const aprBRL = projs.reduce((s,p)=>s+(p.valor_aprovado||0),0);
+    const solBRL = projs.reduce((s,p)=>s+_cxToBRL(p.valor_solicitado||0, p.moeda),0);
+    const aprBRL = projs.reduce((s,p)=>s+_cxToBRL(p.valor_aprovado||0,   p.moeda),0);
     const fmtM   = v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
     document.getElementById('mkpis-capex').innerHTML=
       mkMicro(total,'Total projetos','c-azul',"abrirModuloComDrill('capex','cx-total')")+
