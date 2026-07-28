@@ -1516,10 +1516,122 @@ async def atualizar_solicitacao_codin(sid: str, request: Request):
     return JSONResponse({"ok": True})
 
 
-@app.get("/api/conforto")
-async def get_conforto(request: Request):
+@app.put("/api/conforto/ucs/{uc_id}")
+async def atualizar_uc(uc_id: str, request: Request):
     exigir_auth(request)
-    return JSONResponse(get_cached("conforto"))
+    u = get_usuario(request)
+    body = await request.json()
+    uc = body 
+    try:
+        await arun_exec_retry(f"""
+            MERGE INTO {S_CONFORTO}.ucs AS t
+            USING (SELECT
+                ? AS id, ? AS codigo, ? AS nome, ? AS categoria, ? AS local, ? AS modelo,
+                ? AS capacidade_btu, ? AS tipo, ? AS data_instalacao, ? AS ciclo_filtro_dias,
+                ? AS responsavel_id, ? AS obs, ? AS fabricante, ? AS serie, ? AS status_op,
+                ? AS intervalo_prev_dias, ? AS ultima_limpeza_filtro, ? AS atualizado_por
+            ) AS s ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET
+                codigo=s.codigo, nome=s.nome, categoria=s.categoria, local=s.local, modelo=s.modelo,
+                capacidade_btu=s.capacidade_btu, tipo=s.tipo, data_instalacao=s.data_instalacao,
+                ciclo_filtro_dias=s.ciclo_filtro_dias, responsavel_id=s.responsavel_id, obs=s.obs,
+                fabricante=s.fabricante, serie=s.serie, status_op=s.status_op,
+                intervalo_prev_dias=s.intervalo_prev_dias, ultima_limpeza_filtro=s.ultima_limpeza_filtro,
+                atualizado_por=s.atualizado_por
+            WHEN NOT MATCHED THEN INSERT
+                (id,codigo,nome,categoria,local,modelo,capacidade_btu,tipo,
+                 data_instalacao,ciclo_filtro_dias,responsavel_id,obs,
+                 fabricante,serie,status_op,intervalo_prev_dias,
+                 ultima_limpeza_filtro,atualizado_por)
+            VALUES (s.id,s.codigo,s.nome,s.categoria,s.local,s.modelo,s.capacidade_btu,s.tipo,
+                    s.data_instalacao,s.ciclo_filtro_dias,s.responsavel_id,s.obs,
+                    s.fabricante,s.serie,s.status_op,s.intervalo_prev_dias,
+                    s.ultima_limpeza_filtro,s.atualizado_por)
+        """, [
+            uc_id, uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
+            uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
+            uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
+            uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
+            uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
+            uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")), u
+        ])
+        checklist = uc.get("checklistProprio")
+        if checklist is not None:
+            await arun_exec_retry(
+                f"DELETE FROM {S_CONFORTO}.uc_checklist WHERE uc_id=?", [uc_id]
+            )
+            if checklist:
+                rows_cl = []
+                params_cl = []
+                for i, item in enumerate(checklist):
+                    rows_cl.append("(?,?,?,?,?)")
+                    params_cl += [f"{uc_id}_c_{i}", uc_id, item, i, u]
+                await arun_exec_retry(f"""
+                    INSERT INTO {S_CONFORTO}.uc_checklist (id,uc_id,item,ordem,atualizado_por)
+                    VALUES {",".join(rows_cl)}
+                """, params_cl)
+
+        await asyncio.to_thread(_atualizar_cache_conforto_lista, "ucs", "ucs", _MAPPER_UCS, [uc_id])
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        print(f"[atualizar_uc] erro: {e}")
+        print(traceback.format_exc())
+        return JSONResponse({"erro": str(e)}, status_code=500)
+
+@app.put("/api/conforto/ucs/{uc_id}")
+async def atualizar_uc(uc_id: str, request: Request):
+    exigir_auth(request)
+    u = get_usuario(request)
+    uc = await request.json()
+    try:
+        await arun_exec_retry(f"""
+            MERGE INTO {S_CONFORTO}.ucs AS t
+            USING (SELECT ? AS id, ? AS codigo, ? AS nome, ? AS categoria, ? AS local, ? AS modelo,
+                          ? AS capacidade_btu, ? AS tipo, ? AS data_instalacao, ? AS ciclo_filtro_dias,
+                          ? AS responsavel_id, ? AS obs, ? AS fabricante, ? AS serie, ? AS status_op,
+                          ? AS intervalo_prev_dias, ? AS ultima_limpeza_filtro, ? AS atualizado_por) AS s
+            ON t.id = s.id
+            WHEN MATCHED THEN UPDATE SET
+                codigo=s.codigo, nome=s.nome, categoria=s.categoria, local=s.local, modelo=s.modelo,
+                capacidade_btu=s.capacidade_btu, tipo=s.tipo, data_instalacao=s.data_instalacao,
+                ciclo_filtro_dias=s.ciclo_filtro_dias, responsavel_id=s.responsavel_id, obs=s.obs,
+                fabricante=s.fabricante, serie=s.serie, status_op=s.status_op,
+                intervalo_prev_dias=s.intervalo_prev_dias, ultima_limpeza_filtro=s.ultima_limpeza_filtro,
+                atualizado_por=s.atualizado_por
+            WHEN NOT MATCHED THEN INSERT
+                (id,codigo,nome,categoria,local,modelo,capacidade_btu,tipo,
+                 data_instalacao,ciclo_filtro_dias,responsavel_id,obs,
+                 fabricante,serie,status_op,intervalo_prev_dias,ultima_limpeza_filtro,atualizado_por)
+            VALUES (s.id,s.codigo,s.nome,s.categoria,s.local,s.modelo,s.capacidade_btu,s.tipo,
+                    s.data_instalacao,s.ciclo_filtro_dias,s.responsavel_id,s.obs,
+                    s.fabricante,s.serie,s.status_op,s.intervalo_prev_dias,
+                    s.ultima_limpeza_filtro,s.atualizado_por)
+        """, [
+            uc_id, uc.get("codigo"), uc.get("nome"), uc.get("categoria"),
+            uc.get("local"), uc.get("modelo"), uc.get("capacidadeBtu"),
+            uc.get("tipo"), to_date_or_none(uc.get("dataInstalacao")),
+            uc.get("cicloFiltroDias"), uc.get("responsavelId"), uc.get("obs"),
+            uc.get("fabricante"), uc.get("serie"), uc.get("statusOp", "Operacional"),
+            uc.get("intervaloPrevDias", 0), to_date_or_none(uc.get("ultimaLimpezaFiltro")), u
+        ])
+        checklist = uc.get("checklistProprio")
+        if checklist is not None:
+            await arun_exec_retry(f"DELETE FROM {S_CONFORTO}.uc_checklist WHERE uc_id=?", [uc_id])
+            if checklist:
+                rows_cl, params_cl = [], []
+                for i, item in enumerate(checklist):
+                    rows_cl.append("(?,?,?,?,?)")
+                    params_cl += [f"{uc_id}_c_{i}", uc_id, item, i, u]
+                await arun_exec_retry(f"""
+                    INSERT INTO {S_CONFORTO}.uc_checklist (id,uc_id,item,ordem,atualizado_por)
+                    VALUES {",".join(rows_cl)}
+                """, params_cl)
+        await asyncio.to_thread(_atualizar_cache_conforto_lista, "ucs", "ucs", _MAPPER_UCS, [uc_id])
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        print(f"[atualizar_uc] erro: {e}")
+        print(traceback.format_exc())
+        return JSONResponse({"erro": str(e)}, status_code=500)
 
 
 async def _salvar_ucs(body, u):

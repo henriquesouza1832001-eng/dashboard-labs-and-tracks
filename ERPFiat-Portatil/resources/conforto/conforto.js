@@ -558,7 +558,7 @@ function renderUCGrid() {
   grid.innerHTML = lista.length
     ? lista.map(u => {
         const idxReal = state.ucs.indexOf(u);
-        return `<div class="uc-card">
+        return `<div class="uc-card" data-uc-idx="${idxReal}" onclick="selecionarUC(${idxReal})">
         <div class="uc-card-header">
           <div>
             <div class="uc-cod">${u.codigo}</div>
@@ -1234,20 +1234,41 @@ function salvarUC() {
     responsavelId: $('uc-resp').value,
     obs: $('uc-obs').value.trim()
   };
-  if (state.editIdx.uc >= 0) {
-    obj.id = state.ucs[state.editIdx.uc].id;
-    obj.codigo = ($('uc-codigo-display').value || '').trim().toUpperCase() || state.ucs[state.editIdx.uc].codigo;
+
+if (state.editIdx.uc >= 0) {
+    const ucExistente = state.ucs[state.editIdx.uc];
+    obj.id = ucExistente.id;
+    obj.codigo = ($('uc-codigo-display').value || '').trim().toUpperCase() || ucExistente.codigo;
+    Object.assign(ucExistente, obj);
+    fecharModal('modal-uc');
+    popularSelects();
+    renderTudo();
+    setSaveStatus('saving', 'Salvando...');
+    fetch(`/api/conforto/ucs/${obj.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Ctrl-Token': localStorage.getItem('ctrl-token') || '' },
+      body: JSON.stringify(obj)
+    })
+      .then(r => r.json())
+      .then(r => r.ok ? setSaveStatus('ok', 'Salvo') : setSaveStatus('error', 'Erro ao salvar'))
+      .catch(() => setSaveStatus('error', 'Erro ao salvar'));
   } else {
     obj.codigo = ($('uc-codigo-display').value || '').trim().toUpperCase() || gerarCodigoUC(categoria);
+    obj.id = `uc_${Date.now()}`;
     state.ucs.push(obj);
+    fecharModal('modal-uc');
+    agendarSalvamento();
+    popularSelects();
+    renderTudo();
   }
-  fecharModal('modal-uc');
-  agendarSalvamento();
-  popularSelects();
-  renderTudo();
 }
-
 function editarUC(idx) { abrirModalUC(idx); }
+function selecionarUC(idx) {
+  document.querySelectorAll('[data-uc-idx]').forEach(el => el.classList.remove('ativo'));
+  const el = document.querySelector(`[data-uc-idx="${idx}"]`);
+  if (el) el.classList.add('ativo');
+  state._ucSelecionada = idx;
+}
 function excluirUC(idx) { if (confirm('Excluir esta UC?')) { state.ucs.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
 
 function abrirModalPreventiva(idx = -1) {
@@ -2471,4 +2492,13 @@ document.querySelectorAll('.pad-filtro-tipo').forEach(btn => {
     _padFiltroTipo = btn.dataset.tipo;
     padRenderGrid();
   });
+});
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+    e.preventDefault();
+    const modalUC = document.getElementById('modal-uc');
+    if (modalUC?.classList.contains('open')) return;
+    const idx = state._ucSelecionada ?? -1;
+    abrirModalUC(idx);
+  }
 });
