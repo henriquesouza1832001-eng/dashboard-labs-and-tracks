@@ -2285,7 +2285,13 @@ function abrirDrillCapex(tipo){
   const corStatus={'Aprovado':'#1a7f4b','Em Execução':'#2E5FA3','Concluído':'#4ade80','Em Análise':'#e3711a','Rascunho':'#8a9abf','Reprovado':'#c0392b'};
   const badgeSt=s=>`<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:${corStatus[s]||'#8a9abf'}22;color:${corStatus[s]||'#8a9abf'};font-family:var(--mono)">${s}</span>`;
   const pb=(v,c)=>`<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:5px;background:#e8edf5;border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(v,100)}%;background:${c};border-radius:3px"></div></div><span style="font-size:9px;font-family:var(--mono);color:var(--text-muted);min-width:28px">${Math.round(v)}%</span></div>`;
-  const fmtK=v=>v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+  const fmtK = v => v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+Math.round(v);
+  const fmtKm = (v, moeda) => {
+  const simb = {BRL:'R$', USD:'$', EUR:'€', ARS:'$AR'}[moeda] || 'R$';
+  const abs = Math.abs(v);
+  const fmt = abs>=1e6?(v/1e6).toFixed(1)+'M':abs>=1e3?(v/1e3).toFixed(0)+'k':Math.round(v).toString();
+  return simb+fmt;
+  };
   const linhas=pagina.map(p=>{
     const sol=_cxToBRL(p.valor_solicitado||0,p.moeda);
     const apr=_cxToBRL(p.valor_aprovado||0,p.moeda);
@@ -2297,8 +2303,8 @@ function abrirDrillCapex(tipo){
       <td>${nomePlanta(p.planta_id)}</td>
       <td>${p.categoria||'—'}</td>
       <td>${badgeSt(p.status||'Rascunho')}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--blue-mid)">${fmtK(sol)} ${moedaStr}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:#1a7f4b">${apr>0?fmtK(apr):'—'}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--blue-mid)">${fmtKm(p.valor_solicitado||0, p.moeda)} ${p.moeda&&p.moeda!=='BRL'?`<span style="font-size:9px;color:var(--text-muted)">= ${fmtK(sol)}</span>`:''}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:#1a7f4b">${apr>0?fmtKm(p.valor_aprovado||0, p.moeda):'—'}</td>
       <td style="min-width:120px">${pb(pct,'#1a7f4b')}</td>
       <td style="text-align:center;font-size:13px">${temArq?'<span style="color:#1a7f4b">✓</span>':'<span style="color:#c0392b">✗</span>'}</td>
     </tr>`;

@@ -1,7 +1,4 @@
 'use strict';
-// ══════════════════════════════════════════
-// API CAPEX (estende api.js existente)
-// ══════════════════════════════════════════
 const CAPEX_API = {
   listar:          ()        => req('/capex',                               {}, 120000),
   salvar:          (d)       => req('/capex/projetos',                      { method:'POST', body:JSON.stringify({ projetos: Array.isArray(d)?d:[d] }) }),
@@ -13,9 +10,6 @@ const CAPEX_API = {
   salvarPlanta:    (d)       => req('/capex/plantas',                       { method:'POST', body:JSON.stringify(d) }),
   invalida: () => { ['/capex','/capex/projetos','/capex/plantas'].forEach(k=>{ if(typeof API!=='undefined'&&API.invalidar) API.invalidar(k); }); },
 };
-// ══════════════════════════════════════════
-// ESTADO
-// ══════════════════════════════════════════
 let _dados      = null;
 let _grupos     = [];  
 let _plantas    = [];   
@@ -43,12 +37,15 @@ function _toBRL(valor, moeda) {
 function _fmtCambio(moeda) {
   if (!moeda || moeda === 'BRL') return '';
   const taxa = _cotacoes[moeda] || 1;
-  return `1 ${moeda} = ${fmtR(taxa)}`;
+  return `1 ${moeda} = R$${taxa>=1e3?(taxa/1e3).toFixed(1)+'k':Math.round(taxa)}`;
 }
 const GRUPOS_PADRAO = ['ESLM','Proving Grounds','Protótipo','EMAT','Safety Center','NVH'];
 function fmtR(v, moeda='BRL') {
   if (v==null||isNaN(v)) return '—';
-  return new Intl.NumberFormat('pt-BR',{style:'currency',currency:moeda||'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(v);
+  const simb = {BRL:'R$', USD:'$', EUR:'€', ARS:'$AR'}[moeda] || moeda+' ';
+  const n = Math.abs(v);
+  const fmt = n>=1e6 ? (v/1e6).toFixed(1)+'M' : n>=1e3 ? (v/1e3).toFixed(0)+'k' : Math.round(v).toString();
+  return simb+fmt;
 }
 function fmtBytes(b) {
   if(!b) return '';
@@ -499,7 +496,7 @@ function renderItens() {
       <td><button class="btn-rm-item" onclick="rmItem(${i})">×</button></td>
     </tr>`).join('');
   const total = _itensEd.reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda),0);
-  document.getElementById('itens-total').textContent='Total em BRL: '+fmtR(total);
+  document.getElementById('itens-total').textContent = 'Total: R$' + (total>=1e6?(total/1e6).toFixed(1)+'M':total>=1e3?(total/1e3).toFixed(0)+'k':Math.round(total));
 }
 
 window.editItem = function(idx,campo,valor) {
