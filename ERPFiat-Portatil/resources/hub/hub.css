@@ -205,3 +205,25 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .kpi-grid,.modulos-grid{grid-template-columns:repeat(2,1fr)}
   .section-row{grid-template-columns:1fr}
 }
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+  --blue-light: #58a6ff;
+  --blue-mid: #388bfd;
+  --blue-pale: #1f3358;
+  --shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}

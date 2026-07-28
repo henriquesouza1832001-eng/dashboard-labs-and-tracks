@@ -288,3 +288,12 @@ canvas { display: block; width: 100% !important; }
 
 /* loading */
 .loading-msg { text-align: center; color: var(--text-muted); padding: 60px 0; font-size: 13px; }
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}

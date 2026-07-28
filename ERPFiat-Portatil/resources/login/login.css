@@ -10,3 +10,12 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);height:100vh;d
 .login-box button{background:var(--bl);border:none;border-radius:6px;color:#0d1117;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;padding:10px;transition:opacity .15s}
 .login-box button:hover{opacity:.85}
 .login-err{color:var(--rd);font-size:11px;text-align:center;min-height:16px;font-family:var(--mono)}
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}

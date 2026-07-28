@@ -525,3 +525,12 @@ select.form-control option { background: var(--surface2); }
 .qr-acoes{display:flex;gap:8px;width:100%}
 .qr-acoes button{flex:1;font-size:11px;padding:6px 10px}
 .qr-vazio,.qr-erro{text-align:center;color:var(--text-muted);padding:40px 0;grid-column:1/-1}
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}

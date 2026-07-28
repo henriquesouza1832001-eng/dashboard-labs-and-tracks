@@ -862,3 +862,12 @@ select:focus-visible {
 }
 .qr-ponto-card .qpc-nome{ font-weight:500; font-size:13px; }
 .qr-ponto-card .qpc-codin{ font-family:var(--mono); font-size:11px; color:var(--text2); }
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}

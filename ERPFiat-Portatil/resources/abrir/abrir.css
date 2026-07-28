@@ -217,3 +217,12 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   .form-row { grid-template-columns: 1fr; }
   .cat-pills { grid-template-columns: 1fr 1fr; }
 }
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}

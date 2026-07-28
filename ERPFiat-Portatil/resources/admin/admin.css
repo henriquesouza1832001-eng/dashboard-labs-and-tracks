@@ -67,3 +67,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
 .btn-reset{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:11px;font-family:var(--mono);padding:2px 8px;margin-left:4px}
 .btn-reset:hover{color:var(--yw)}
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}

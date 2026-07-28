@@ -63,3 +63,12 @@ textarea{resize:vertical;min-height:90px}
 .check-icon svg{width:28px;height:28px;stroke:#1a7f4b;fill:none;stroke-width:3}
 #sucesso-area h2{font-size:18px;color:#0f1c3f;margin-bottom:8px}
 .sucesso-sub{font-size:13px;color:#4a5880;margin-bottom:0}
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+}
