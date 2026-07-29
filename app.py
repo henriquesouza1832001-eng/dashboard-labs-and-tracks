@@ -2456,15 +2456,26 @@ async def portal_page(request: Request):
 
 @app.get("/conforto-prev/{uc_id}")
 async def prev_page(uc_id: str, request: Request):
+    uc = None
+    checklist = []
     try:
         ucs_rows = await arun_query(f"SELECT * FROM {S_CONFORTO}.ucs WHERE id=? LIMIT 1", [uc_id])
-        uc = None
+        print(f"[prev_page] UC id={uc_id} rows={len(ucs_rows) if ucs_rows else 0}")
+        # Fallback: busca por codigo se nao achou pelo id
+        if not ucs_rows:
+            ucs_rows = await arun_query(f"SELECT * FROM {S_CONFORTO}.ucs WHERE codigo=? LIMIT 1", [uc_id])
+            print(f"[prev_page] fallback por codigo={uc_id} rows={len(ucs_rows) if ucs_rows else 0}")
         if ucs_rows:
             u = ucs_rows[0]
-            checklist_proprio_rows = await arun_query(
-                f"SELECT item FROM {S_CONFORTO}.uc_checklist WHERE uc_id=? ORDER BY ordem", [uc_id]
-            )
-            checklist_proprio = [r["item"] for r in checklist_proprio_rows] if checklist_proprio_rows else []
+            uc_id_real = u.get("id") or uc_id
+            try:
+                checklist_proprio_rows = await arun_query(
+                    f"SELECT item FROM {S_CONFORTO}.uc_checklist WHERE uc_id=? ORDER BY ordem", [uc_id_real]
+                )
+                checklist_proprio = [r["item"] for r in checklist_proprio_rows] if checklist_proprio_rows else []
+            except Exception as e2:
+                print(f"[prev_page] erro ao buscar uc_checklist: {e2}")
+                checklist_proprio = []
             uc = {
                 "id":              u.get("id"),
                 "codigo":          u.get("codigo"),
@@ -2480,30 +2491,55 @@ async def prev_page(uc_id: str, request: Request):
                 "obs":             u.get("obs") or "",
                 "checklistProprio": checklist_proprio,
             }
-        config_rows = await arun_query(f"SELECT checklist_preventiva FROM {S_CONFORTO}.config LIMIT 1")
-        checklist_global = []
-        if config_rows and config_rows[0].get("checklist_preventiva"):
-            try:
-                checklist_global = json.loads(config_rows[0]["checklist_preventiva"])
-            except:
-                checklist_global = []
-        checklist = (uc.get("checklistProprio") or []) if uc else []
-        if not checklist and uc:
-            uc_tipo = uc.get("tipo")
-            if uc_tipo:
-                tipo_rows = await arun_query(
-                    f"SELECT checklist FROM {S_CONFORTO}.tipos_uc WHERE nome=? LIMIT 1", [uc_tipo]
-                )
-                if tipo_rows and tipo_rows[0].get("checklist"):
-                    try: checklist = json.loads(tipo_rows[0]["checklist"])
-                    except: checklist = []
-        if not checklist:
-            checklist = checklist_global
+        else:
+            print(f"[prev_page] AVISO: UC '{uc_id}' nao encontrada na tabela ucs")
     except Exception as e:
         print(f"[prev_page] erro ao buscar UC {uc_id}: {e}")
         print(traceback.format_exc())
         uc = None
-        checklist = []
+
+    # Checklist global do config
+    checklist_global = []
+    try:
+        config_rows = await arun_query(f"SELECT checklist_preventiva FROM {S_CONFORTO}.config LIMIT 1")
+        if config_rows and config_rows[0].get("checklist_preventiva"):
+            raw = config_rows[0]["checklist_preventiva"]
+            if isinstance(raw, list):
+                checklist_global = raw
+            else:
+                try:
+                    checklist_global = json.loads(raw)
+                except:
+                    checklist_global = []
+        print(f"[prev_page] checklist_global={len(checklist_global)} itens")
+    except Exception as e:
+        print(f"[prev_page] erro ao buscar config checklist: {e}")
+
+    # Prioridade: checklistProprio > tipo UC > global
+    checklist = (uc.get("checklistProprio") or []) if uc else []
+    if not checklist and uc:
+        uc_tipo = uc.get("tipo")
+        print(f"[prev_page] checklist proprio vazio, tentando tipo='{uc_tipo}'")
+        if uc_tipo:
+            try:
+                tipo_rows = await arun_query(
+                    f"SELECT checklist FROM {S_CONFORTO}.tipos_uc WHERE nome=? LIMIT 1", [uc_tipo]
+                )
+                if tipo_rows and tipo_rows[0].get("checklist"):
+                    raw = tipo_rows[0]["checklist"]
+                    if isinstance(raw, list):
+                        checklist = raw
+                    else:
+                        try:
+                            checklist = json.loads(raw)
+                        except:
+                            checklist = []
+                print(f"[prev_page] checklist por tipo='{uc_tipo}': {len(checklist)} itens")
+            except Exception as e:
+                print(f"[prev_page] erro ao buscar checklist do tipo: {e}")
+    if not checklist:
+        checklist = checklist_global
+        print(f"[prev_page] usando checklist_global: {len(checklist)} itens")
     tec_rows = await arun_query(f"SELECT nome FROM {S_CONFORTO}.tecnicos ORDER BY nome")
     tecnicos_nomes = [t["nome"] for t in tec_rows] if tec_rows else []
     html = inject(f"{BASE}/confortoprev/prev.html", {
