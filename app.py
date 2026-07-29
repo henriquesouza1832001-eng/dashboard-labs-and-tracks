@@ -587,7 +587,7 @@ def _load_conforto():
             print(f"[conforto] erro ao carregar {tabela}: {e}")
             return []
 
-    ucs = _enrich_ucs_checklist(load_table("ucs", _MAPPER_UCS))
+    ucs = load_table("ucs", _MAPPER_UCS)
     ordens = load_table("ordens", _MAPPER_ORDENS)
     pecas = load_table("pecas", _MAPPER_PECAS)
     requisicoes = load_table("requisicoes", _MAPPER_REQUISICOES)

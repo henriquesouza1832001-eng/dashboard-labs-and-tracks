@@ -1175,30 +1175,7 @@ function abrirModalUC(idx = -1) {
   $('uc-status-op') && ($('uc-status-op').value = u?.statusOp || 'Operacional');
   $('uc-intervalo-prev') && ($('uc-intervalo-prev').value = u?.intervaloPrevDias || '');
   $('uc-ultima-limpeza') && ($('uc-ultima-limpeza').value = u?.ultimaLimpezaFiltro || '');
-  const ucClWrap = $('uc-checklist-wrap');
-  if (ucClWrap) {
-    const items = u?.checklistProprio || [];
-    ucClWrap.innerHTML = items.map((it, i) => `
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="flex:1;font-size:13px">${it}</span>
-        <button type="button" onclick="removerChecklistUC(${i})" class="btn btn-danger btn-sm">✕</button>
-      </div>`).join('');
-    window._ucChecklistTemp = [...items];
-  }
-  $('btn-uc-checklist-add')?.removeEventListener('click', window._ucChecklistAddFn);
-  window._ucChecklistAddFn = () => {
-    const val = $('uc-checklist-novo').value.trim();
-    if (!val) return;
-    window._ucChecklistTemp.push(val);
-    $('uc-checklist-novo').value = '';
-    const i = window._ucChecklistTemp.length - 1;
-    $('uc-checklist-wrap').insertAdjacentHTML('beforeend', `
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="flex:1;font-size:13px">${val}</span>
-        <button type="button" onclick="removerChecklistUC(${i})" class="btn btn-danger btn-sm">✕</button>
-      </div>`);
-  };
-  $('btn-uc-checklist-add')?.addEventListener('click', window._ucChecklistAddFn);
+  
   abrirModal('modal-uc');
 }
 
@@ -1222,7 +1199,7 @@ function salvarUC() {
     statusOp: $('uc-status-op')?.value || 'Operacional',
     intervaloPrevDias: parseInt($('uc-intervalo-prev')?.value) || 0,
     ultimaLimpezaFiltro: $('uc-ultima-limpeza')?.value || '',
-    checklistProprio: window._ucChecklistTemp || [],
+    
     categoria,
     nome,
     local: $('uc-local-detalhe').value.trim(),
@@ -1287,11 +1264,10 @@ function abrirModalPreventiva(idx = -1) {
   if (cl) {
     const ucId = p?.ucId || $('prev-uc').value;
     const uc = state.ucs.find(u => u.id === ucId);
-    const itensUC    = uc?.checklistProprio?.length ? uc.checklistProprio : null;
-    const itensTipo  = uc?.tipo && state.config.checklistPorTipo?.[uc.tipo]?.length
-      ? state.config.checklistPorTipo[uc.tipo] : null;
+    const tipoUC     = uc?.tipo ? state.tiposuc?.find(t => t.nome === uc.tipo) : null;
+    const itensTipo  = tipoUC?.checklist?.length ? tipoUC.checklist : null;
     const itensGlobal = state.config.checklistPreventiva || [];
-    const itens       = itensUC || itensTipo || itensGlobal;
+    const itens       = itensTipo || itensGlobal;
     cl.innerHTML = itens.map((item, i) => {
       const checked = p?.checklist?.find(c => c.item === item)?.concluido ? 'checked' : '';
       return `<div class="checklist-item">
@@ -1303,8 +1279,9 @@ function abrirModalPreventiva(idx = -1) {
   abrirModal('modal-preventiva');
   $('prev-uc')?.addEventListener('change', function() {
     const ucSel = state.ucs.find(u => u.id === this.value);
-    const itens = ucSel?.checklistProprio?.length
-      ? ucSel.checklistProprio
+    const tipoUCSel  = ucSel?.tipo ? state.tiposuc?.find(t => t.nome === ucSel.tipo) : null;
+    const itens = tipoUCSel?.checklist?.length
+      ? tipoUCSel.checklist
       : (state.config.checklistPreventiva || []);
     const cl = $('prev-checklist-wrap');
     if (cl) cl.innerHTML = itens.map((item, i) =>
@@ -1322,10 +1299,10 @@ function salvarPreventiva() {
   if (!ucId || !dataPrevista) { alert('UC e data prevista são obrigatórios.'); return; }
 
   const ucSel   = state.ucs.find(u => u.id === ucId);
-  const itensUC   = ucSel?.checklistProprio?.length ? ucSel.checklistProprio : null;
-  const itensTipo = ucSel?.tipo && state.config.checklistPorTipo?.[ucSel.tipo]?.length
-      ? state.config.checklistPorTipo[ucSel.tipo] : null;
-  const itens     = itensUC || itensTipo || state.config.checklistPreventiva || [];
+  const tipoUCSalvar = ucSel?.tipo ? state.tiposuc?.find(t => t.nome === ucSel.tipo) : null;
+  const itens = tipoUCSalvar?.checklist?.length
+    ? tipoUCSalvar.checklist
+    : (state.config.checklistPreventiva || []);
   const checklist = itens.map((item, i) => ({
     item,
     concluido: !!document.getElementById('clitem-' + i)?.checked
@@ -1924,15 +1901,6 @@ window.abrirQrUC = function(ucId, label) {
   window._qrUcUrl  = url;
   window._qrUcSlug = ucId;
   abrirModal('modal-qr-uc');
-};
-window.removerChecklistUC = function(i) {
-  window._ucChecklistTemp.splice(i, 1);
-  const wrap = $('uc-checklist-wrap');
-  if (wrap) wrap.innerHTML = window._ucChecklistTemp.map((it, idx) => `
-    <div style="display:flex;align-items:center;gap:6px">
-      <span style="flex:1;font-size:13px">${it}</span>
-      <button type="button" onclick="removerChecklistUC(${idx})" class="btn btn-danger btn-sm">✕</button>
-    </div>`).join('');
 };
 window.baixarQrUC = function() {
   const wrap = $('qr-uc-canvas');
