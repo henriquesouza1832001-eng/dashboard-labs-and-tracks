@@ -239,9 +239,11 @@ function renderMatriz() {
             const sol    = p.valor_solicitado||0;
             const apr    = p.valor_aprovado||0;
             const solBRL = _toBRL(sol, p.moeda);
-            const itensHtml = (p.itens||[]).slice(0,3).map(it=>
-              `<div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc(it.descricao||'')} — ${fmtR((it.quantidade||1)*(it.preco_unitario||0), it.moeda)}</div>`
-            ).join('');
+            const _itInfra = (p.itens||[]).filter(it=>it.categoria==='Infraestrutura').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0),it.moeda||'BRL'),0);
+            const _itEquip = (p.itens||[]).filter(it=>it.categoria==='Equipamento').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0),it.moeda||'BRL'),0);
+            const itensHtml = (_itInfra>0||_itEquip>0)
+              ? `<div style="font-size:10px;color:var(--text-muted);white-space:nowrap">🏗 Infra: ${fmtR(_itInfra)}</div><div style="font-size:10px;color:var(--text-muted);white-space:nowrap">⚙ Equip: ${fmtR(_itEquip)}</div>`
+              : (p.itens||[]).slice(0,2).map(it=>`<div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc(it.descricao||'')} — ${fmtR((it.quantidade||1)*(it.preco_unitario||0), it.moeda)}</div>`).join('');
             return `<td class="cell-planta">
               <div class="cell-inner">
                 <div class="cell-valor">${fmtR(solBRL)}</div>
@@ -332,7 +334,7 @@ function renderDashboard() {
     sol:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+_toBRL(p.valor_solicitado||0, p.moeda),0),
     apr:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+_toBRL(p.valor_aprovado||0,   p.moeda),0),
   })).filter(d=>d.sol>0||d.apr>0);
-  _renderChart('chart-grupos','bar',{
+  _renderChart('<div class="dash-card"><h3>Por Tipo de Item</h3><div class="chart-wrap"><canvas id="chart-tipo-item"></canvas></div></div>','bar',{
     labels: dadosGrupos.map(d=>d.nome),
     datasets:[
       { label:'Solicitado', data:dadosGrupos.map(d=>d.sol), backgroundColor:'#3a6bc7', borderRadius:4 },
@@ -342,6 +344,19 @@ function renderDashboard() {
     responsive:true, maintainAspectRatio:false, indexAxis:'y',
     plugins:{ legend:{ position:'top', labels:{ font:{size:11}, boxWidth:12 } } },
     scales:{ x:{ ticks:{ callback:v=>fmtR(v), font:{size:10} }, grid:{ color:'#e8edf5' } }, y:{ grid:{display:false} } }
+  });
+
+  const todosItens = lista.flatMap(p=>p.itens||[]);
+  const somaInfra = todosItens.filter(it=>it.categoria==='Infraestrutura').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
+  const somaEquip = todosItens.filter(it=>it.categoria==='Equipamento').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
+  const somaSemTipo = todosItens.filter(it=>!it.categoria||it.categoria==='').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
+  _renderChart('chart-tipo-item','doughnut',{
+    labels: ['Infraestrutura','Equipamento', somaSemTipo>0?'Sem tipo':''].filter(Boolean),
+    datasets:[{ data:[somaInfra, somaEquip, somaSemTipo>0?somaSemTipo:null].filter(v=>v!=null), backgroundColor:['#2E5FA3','#e67e22','#d0d8e8'], borderWidth:2, borderColor:'#fff' }]
+  },{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'right', labels:{ font:{size:11}, boxWidth:12 } } },
+    cutout:'65%'
   });
 }
 
@@ -491,7 +506,11 @@ function renderItens() {
   tbody.innerHTML = _itensEd.map((it,i)=>`
     <tr data-idx="${i}">
       <td><input value="${esc(it.descricao)}"    onchange="editItem(${i},'descricao',this.value)"   placeholder="Descrição"></td>
-      <td><input value="${esc(it.categoria)}"    onchange="editItem(${i},'categoria',this.value)"   placeholder="Categoria"></td>
+      <td><select onchange="editItem(${i},'categoria',this.value)" style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);color:var(--text)">
+        <option value="">— Tipo —</option>
+        <option value="Infraestrutura" ${it.categoria==='Infraestrutura'?'selected':''}>Infraestrutura</option>
+        <option value="Equipamento" ${it.categoria==='Equipamento'?'selected':''}>Equipamento</option>
+      </select></td>
       <td><input value="${esc(it.fornecedor)}"   onchange="editItem(${i},'fornecedor',this.value)"  placeholder="Fornecedor"></td>
       <td><input class="num" type="number" value="${it.quantidade||1}" onchange="editItem(${i},'quantidade',+this.value)" style="width:60px"></td>
       <td><input value="${esc(it.unidade)}"      onchange="editItem(${i},'unidade',this.value)"     placeholder="un" style="width:48px"></td>
@@ -506,7 +525,9 @@ function renderItens() {
       <td><button class="btn-rm-item" onclick="rmItem(${i})">×</button></td>
     </tr>`).join('');
   const total = _itensEd.reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda),0);
-  document.getElementById('itens-total').textContent = 'Total BRL: ' + fmtR(total);
+  const totalInfra = _itensEd.filter(it=>it.categoria==='Infraestrutura').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda),0);
+  const totalEquip = _itensEd.filter(it=>it.categoria==='Equipamento').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda),0);
+  document.getElementById('itens-total').textContent = `Total BRL: ${fmtR(total)}  |  Infra: ${fmtR(totalInfra)}  |  Equip: ${fmtR(totalEquip)}`;
 }
 
 window.editItem = function(idx,campo,valor) {

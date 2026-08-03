@@ -1211,7 +1211,6 @@ function salvarUC() {
     responsavelId: $('uc-resp').value,
     obs: $('uc-obs').value.trim()
   };
-
 if (state.editIdx.uc >= 0) {
     const ucExistente = state.ucs[state.editIdx.uc];
     obj.id = ucExistente.id;
@@ -1247,7 +1246,6 @@ function selecionarUC(idx) {
   state._ucSelecionada = idx;
 }
 function excluirUC(idx) { if (confirm('Excluir esta UC?')) { state.ucs.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
-
 function abrirModalPreventiva(idx = -1) {
   state.editIdx.preventiva = idx;
   const p = idx >= 0 ? state.preventivas[idx] : null;
@@ -1259,7 +1257,6 @@ function abrirModalPreventiva(idx = -1) {
   $('prev-data-real').value = p?.dataRealizada || '';
   $('prev-status').value = p?.status || 'Programada';
   $('prev-obs').value = p?.obs || '';
-
   const cl = $('prev-checklist-wrap');
   if (cl) {
     const ucId = p?.ucId || $('prev-uc').value;
@@ -1292,7 +1289,6 @@ function abrirModalPreventiva(idx = -1) {
     ).join('') || '<div style="color:var(--text-muted);font-size:12px">Nenhum item configurado.</div>';
   });
 }
-
 function salvarPreventiva() {
   const ucId = $('prev-uc').value;
   const dataPrevista = $('prev-data-prev').value;
@@ -1307,7 +1303,6 @@ function salvarPreventiva() {
     item,
     concluido: !!document.getElementById('clitem-' + i)?.checked
   }));
-
   const prevExistente = state.editIdx.preventiva >= 0 ? state.preventivas[state.editIdx.preventiva] : null;
   const obj = {
     ucId,
@@ -1333,7 +1328,6 @@ function salvarPreventiva() {
   agendarSalvamento();
   renderTudo();
 }
-
 function editarPreventiva(idx) { abrirModalPreventiva(idx); }
 async function excluirPreventiva(idx) {
   if (!confirm('Excluir esta preventiva?')) return;
@@ -1351,7 +1345,6 @@ async function excluirPreventiva(idx) {
     alert('Erro ao excluir: ' + e);
   }
 }
-
 function abrirModalManutencao(idx = -1) {
   state.editIdx.manutencao = idx;
   const m = idx >= 0 ? state.manutencoes[idx] : null;
@@ -1368,7 +1361,6 @@ function abrirModalManutencao(idx = -1) {
   $('man-obs').value = m?.obs || '';
   abrirModal('modal-manutencao');
 }
-
 function salvarManutencao() {
   const ucId = $('man-uc').value;
   const falha = ($('man-falha').value || '').trim();
@@ -1395,7 +1387,6 @@ function salvarManutencao() {
   agendarSalvamento();
   renderTudo();
 }
-
 function editarManutencao(idx) { abrirModalManutencao(idx); }
 function excluirManutencao(idx) { if (confirm('Excluir esta manutenção?')) { state.manutencoes.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
 function abrirModalFecharManutencao(idx) {
@@ -1408,7 +1399,6 @@ function abrirModalFecharManutencao(idx) {
   $('fechar-man-err').textContent = '';
   abrirModal('modal-fechar-man');
 }
-
 function abrirModalPeca(idx = -1) {
   state.editIdx.peca = idx;
   const p = idx >= 0 ? state.pecas[idx] : null;
@@ -1424,7 +1414,6 @@ function abrirModalPeca(idx = -1) {
   $('peca-obs').value = p?.obs || '';
   abrirModal('modal-peca');
 }
-
 function salvarPeca() {
   const codigo = ($('peca-codigo').value || '').trim().toUpperCase();
   const descricao = ($('peca-desc').value || '').trim();
@@ -1452,10 +1441,8 @@ function salvarPeca() {
   popularSelects();
   renderTudo();
 }
-
 function editarPeca(idx) { abrirModalPeca(idx); }
 function excluirPeca(idx) { if (confirm('Excluir esta peça?')) { state.pecas.splice(idx, 1); agendarSalvamento(); popularSelects(); renderTudo(); } }
-
 function abrirModalRequisicao(idx = -1) {
   state.editIdx.requisicao = idx;
   const r = idx >= 0 ? state.requisicoes[idx] : null;
@@ -1469,7 +1456,6 @@ function abrirModalRequisicao(idx = -1) {
   $('req-obs').value = r?.obs || '';
   abrirModal('modal-requisicao');
 }
-
 function salvarRequisicao() {
   const pecaId = $('req-peca').value;
   const quantidade = parseInt($('req-qtd').value) || 0;
@@ -1495,10 +1481,8 @@ function salvarRequisicao() {
   agendarSalvamento();
   renderTudo();
 }
-
 function editarRequisicao(idx) { abrirModalRequisicao(idx); }
 function excluirRequisicao(idx) { if (confirm('Excluir esta requisição?')) { state.requisicoes.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
-
 function abrirModalArea(idx = -1) {
   state.editIdx.area = idx;
   const a = idx >= 0 ? state.areas[idx] : null;
@@ -1514,7 +1498,6 @@ function abrirModalArea(idx = -1) {
   $('area-obs').value = a?.obs || '';
   abrirModal('modal-area');
 }
-
 function salvarArea() {
   const nome = ($('area-nome').value || '').trim();
   if (!nome) { alert('Nome da área é obrigatório.'); return; }
@@ -1540,10 +1523,8 @@ function salvarArea() {
   popularSelects();
   renderTudo();
 }
-
 function editarArea(idx) { abrirModalArea(idx); }
 function excluirArea(idx) { if (confirm('Excluir esta área?')) { state.areas.splice(idx, 1); agendarSalvamento(); popularSelects(); renderTudo(); } }
-
 function abrirModalFornecedor(idx = -1) {
   state.editIdx.fornecedor = idx;
   const f = idx >= 0 ? state.fornecedores[idx] : null;
@@ -1557,7 +1538,6 @@ function abrirModalFornecedor(idx = -1) {
   $('forn-ativo').value = f?.ativo || 'Sim';
   abrirModal('modal-fornecedor');
 }
-
 function salvarFornecedor() {
   const nome = ($('forn-nome').value || '').trim();
   if (!nome) { alert('Nome é obrigatório.'); return; }
@@ -1581,10 +1561,8 @@ function salvarFornecedor() {
   agendarSalvamento();
   renderTudo();
 }
-
 function editarFornecedor(idx) { abrirModalFornecedor(idx); }
 function excluirFornecedor(idx) { if (confirm('Excluir este fornecedor?')) { state.fornecedores.splice(idx, 1); agendarSalvamento(); renderTudo(); } }
-
 function abrirModalTecnico(idx = -1) {
   state.editIdx.tecnico = idx;
   const t = idx >= 0 ? state.tecnicos[idx] : null;
@@ -1595,7 +1573,6 @@ function abrirModalTecnico(idx = -1) {
   $('tec-turno').value = t?.turno || 'Manhã';
   abrirModal('modal-tecnico');
 }
-
 function salvarTecnico() {
   const nome = ($('tec-nome').value || '').trim();
   if (!nome) { alert('Nome é obrigatório.'); return; }
