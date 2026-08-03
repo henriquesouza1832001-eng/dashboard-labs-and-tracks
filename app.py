@@ -3073,6 +3073,10 @@ async def _startup_capex():
         await arun_exec_retry("CREATE SCHEMA IF NOT EXISTS eng_lab.dashboard_labs_and_tracks_capex")
     except Exception as e:
         print(f"[startup][capex] schema: {e}")
+    try:
+        await arun_exec_retry(f"ALTER TABLE {S_CAPEX}.projetos ADD COLUMNS IF NOT EXISTS (tipo_projeto STRING)")
+    except Exception as e:
+        print(f"[startup][capex] alter tipo_projeto erro: {e}")
     for ddl in [
         f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.plantas (
             id STRING, nome STRING, ativo BOOLEAN,
