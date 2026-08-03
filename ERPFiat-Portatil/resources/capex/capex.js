@@ -69,7 +69,7 @@ async function init() {
   const selAno = document.getElementById('sel-ano');
   const base = new Date().getFullYear();
   selAno.innerHTML = '<option value="">Todos os Anos</option>';
-  for(let a=base-1;a<=base+3;a++) {
+  for(let a=base-5;a<=base+5;a++) {
     selAno.innerHTML += `<option value="${a}" ${a===base+1?'selected':''}>${a}</option>`;
   }
   if(window.__DADOS__) { _dados=window.__DADOS__; _processar(); }
@@ -334,7 +334,7 @@ function renderDashboard() {
     sol:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+_toBRL(p.valor_solicitado||0, p.moeda),0),
     apr:  lista.filter(p=>p.categoria===g.nome).reduce((a,p)=>a+_toBRL(p.valor_aprovado||0,   p.moeda),0),
   })).filter(d=>d.sol>0||d.apr>0);
-  _renderChart('<div class="dash-card"><h3>Por Tipo de Item</h3><div class="chart-wrap"><canvas id="chart-tipo-item"></canvas></div></div>','bar',{
+  _renderChart('chart-grupos','bar',{
     labels: dadosGrupos.map(d=>d.nome),
     datasets:[
       { label:'Solicitado', data:dadosGrupos.map(d=>d.sol), backgroundColor:'#3a6bc7', borderRadius:4 },
@@ -347,9 +347,15 @@ function renderDashboard() {
   });
 
   const todosItens = lista.flatMap(p=>p.itens||[]);
-  const somaInfra = todosItens.filter(it=>it.categoria==='Infraestrutura').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
-  const somaEquip = todosItens.filter(it=>it.categoria==='Equipamento').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
-  const somaSemTipo = todosItens.filter(it=>!it.categoria||it.categoria==='').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
+  let somaInfra = todosItens.filter(it=>it.categoria==='Infraestrutura').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
+  let somaEquip = todosItens.filter(it=>it.categoria==='Equipamento').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
+  let somaSemTipo = todosItens.filter(it=>!it.categoria||it.categoria==='').reduce((s,it)=>s+_toBRL((it.quantidade||1)*(it.preco_unitario||0), it.moeda||'BRL'),0);
+  lista.filter(p=>!(p.itens&&p.itens.length)).forEach(p=>{
+    const val = _toBRL(p.valor_solicitado||0, p.moeda);
+    if(p.tipo_projeto==='Infraestrutura') somaInfra += val;
+    else if(p.tipo_projeto==='Equipamento') somaEquip += val;
+    else somaSemTipo += val;
+  });
   _renderChart('chart-tipo-item','doughnut',{
     labels: ['Infraestrutura','Equipamento', somaSemTipo>0?'Sem tipo':''].filter(Boolean),
     datasets:[{ data:[somaInfra, somaEquip, somaSemTipo>0?somaSemTipo:null].filter(v=>v!=null), backgroundColor:['#2E5FA3','#e67e22','#d0d8e8'], borderWidth:2, borderColor:'#fff' }]
@@ -378,7 +384,7 @@ function _popularSelects() {
 }
 
 function abrirNovo() {
-  _projetoEd = { id:uid(), planta_id:'', categoria:'', titulo:'', descricao:'', ano_orcamento:new Date().getFullYear()+1, responsavel:'', status:'Rascunho', prioridade:'Média', valor_solicitado:0, valor_aprovado:0, moeda:'BRL', justificativa:'', retorno_previsto:'', obs:'', itens:[], arquivos:[] };
+  _projetoEd = { id:uid(), planta_id:'', categoria:'', tipo_projeto:'', titulo:'', descricao:'', ano_orcamento:new Date().getFullYear()+1, responsavel:'', status:'Rascunho', prioridade:'Média', valor_solicitado:0, valor_aprovado:0, moeda:'BRL', justificativa:'', retorno_previsto:'', obs:'', itens:[], arquivos:[] };
   _itensEd = [];
   _arquivoLocal = { xlsx:null, pptx:null };
   _popularSelects();
@@ -411,6 +417,7 @@ function _preencherModal() {
   const p = _projetoEd;
   document.getElementById('f-grupo').value       = p.categoria||'';
   document.getElementById('f-planta').value      = p.planta_id||'';
+  document.getElementById('f-tipo-projeto').value = p.tipo_projeto||'';
   document.getElementById('f-ano').value         = p.ano_orcamento||'';
   document.getElementById('f-status').value      = p.status||'Rascunho';
   document.getElementById('f-prioridade').value  = p.prioridade||'Média';
@@ -447,6 +454,7 @@ async function salvarProjeto() {
   const p = _projetoEd;
   p.categoria         = document.getElementById('f-grupo').value;
   p.planta_id         = document.getElementById('f-planta').value;
+  p.tipo_projeto       = document.getElementById('f-tipo-projeto').value;
   p.ano_orcamento     = parseInt(document.getElementById('f-ano').value)||new Date().getFullYear()+1;
   p.status            = document.getElementById('f-status').value;
   p.prioridade        = document.getElementById('f-prioridade').value;

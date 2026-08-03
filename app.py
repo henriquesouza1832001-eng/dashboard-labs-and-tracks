@@ -3079,7 +3079,7 @@ async def _startup_capex():
             criado_em TIMESTAMP, atualizado_em TIMESTAMP)""",
         f"""CREATE TABLE IF NOT EXISTS {S_CAPEX}.projetos (
             id STRING, planta_id STRING, titulo STRING, descricao STRING,
-            ano_orcamento INT, categoria STRING, responsavel STRING, status STRING,
+            ano_orcamento INT, categoria STRING, tipo_projeto STRING, responsavel STRING, status STRING,
             valor_solicitado DOUBLE, valor_aprovado DOUBLE, moeda STRING,
             prioridade STRING, justificativa STRING, retorno_previsto STRING,
             obs STRING, criado_em TIMESTAMP, atualizado_em TIMESTAMP, atualizado_por STRING)""",
@@ -3258,13 +3258,13 @@ async def salvar_projetos(request: Request):
         for p in lista:
             sel_proj.append(
                 "SELECT ? AS id, ? AS planta_id, ? AS titulo, ? AS descricao, "
-                "? AS ano_orcamento, ? AS categoria, ? AS responsavel, ? AS status, "
+                "? AS ano_orcamento, ? AS categoria, ? AS tipo_projeto, ? AS responsavel, ? AS status, "
                 "? AS valor_solicitado, ? AS valor_aprovado, ? AS moeda, ? AS prioridade, "
                 "? AS justificativa, ? AS retorno_previsto, ? AS obs, ? AS atualizado_por"
             )
             par_proj += [
                 p["id"], p.get("planta_id"), p.get("titulo"), p.get("descricao"),
-                p.get("ano_orcamento"), p.get("categoria"), p.get("responsavel"), p.get("status", "Rascunho"),
+                p.get("ano_orcamento"), p.get("categoria"), p.get("tipo_projeto"), p.get("responsavel"), p.get("status", "Rascunho"),
                 p.get("valor_solicitado", 0), p.get("valor_aprovado", 0), p.get("moeda", "BRL"),
                 p.get("prioridade", "Média"), p.get("justificativa"), p.get("retorno_previsto"),
                 p.get("obs"), u,
@@ -3275,17 +3275,17 @@ async def salvar_projetos(request: Request):
             USING ({origem}) AS s ON t.id = s.id
             WHEN MATCHED THEN UPDATE SET
                 planta_id=s.planta_id, titulo=s.titulo, descricao=s.descricao,
-                ano_orcamento=s.ano_orcamento, categoria=s.categoria, responsavel=s.responsavel,
+                ano_orcamento=s.ano_orcamento, categoria=s.categoria, tipo_projeto=s.tipo_projeto, responsavel=s.responsavel,
                 status=s.status, valor_solicitado=s.valor_solicitado, valor_aprovado=s.valor_aprovado,
                 moeda=s.moeda, prioridade=s.prioridade, justificativa=s.justificativa,
                 retorno_previsto=s.retorno_previsto, obs=s.obs,
                 atualizado_em=current_timestamp(), atualizado_por=s.atualizado_por
             WHEN NOT MATCHED THEN INSERT
-                (id,planta_id,titulo,descricao,ano_orcamento,categoria,responsavel,status,
+                (id,planta_id,titulo,descricao,ano_orcamento,categoria,tipo_projeto,responsavel,status,
                  valor_solicitado,valor_aprovado,moeda,prioridade,justificativa,retorno_previsto,
                  obs,criado_em,atualizado_em,atualizado_por)
             VALUES
-                (s.id,s.planta_id,s.titulo,s.descricao,s.ano_orcamento,s.categoria,s.responsavel,
+                (s.id,s.planta_id,s.titulo,s.descricao,s.ano_orcamento,s.categoria,s.tipo_projeto,s.responsavel,
                  s.status,s.valor_solicitado,s.valor_aprovado,s.moeda,s.prioridade,s.justificativa,
                  s.retorno_previsto,s.obs,current_timestamp(),current_timestamp(),s.atualizado_por)
         """, par_proj)
