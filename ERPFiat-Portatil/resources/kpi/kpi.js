@@ -1150,16 +1150,31 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
       const d = new Date(mes+'-15');
       ctx.fillText(d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), xPos2(i), m.t+ch+14);
     });
-    const curvaPlan2 = meses2.map((_,i) => (i/(meses2.length-1||1))*100);
+    const _hjNow=new Date(), _maNow=_hjNow.toISOString().slice(0,7);
+    const curvaPlan2 = meses2.map((mes,i) => {
+      const total = meses2.length-1||1;
+      if(mes < _maNow) return (i/total)*100;
+      if(mes === _maNow) {
+        const diaHoje=_hjNow.getDate(), diasMes=new Date(_hjNow.getFullYear(),_hjNow.getMonth()+1,0).getDate();
+        return ((i + diaHoje/diasMes - 1 + 1/total) / total)*100;
+      }
+      return (i/total)*100;
+    });
     ctx.beginPath();
     ctx.strokeStyle = '#58a6ff';
     ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     curvaPlan2.forEach((v,i) => { const x=xPos2(i),y=yPos2(v); if(i===0){ctx.moveTo(x,y);}else{const xp=xPos2(i-1),yp=yPos2(curvaPlan2[i-1]);ctx.quadraticCurveTo((xp+x)/2,yp,x,y);} });
     ctx.stroke();
     const mesHoje = new Date().toISOString().slice(0,7);
-    const idxHoje = Math.min(meses2.findIndex(m2=>m2>=mesHoje), meses2.length-1);
+    const idxHoje = meses2.findIndex(m2=>m2===mesHoje);
     const idxReal = idxHoje === -1 ? meses2.length-1 : idxHoje;
-    const curvaReal2 = meses2.map((_,i) => i <= idxReal ? (i/Math.max(idxReal,1))*afManual : null);
+    const _hjD=new Date(), _diasTot=new Date(_hjD.getFullYear(),_hjD.getMonth()+1,0).getDate();
+    const fracaoMesAtual = _hjD.getDate()/_diasTot;
+    const curvaReal2 = meses2.map((_,i) => {
+      if(i < idxReal) return (i/Math.max(idxReal,1))*afManual;
+      if(i === idxReal) return fracaoMesAtual * afManual;
+      return null;
+    });
     const gradReal2 = ctx.createLinearGradient(0, m.t, 0, m.t+ch);
     gradReal2.addColorStop(0, 'rgba(227,113,26,0.18)');
     gradReal2.addColorStop(1, 'rgba(227,113,26,0)');
