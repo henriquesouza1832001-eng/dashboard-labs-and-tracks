@@ -86,6 +86,13 @@ function abrirModalVer(id) {
   if($('mv-tipo'))          $('mv-tipo').value = c.tipo||'';
   if($('mv-data-desejada')) $('mv-data-desejada').value = c.dataDesejada||'';
   $('mv-obs').value             = '';
+  if($('mv-solicitante-email')) $('mv-solicitante-email').textContent = c.solicitante || '–';
+  if($('mv-verificacao-badge')) {
+    const pediu = (c.historico||[]).some(h => h.acao === 'Solicitante pediu atualização de status');
+    const confirmou = (c.historico||[]).some(h => h.acao && h.acao.includes('confirmada pelo solicitante'));
+    $('mv-verificacao-badge').textContent = confirmou ? '✅ Confirmado pelo solicitante' : pediu ? '⏳ Aguardando — solicitante pediu verificação' : '–';
+    $('mv-verificacao-badge').style.color = confirmou ? 'var(--green)' : pediu ? 'var(--yellow)' : 'var(--text-muted)';
+  }
 
   renderFotosGrid('mv-fotos-grid', editFotos, 'mv-add-foto', true);
   renderTimeline(c.historico || []);
@@ -140,7 +147,7 @@ async function salvarChamado() {
     ent.push(`Categoria: ${c.categoria} → ${$('mv-cat').value}`);
   if (obs) ent.push(obs ? null : null); // obs vai como campo separado
 
-  const corMap = { 'Aberto':'#58a6ff','Em Andamento':'#d29922','Concluído':'#3fb950','Cancelado':'#8b949e' };
+  const corMap = { 'Aberto':'#58a6ff','Em Andamento':'#d29922','Concluído':'#3fb950','Cancelado':'#8b949e','Fechado':'#1a7f4b' };
   if (ent.length || obs) {
     const historico = c.historico || [];
     historico.push({

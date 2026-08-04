@@ -19,7 +19,7 @@ function renderTabela() {
     return;
   }
   const ordenar = $('ordenar-por')?.value || 'data-desc';
-  const ordemStatus = { 'Aberto':0,'Em Andamento':1,'Cancelado':2,'Concluído':3 };
+  const ordemStatus = { 'Aberto':0,'Em Andamento':1,'Cancelado':2,'Concluído':3,'Fechado':4 };
   const sorted = [...filteredList].sort((a,b) => {
     if (ordenar === 'prio') {
       const pm = {'Crítica':0,'Alta':1,'Média':2,'Baixa':3};
@@ -37,7 +37,7 @@ function renderTabela() {
     const slaMax = slaParaPrio(c.prioridade);
     const pctSLA = Math.round(dias/slaMax*100);
     let slaTxt, slaCls;
-    if (c.status === 'Concluído' || c.status === 'Cancelado') {
+    if (c.status === 'Concluído' || c.status === 'Cancelado' || c.status === 'Fechado') {
       slaTxt = '—'; slaCls = 'sla-ok';
     } else if (pctSLA >= 100) {
       slaTxt = `${dias}d ⚠`; slaCls = 'sla-out';
@@ -89,7 +89,7 @@ function aplicarFiltros() {
       if (filtroDt === 'hoje'    && dt < hoje) return false;
       if (filtroDt === 'semana'  && dt < inicioSemana) return false;
       if (filtroDt === 'mes'     && dt < inicioMes) return false;
-      if (filtroDt === 'atrasado' && (dentroDeSLA(c) || c.status === 'Concluído' || c.status === 'Cancelado')) return false;
+      if (filtroDt === 'atrasado' && (dentroDeSLA(c) || c.status === 'Concluído' || c.status === 'Cancelado' || c.status === 'Fechado')) return false;
     }
     if (q) {
       const hay = [c.id, c.titulo, c.local, c.setor, c.solicitante, c.responsavel, c.idExterno, c.tipo].join(' ').toLowerCase();

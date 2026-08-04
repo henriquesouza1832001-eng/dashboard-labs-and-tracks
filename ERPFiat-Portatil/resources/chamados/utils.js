@@ -9,7 +9,7 @@ function fmtDateShort(iso) {
   catch { return iso; }
 }
 function statusClass(s) {
-  const m = { 'Aberto':'s-aberto','Em Andamento':'s-andamento','Concluído':'s-concluido','Cancelado':'s-cancelado' };
+  const m = { 'Aberto':'s-aberto','Em Andamento':'s-andamento','Concluído':'s-concluido','Cancelado':'s-cancelado','Fechado':'s-fechado' };
   return m[s] || '';
 }
 function prioClass(p) {
@@ -52,6 +52,7 @@ function atualizarContadores() {
   $('cnt-andamento').textContent = allChamados.filter(c=>c.status==='Em Andamento').length;
   $('cnt-concluido').textContent = allChamados.filter(c=>c.status==='Concluído').length;
   $('cnt-cancelado').textContent = allChamados.filter(c=>c.status==='Cancelado').length;
+  if($('cnt-fechado')) $('cnt-fechado').textContent = allChamados.filter(c=>c.status==='Fechado').length;
   $('cnt-call').textContent      = allChamados.length;
   Object.keys(CATS).forEach(k => {
     const el = $('cnt-'+k);

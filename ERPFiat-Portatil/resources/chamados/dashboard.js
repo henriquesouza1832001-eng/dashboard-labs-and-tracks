@@ -5,7 +5,8 @@ function renderDashboard() {
   const andamento  = c.filter(x => x.status === 'Em Andamento').length;
   const concluidos = c.filter(x => x.status === 'Concluído').length;
   const cancelados = c.filter(x => x.status === 'Cancelado').length;
-  const criticos   = c.filter(x => x.prioridade === 'Crítica' && x.status !== 'Concluído').length;
+  const fechados   = c.filter(x => x.status === 'Fechado').length;
+  const criticos   = c.filter(x => x.prioridade === 'Crítica' && x.status !== 'Concluído' && x.status !== 'Fechado').length;
   const semResp    = c.filter(x => !x.responsavel).length;
   const pctConclusao = total ? Math.round(concluidos / total * 100) : 0;
 const comData   = c.filter(x => x.dataAbertura);
@@ -66,9 +67,9 @@ const baseScale = { grid: { color: gridC }, ticks: { color: textC, font: { size:
   chartInstances.status = new Chart($('chart-status'), {
     type: 'doughnut',
     data: {
-      labels: ['Aberto', 'Em Andamento', 'Concluído', 'Cancelado'],
-      datasets: [{ data: [abertos, andamento, concluidos, cancelados],
-        backgroundColor: ['#58a6ff', '#d29922', '#3fb950', '#8b949e'],
+      labels: ['Aberto', 'Em Andamento', 'Concluído', 'Cancelado', 'Fechado'],
+      datasets: [{ data: [abertos, andamento, concluidos, cancelados, fechados],
+        backgroundColor: ['#58a6ff', '#d29922', '#3fb950', '#8b949e', '#1a7f4b'],
         borderWidth: 0, hoverOffset: 4 }]
     },
     options: { responsive: true, maintainAspectRatio: false, cutout: '65%',

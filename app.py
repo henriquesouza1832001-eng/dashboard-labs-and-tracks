@@ -970,8 +970,29 @@ async def create_chamado(request: Request):
     u = get_usuario(request)
     try:
         await arun_exec_retry(f"""
-            INSERT INTO {S_CHAMADOS}.chamados ...
-        """, [...])
+    INSERT INTO {S_CHAMADOS}.chamados
+        (id, titulo, categoria, tipo, prioridade, local, setor,
+         solicitante, dataDesejada, descricao, status, responsavel,
+         idExterno, dataAbertura, dataConclusao, atualizado_por)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+""", [
+    body.get("id"),
+    body.get("titulo"),
+    body.get("categoria"),
+    body.get("tipo") or None,
+    body.get("prioridade", "Média"),
+    body.get("local") or None,
+    body.get("setor") or None,
+    body.get("solicitante") or None,
+    body.get("dataDesejada") or None,
+    body.get("descricao") or None,
+    body.get("status", "Aberto"),
+    body.get("responsavel") or None,
+    body.get("idExterno") or None,
+    body.get("dataAbertura") or None,
+    body.get("dataConclusao") or None,
+    u if u else None,
+])
         fotos = body.get("fotos", [])
         if fotos:
             rows, params = [], []
@@ -984,9 +1005,9 @@ async def create_chamado(request: Request):
         if historico:
             rows, params = [], []
             for h in historico:
-                rows.append("(?,?,?)")
-                params += [body["id"], h.get("usuario"), h.get("acao")]
-            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao) VALUES {','.join(rows)}", params)
+                rows.append("(?,?,?,?)")
+                params += [body["id"], h.get("usuario") or u or None, h.get("acao"), h.get("data")]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES {','.join(rows)}", params)
     except Exception as e:
         print(f"[chamados] erro ao criar: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
@@ -999,6 +1020,16 @@ async def update_chamado(cid: str, request: Request):
     body = await request.json()
     u = get_usuario(request)
     try:
+        payload_atual = get_cached("chamados")
+        chamado_atual = next((c for c in payload_atual.get("chamados", []) if c["id"] == cid), None)
+        novo_status = body.get("status")
+        if chamado_atual and chamado_atual.get("status") == "Fechado" and novo_status != "Fechado":
+            import datetime as _dt
+            agora_reabertura = _dt.datetime.utcnow().isoformat()
+            await arun_exec_retry(
+                f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES (?,?,?,?)",
+                [cid, u or "admin", f"Chamado reaberto pelo responsável (status anterior: Fechado → {novo_status})", agora_reabertura]
+            )
         await arun_exec_retry(f"""
             UPDATE {S_CHAMADOS}.chamados SET
                 titulo=?, categoria=?, tipo=?, prioridade=?, local=?, setor=?,
@@ -1009,7 +1040,7 @@ async def update_chamado(cid: str, request: Request):
             body.get("titulo"), body.get("categoria"), body.get("tipo"),
             body.get("prioridade"), body.get("local"), body.get("setor"),
             body.get("solicitante"), body.get("dataDesejada") or None,
-            body.get("descricao"), body.get("status"), body.get("responsavel"),
+            body.get("descricao"), novo_status, body.get("responsavel"),
             body.get("idExterno"), body.get("dataConclusao") or None,
             u if u else None,
             cid
@@ -1052,15 +1083,21 @@ async def delete_chamado(cid: str, request: Request):
 
 @app.get("/api/chamados/por-email/{email}")
 async def chamados_por_email(email: str, request: Request):
-    exigir_auth(request)
     todos = get_cached("chamados").get("chamados", [])
     email = email.strip().lower()
     filtrados = [c for c in todos if (c.get("solicitante") or "").strip().lower() == email]
-    return JSONResponse({"chamados": filtrados})
+    campos_publicos = ["id","titulo","categoria","local","status","prioridade","dataAbertura","dataConclusao","historico","responsavel","idExterno","solicitante","descricao","setor"]
+    resultado = [{k: c.get(k) for k in campos_publicos} for c in filtrados]
+    return JSONResponse({"chamados": resultado, "total": len(resultado)})
 
 @app.get("/meus-chamados")
-async def meus_chamados_page():
-    return FileResponse(f"{BASE}/meuschamados/meuschamados.html")
+async def meus_chamados_page(request: Request):
+    email_fwd = request.headers.get("X-Forwarded-Email", "").strip().lower()
+    token_payload = usuario_autenticado(request)
+    email_token = (token_payload.get("email", "") if token_payload else "").strip().lower()
+    email = email_fwd or email_token or ""
+    dados_iniciais = {"email_usuario": email}
+    return inject(f"{BASE}/meuschamados/meuschamados.html", dados_iniciais)
 
 @app.get("/api/chamados/areas-qr")
 async def get_areas_qr(request: Request):
@@ -1121,6 +1158,142 @@ async def save_sla(request: Request):
         return JSONResponse({"erro": str(e)}, status_code=500)
     cache_set("sla", cfg)
     return JSONResponse({"ok": True})
+
+@app.post("/api/chamados-qr")
+async def create_chamado_qr(request: Request):
+    import datetime, time as _t
+    body = await request.json()
+    if not body.get("descricao") or not body.get("categoria"):
+        return JSONResponse({"erro": "Campos obrigatórios ausentes"}, status_code=400)
+    ano = datetime.datetime.utcnow().year
+    cat = body.get("categoria", "QR")
+    try:
+        rows_ex = run_query(
+            f"SELECT id FROM {S_CHAMADOS}.chamados WHERE id LIKE ? ORDER BY id DESC LIMIT 1",
+            [f"{cat}-{ano}-%"]
+        )
+        proximo = 1
+        if rows_ex:
+            ultimo = rows_ex[0]["id"].split("-")[-1]
+            try: proximo = int(ultimo) + 1
+            except: proximo = 1
+    except:
+        proximo = int(_t.time() * 1000) % 10000
+    novo_id = f"{cat}-{ano}-{str(proximo).zfill(3)}"
+    agora = datetime.datetime.utcnow().isoformat()
+    try:
+        await arun_exec_retry(f"""
+            INSERT INTO {S_CHAMADOS}.chamados
+                (id, titulo, categoria, tipo, prioridade, local, setor,
+                 solicitante, dataDesejada, descricao, status, responsavel,
+                 idExterno, dataAbertura, dataConclusao, atualizado_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, [
+            novo_id,
+            body.get("titulo") or f"Chamado via QR - {body.get('local','?')}",
+            body.get("categoria"),
+            body.get("tipo") or None,
+            body.get("prioridade", "Média"),
+            body.get("local") or None,
+            body.get("setor") or None,
+            body.get("solicitante") or None,
+            None,
+            body.get("descricao"),
+            "Aberto",
+            None, None,
+            agora, None, "qr"
+        ])
+        fotos = body.get("fotos", [])
+        if fotos:
+            frows, fparams = [], []
+            for foto in fotos:
+                frows.append("(?,?)")
+                fparams += [novo_id, foto]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.fotos (chamado_id, url) VALUES {','.join(frows)}", fparams)
+        await arun_exec_retry(
+            f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES (?,?,?,?)",
+            [novo_id, body.get("solicitante") or "qr", "Chamado aberto via QR Code", agora]
+        )
+    except Exception as e:
+        print(f"[chamados-qr] erro ao criar: {e}")
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    await asyncio.to_thread(_atualizar_cache_chamados_parcial, [novo_id])
+    return JSONResponse({"ok": True, "id": novo_id})
+
+@app.post("/api/chamados/{cid}/solicitar-verificacao")
+async def solicitar_verificacao(cid: str, request: Request):
+    import datetime
+    body = await request.json()
+    email = body.get("email", "").strip().lower()
+    if not email:
+        return JSONResponse({"erro": "Email obrigatório"}, status_code=400)
+    payload = get_cached("chamados")
+    chamado = next((c for c in payload.get("chamados", []) if c["id"] == cid), None)
+    if not chamado:
+        raise HTTPException(status_code=404, detail="Chamado não encontrado")
+    if (chamado.get("solicitante") or "").strip().lower() != email:
+        raise HTTPException(status_code=403, detail="Email não corresponde ao solicitante")
+    if chamado.get("status") in ("Concluído", "Cancelado"):
+        return JSONResponse({"erro": "Chamado já encerrado"}, status_code=400)
+    historico = chamado.get("historico") or []
+    agora_dt = datetime.datetime.utcnow()
+    for h in reversed(historico):
+        if h.get("acao") == "Solicitante pediu atualização de status":
+            try:
+                ultima = datetime.datetime.fromisoformat(h["data"].replace("Z",""))
+                diff_horas = (agora_dt - ultima).total_seconds() / 3600
+                if diff_horas < 24:
+                    return JSONResponse({"erro": "Você já solicitou uma atualização nas últimas 24h. Aguarde."}, status_code=429)
+            except:
+                pass
+            break
+    agora = agora_dt.isoformat()
+    try:
+        await arun_exec_retry(
+            f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES (?,?,?,?)",
+            [cid, email, "Solicitante pediu atualização de status", agora]
+        )
+    except Exception as e:
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    await asyncio.to_thread(_atualizar_cache_chamados_parcial, [cid])
+    return JSONResponse({"ok": True, "mensagem": "Solicitação registrada. O responsável será notificado."})
+
+@app.post("/api/chamados/{cid}/confirmar-conclusao")
+async def confirmar_conclusao(cid: str, request: Request):
+    import datetime
+    body = await request.json()
+    email = body.get("email", "").strip().lower()
+    if not email:
+        return JSONResponse({"erro": "Email obrigatório"}, status_code=400)
+    payload = get_cached("chamados")
+    chamado = next((c for c in payload.get("chamados", []) if c["id"] == cid), None)
+    if not chamado:
+        raise HTTPException(status_code=404, detail="Chamado não encontrado")
+    if (chamado.get("solicitante") or "").strip().lower() != email:
+        raise HTTPException(status_code=403, detail="Email não corresponde ao solicitante")
+    if chamado.get("status") not in ("Concluído", "Concluido", "Fechado"):
+        return JSONResponse({"erro": "Chamado ainda não foi marcado como concluído pelo responsável. Aguarde."}, status_code=400)
+    if chamado.get("status") == "Fechado":
+        return JSONResponse({"erro": "Chamado já foi confirmado anteriormente."}, status_code=400)
+    agora = datetime.datetime.utcnow().isoformat()
+    try:
+        await arun_exec_retry(
+            f"""UPDATE {S_CHAMADOS}.chamados SET
+                status='Fechado',
+                dataConclusao=?,
+                atualizado_em=current_timestamp(),
+                atualizado_por=?
+            WHERE id=?""",
+            [agora, email, cid]
+        )
+        await arun_exec_retry(
+            f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES (?,?,?,?)",
+            [cid, email, "Conclusão confirmada pelo solicitante — chamado fechado", agora]
+        )
+    except Exception as e:
+        return JSONResponse({"erro": str(e)}, status_code=500)
+    await asyncio.to_thread(_atualizar_cache_chamados_parcial, [cid])
+    return JSONResponse({"ok": True, "mensagem": "Chamado fechado com sucesso. Obrigado pela confirmação!"})
 
 @app.get("/api/obras")
 async def get_obras(request: Request):
