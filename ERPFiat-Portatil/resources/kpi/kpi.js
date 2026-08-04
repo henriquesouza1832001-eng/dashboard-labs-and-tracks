@@ -1150,48 +1150,74 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
       const d = new Date(mes+'-15');
       ctx.fillText(d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), xPos2(i), m.t+ch+14);
     });
-    const _hjNow=new Date(), _maNow=_hjNow.toISOString().slice(0,7);
-    const _diaHjNow=_hjNow.getDate(), _dmNow=new Date(_hjNow.getFullYear(),_hjNow.getMonth()+1,0).getDate();
-    const _idxMesAtual=meses2.findIndex(m2=>m2===_maNow);
-    const _valMesAtual=_idxMesAtual===-1?null:((_idxMesAtual+_diaHjNow/_dmNow)/(meses2.length-1||1))*100;
-    const curvaPlan2 = meses2.map((mes,i) => {
-      const total = meses2.length-1||1;
-      if(mes < _maNow) return (i/total)*100;
-      if(mes === _maNow) return Math.min(_valMesAtual, 100);
-      return null;
+    // Curva S para obras com % manual:
+    // - Planejado (azul): progresso linear de 0→100% ao longo de toda a obra, cortado no dia de hoje
+    // - Realizado (laranja): linha horizontal no valor do afManual, cortada no dia de hoje
+    const _hjNow = new Date();
+    const _maNow = _hjNow.toISOString().slice(0,7);
+    const _diaHj = _hjNow.getDate();
+    const _dmHj = new Date(_hjNow.getFullYear(), _hjNow.getMonth()+1, 0).getDate();
+    // Timestamp exato de hoje (com hora do dia proporcional)
+    const _msHoje = ini + (_diaHj / _dmHj - 0) * 0; // não usado diretamente
+    const _msHojeExato = new Date(_hjNow.getFullYear(), _hjNow.getMonth(), _diaHj).getTime();
+    const _duracaoTotal = fim - ini || 1;
+    // % planejado no momento exato de hoje = tempo decorrido / duração total da obra
+    const _percPlanHoje = Math.min(Math.max((_msHojeExato - ini) / _duracaoTotal, 0), 1) * 100;
+
+    // Para cada mês, calcular % planejado proporcional ao tempo — mas só até hoje
+    const curvaPlan2 = meses2.map((mes, i) => {
+      // Usar dia 28 como representativo do mês (garante que qualquer mês tem esse dia)
+      const msRef = mes < _maNow
+        ? new Date(mes + '-28').getTime()
+        : mes === _maNow ? _msHojeExato : null;
+      if (msRef === null) return null; // meses futuros: não plotar
+      return Math.min(Math.max((msRef - ini) / _duracaoTotal, 0), 1) * 100;
     });
+
     ctx.beginPath();
     ctx.strokeStyle = '#58a6ff';
     ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    curvaPlan2.forEach((v,i) => { const x=xPos2(i),y=yPos2(v); if(i===0){ctx.moveTo(x,y);}else{const xp=xPos2(i-1),yp=yPos2(curvaPlan2[i-1]);ctx.quadraticCurveTo((xp+x)/2,yp,x,y);} });
-    ctx.stroke();
-    const mesHoje = new Date().toISOString().slice(0,7);
-    const idxHoje = meses2.findIndex(m2=>m2===mesHoje);
-    const idxReal = idxHoje === -1 ? meses2.length-1 : idxHoje;
-    const _hjD=new Date(), _diasTot=new Date(_hjD.getFullYear(),_hjD.getMonth()+1,0).getDate();
-    const fracaoMesAtual = _hjD.getDate()/_diasTot;
-    const curvaReal2 = meses2.map((_,i) => {
-      if(i < idxReal) return (i/Math.max(idxReal,1))*afManual;
-      if(i === idxReal) return fracaoMesAtual * afManual;
-      return null;
+    let planStarted = false;
+    curvaPlan2.forEach((v, i) => {
+      if (v === null) return;
+      const x = xPos2(i), y = yPos2(v);
+      if (!planStarted) { ctx.moveTo(x, y); planStarted = true; }
+      else { const xp = xPos2(i-1), yp = yPos2(curvaPlan2[i-1] ?? v); ctx.quadraticCurveTo((xp+x)/2, yp, x, y); }
     });
+    ctx.stroke();
+
+    // Curva realizado: linha horizontal em afManual, do início até hoje
+    const idxHoje = meses2.findIndex(m2 => m2 === _maNow);
+    const idxReal = idxHoje === -1 ? meses2.length - 1 : idxHoje;
+    // O ponto final da curva realizado fica na posição X proporcional ao dia de hoje dentro do mês
+    const _xHojeExato = xPos2(idxReal - 1 + _diaHj / _dmHj);
+
+    // Desenhar área preenchida sob o realizado
     const gradReal2 = ctx.createLinearGradient(0, m.t, 0, m.t+ch);
     gradReal2.addColorStop(0, 'rgba(227,113,26,0.18)');
     gradReal2.addColorStop(1, 'rgba(227,113,26,0)');
     ctx.beginPath();
-    curvaReal2.filter(v=>v!==null).forEach((v,i) => { const x=xPos2(i),y=yPos2(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
-    ctx.lineTo(xPos2(idxReal), m.t+ch); ctx.lineTo(xPos2(0), m.t+ch); ctx.closePath();
+    ctx.moveTo(xPos2(0), yPos2(afManual));
+    ctx.lineTo(_xHojeExato, yPos2(afManual));
+    ctx.lineTo(_xHojeExato, m.t+ch);
+    ctx.lineTo(xPos2(0), m.t+ch);
+    ctx.closePath();
     ctx.fillStyle = gradReal2; ctx.fill();
+
+    // Linha laranja realizado
     ctx.beginPath();
     ctx.strokeStyle = '#e3711a';
     ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    curvaReal2.forEach((v,i) => { if(v===null) return; const x=xPos2(i),y=yPos2(v); if(i===0||curvaReal2[i-1]===null){ctx.moveTo(x,y);}else{const xp=xPos2(i-1),yp=yPos2(curvaReal2[i-1]);ctx.quadraticCurveTo((xp+x)/2,yp,x,y);} });
+    ctx.moveTo(xPos2(0), yPos2(afManual));
+    ctx.lineTo(_xHojeExato, yPos2(afManual));
     ctx.stroke();
-    const px = xPos2(idxReal), py = yPos2(fracaoMesAtual * afManual);
+
+    // Ponto "Hoje" e label
+    const px = _xHojeExato, py = yPos2(afManual);
     ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI*2);
     ctx.fillStyle = '#e3711a'; ctx.fill();
     ctx.fillStyle = 'rgba(139,148,158,0.9)'; ctx.font = '600 9px var(--font,sans-serif)'; ctx.textAlign = 'left';
-    ctx.fillText('Hoje '+(fracaoMesAtual*afManual).toFixed(1)+'%', px+8, py+4);
+    ctx.fillText('Hoje ' + afManual.toFixed(1) + '%', px+8, py+4);
     ctx.fillStyle = 'rgba(139,148,158,0.9)'; ctx.font = '600 10px var(--font,sans-serif)'; ctx.textAlign = 'left';
     ctx.fillText('Físico (%)', m.l, 10);
     return;
