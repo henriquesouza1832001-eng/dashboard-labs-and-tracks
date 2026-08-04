@@ -1233,8 +1233,8 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   });
 
   const planejado = meses.map(mes => {
-    const hoje_ = new Date(); const mesAtual_ = hoje_.toISOString().slice(0,7);
-    const mesMs = mes === mesAtual_ ? hoje_.getTime() : new Date(mes+'-28').getTime();
+    const _hj=new Date(),_ma=_hj.toISOString().slice(0,7);
+    const mesMs = mes===_ma ? _hj.getTime() : new Date(mes+'-28').getTime();
     if (todosItens.length) {
       let acum = 0;
       todosItens.forEach(it => {
@@ -1265,8 +1265,8 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   });
   const budgetPorEtapa = etapas.reduce((s,e)=>s+(e.orcamento||0),0) || budgetTotal || 1;
   const planejadoFinanceiro = meses.map(mes => {
-    const hoje_ = new Date(); const mesAtual_ = hoje_.toISOString().slice(0,7);
-    const mesMs = mes === mesAtual_ ? hoje_.getTime() : new Date(mes+'-28').getTime();
+    const _hj=new Date(),_ma=_hj.toISOString().slice(0,7);
+    const mesMs = mes===_ma ? _hj.getTime() : new Date(mes+'-28').getTime();
     let acum = 0;
     etapas.forEach(e => {
       const s = toMs(e.dtInicio), f = toMs(e.dtFim);
@@ -1278,8 +1278,8 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
   });
   const hojeMs = new Date().getTime();
   const realizadoFisico = meses.map(mes => {
-    const hoje_ = new Date(); const mesAtual_ = hoje_.toISOString().slice(0,7);
-    const mesMs = mes === mesAtual_ ? hoje_.getTime() : new Date(mes+'-28').getTime();
+    const _hj=new Date(),_ma=_hj.toISOString().slice(0,7);
+    const mesMs = mes===_ma ? _hj.getTime() : new Date(mes+'-28').getTime();
     if (todosItens.length || semDataConcluidoPeso > 0) {
       let acum = 0;
       todosItens.forEach(it => {
