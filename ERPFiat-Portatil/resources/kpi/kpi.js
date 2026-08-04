@@ -1151,14 +1151,14 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
       ctx.fillText(d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), xPos2(i), m.t+ch+14);
     });
     const _hjNow=new Date(), _maNow=_hjNow.toISOString().slice(0,7);
+    const _diaHjNow=_hjNow.getDate(), _dmNow=new Date(_hjNow.getFullYear(),_hjNow.getMonth()+1,0).getDate();
+    const _idxMesAtual=meses2.findIndex(m2=>m2===_maNow);
+    const _valMesAtual=_idxMesAtual===-1?null:((_idxMesAtual+_diaHjNow/_dmNow)/(meses2.length-1||1))*100;
     const curvaPlan2 = meses2.map((mes,i) => {
       const total = meses2.length-1||1;
       if(mes < _maNow) return (i/total)*100;
-      if(mes === _maNow) {
-        const diaHoje=_hjNow.getDate(), diasMes=new Date(_hjNow.getFullYear(),_hjNow.getMonth()+1,0).getDate();
-        return ((i + diaHoje/diasMes - 1 + 1/total) / total)*100;
-      }
-      return (i/total)*100;
+      if(mes === _maNow) return Math.min(_valMesAtual, 100);
+      return null;
     });
     ctx.beginPath();
     ctx.strokeStyle = '#58a6ff';
@@ -1187,11 +1187,11 @@ function desenharCurvaS(canvasId, obra, lancs, budgetTotal, modo='fisico') {
     ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     curvaReal2.forEach((v,i) => { if(v===null) return; const x=xPos2(i),y=yPos2(v); if(i===0||curvaReal2[i-1]===null){ctx.moveTo(x,y);}else{const xp=xPos2(i-1),yp=yPos2(curvaReal2[i-1]);ctx.quadraticCurveTo((xp+x)/2,yp,x,y);} });
     ctx.stroke();
-    const px = xPos2(idxReal), py = yPos2(afManual);
+    const px = xPos2(idxReal), py = yPos2(fracaoMesAtual * afManual);
     ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI*2);
     ctx.fillStyle = '#e3711a'; ctx.fill();
     ctx.fillStyle = 'rgba(139,148,158,0.9)'; ctx.font = '600 9px var(--font,sans-serif)'; ctx.textAlign = 'left';
-    ctx.fillText('Hoje '+afManual.toFixed(1)+'%', px+8, py+4);
+    ctx.fillText('Hoje '+(fracaoMesAtual*afManual).toFixed(1)+'%', px+8, py+4);
     ctx.fillStyle = 'rgba(139,148,158,0.9)'; ctx.font = '600 10px var(--font,sans-serif)'; ctx.textAlign = 'left';
     ctx.fillText('Físico (%)', m.l, 10);
     return;
