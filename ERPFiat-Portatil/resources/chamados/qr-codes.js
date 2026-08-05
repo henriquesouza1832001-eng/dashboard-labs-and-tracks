@@ -166,7 +166,7 @@ async function adicionarAreaQR() {
   const id = 'area-' + Date.now();
 
   try {
-    await fetch('/api/chamados-qr/areas-qr', {
+    await fetch('/api/chamados/areas-qr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, nome, slug })
