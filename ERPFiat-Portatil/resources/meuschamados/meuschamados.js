@@ -1,3 +1,91 @@
+const $ = id => document.getElementById(id);
+const CATS = {
+  INF: { label: 'Infraestrutura', color: '#58a6ff' },
+  ELE: { label: 'Elétrica',       color: '#d29922' },
+  HID: { label: 'Hidráulica',     color: '#3fb950' },
+  LMP: { label: 'Limpeza',        color: '#bc8cff' },
+  AR:  { label: 'Ar Cond.',       color: '#39c5cf' },
+};
+let allChamados = [];
+let areasQR = [];
+let _slaCache = {};
+
+function slaParaPrio(prio) {
+  const pad = { 'Crítica':1,'Alta':3,'Média':5,'Baixa':7 };
+  return _slaCache[prio] || pad[prio] || 7;
+}
+function diasAberto(c) {
+  const inicio = new Date(c.dataAbertura);
+  const fim = c.dataConclusao ? new Date(c.dataConclusao) : new Date();
+  return Math.max(0, (fim - inicio) / 86400000);
+}
+function fmtDateShort(iso) {
+  if (!iso) return '–';
+  return new Date(iso).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function statusClass(s) {
+  return { 'Aberto':'s-aberto','Em Andamento':'s-andamento','Concluído':'s-concluido','Cancelado':'s-cancelado','Fechado':'s-fechado' }[s] || '';
+}
+function prioClass(p) {
+  return { 'Baixa':'p-baixa','Média':'p-media','Alta':'p-alta','Crítica':'p-critica' }[p] || '';
+}
+function gerarId(cat) {
+  const ano = new Date().getFullYear();
+  const ts = Date.now().toString().slice(-6);
+  return `${cat}-${ano}-${ts}`;
+}
+function showToast(msg, type='ok') {
+  alert(msg);
+}
+function renderFotosGrid(gridId, arr, addBtnId) {
+  const grid = $(gridId);
+  const addBtn = $(addBtnId);
+  grid.innerHTML = '';
+  arr.forEach((b64, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'foto-thumb';
+    thumb.innerHTML = `<img src="${b64}" style="width:64px;height:64px;object-fit:cover;border-radius:6px">`;
+    grid.appendChild(thumb);
+  });
+  grid.appendChild(addBtn);
+}
+function lerImagens(input, arr, gridId, addBtnId) {
+  Array.from(input.files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => { arr.push(e.target.result); renderFotosGrid(gridId, arr, addBtnId); };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+}
+function abrirModalVer(id) {
+  alert('Abra o sistema principal para ver detalhes do chamado ' + id);
+}
+
+async function carregarDados() {
+  try {
+    const [dc, da, ds] = await Promise.all([
+      fetch('/api/chamados').then(r => r.json()),
+      fetch('/api/chamados/areas-qr').then(r => r.json()),
+      fetch('/api/chamados/sla').then(r => r.json()),
+    ]);
+    allChamados = dc.chamados || [];
+    areasQR = Array.isArray(da) ? da : [];
+    _slaCache = ds || {};
+  } catch(e) {
+    console.error('Erro ao carregar dados:', e);
+  }
+  initMeusChamados();
+}
+
+const emailInicial = (window.__DADOS__ || {}).email_usuario || '';
+if (emailInicial) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = $('mc-nome');
+    if (inp) inp.value = emailInicial;
+  });
+}
+
+carregarDados();
 const MC_STORAGE_KEY = 'mc-solicitante';
 let mcSolicitante = localStorage.getItem(MC_STORAGE_KEY) || '';
 let mcSubAba = 'historico';

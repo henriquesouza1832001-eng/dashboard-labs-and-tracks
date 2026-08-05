@@ -72,5 +72,5 @@ window.addEventListener('beforeinstallprompt', e => {
   }
 });
 setInterval(() => {
-  fetch('/health').catch(() => {});
+  fetch('/api/chamados/sla').catch(() => {});
 }, 10 * 60 * 1000);
