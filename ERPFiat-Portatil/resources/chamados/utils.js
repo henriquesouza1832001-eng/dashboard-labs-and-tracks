@@ -32,7 +32,7 @@ function setSave(state, label) {
   el.className = 'save-status ' + state;
   $('save-label').textContent = label;
 }
-carregar('chamados', () => window.__DADOS__ ? Promise.resolve(window.__DADOS__) : API.chamados.listar(), d => {
+carregar('chamados', () => API.chamados.listar(), d => {
   allChamados = d.chamados || [];
   setSave('saved', 'carregado');
   atualizarContadores();
@@ -67,3 +67,9 @@ function atualizarContadores() {
   $('stat-criticos').textContent  = allChamados.filter(c=>c.prioridade==='Crítica' && c.status==='Aberto').length;
   $('stat-sem-resp').textContent  = allChamados.filter(c=>!c.responsavel).length;
 }
+setInterval(async () => {
+  const d = await API.chamados.listar();
+  allChamados = d.chamados || [];
+  atualizarContadores();
+  aplicarFiltros();
+}, 60000);
