@@ -264,7 +264,7 @@ async function salvarAtendimento(id) {
   } else if (comentario) {
     historico.push({
       data: new Date().toISOString(),
-      acao: 'Comentário do Service Desk',
+      acao: `Comentário do Service Desk: ${comentario}`,
       obs: comentario,
       cor: '#58a6ff'
     });

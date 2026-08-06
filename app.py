@@ -208,7 +208,7 @@ def _load_chamados():
     fotos, historico = [], []
     if ids:
         fotos = run_query(f"SELECT chamado_id, url FROM {S_CHAMADOS}.fotos")
-        historico = run_query(f"SELECT chamado_id, usuario, acao, data FROM {S_CHAMADOS}.historico ORDER BY data")
+        historico = run_query(f"SELECT chamado_id, usuario, acao, data, obs FROM {S_CHAMADOS}.historico ORDER BY data")
     rows = _transformar_chamados(rows, fotos, historico)
     payload = {"chamados": rows}
     cache_set("chamados", payload)
@@ -225,7 +225,7 @@ def _atualizar_cache_chamados_parcial(ids_chamados):
     rows_novos = run_query(f"SELECT * FROM {S_CHAMADOS}.chamados WHERE id IN ({ph})", ids_chamados)
     fotos_novas = run_query(f"SELECT chamado_id, url FROM {S_CHAMADOS}.fotos WHERE chamado_id IN ({ph})", ids_chamados)
     historico_novo = run_query(
-        f"SELECT chamado_id, usuario, acao, data FROM {S_CHAMADOS}.historico WHERE chamado_id IN ({ph}) ORDER BY data",
+        f"SELECT chamado_id, usuario, acao, data, obs FROM {S_CHAMADOS}.historico WHERE chamado_id IN ({ph}) ORDER BY data",
         ids_chamados
     )
     rows_novos = _transformar_chamados(rows_novos, fotos_novas, historico_novo)
@@ -1058,9 +1058,9 @@ async def update_chamado(cid: str, request: Request):
         if historico:
             rows, params = [], []
             for h in historico:
-                rows.append("(?,?,?,?)")
-                params += [cid, u if u else None, h.get("acao"), h.get("data")]
-            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data) VALUES {','.join(rows)}", params)
+                rows.append("(?,?,?,?,?)")
+                params += [cid, u if u else None, h.get("acao"), h.get("data"), h.get("obs","")]
+            await arun_exec_retry(f"INSERT INTO {S_CHAMADOS}.historico (chamado_id, usuario, acao, data, obs) VALUES {','.join(rows)}", params)
     except Exception as e:
         print(f"[chamados] erro ao atualizar {cid}: {e}")
         return JSONResponse({"erro": str(e)}, status_code=500)
