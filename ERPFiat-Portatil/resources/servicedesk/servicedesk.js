@@ -37,6 +37,7 @@ async function comprimirImagem(file) {
 }
 let verConcluidos = false;
 let abaAtiva = 'abertos';
+let filtroStatus = 'Aberto';
 let filtroData = 'todos';
 let painelAberto = null;
 let fotosNovas = {};
@@ -85,6 +86,7 @@ function renderLista() {
     if (abaAtiva === 'andamento') {
       if (c.status !== 'Em Andamento') return false;
     } else {
+      if (c.status !== 'Aberto' && !verConcluidos) return false;
       if (c.status === 'Em Andamento') return false;
       if (!dentroDoFiltroData(c)) return false;
     }
@@ -286,7 +288,7 @@ async function salvarAtendimento(id) {
     delete fotosNovas[id];
     document.querySelector(`[data-comentario="${id}"]`).value = '';
     mostrarToast('Atendimento atualizado.');
-    renderLista();
+    await carregar();
   } catch {
     mostrarToast('Erro ao salvar. Tente novamente.');
   }
@@ -294,7 +296,7 @@ async function salvarAtendimento(id) {
 
 async function carregar() {
   try {
-    const dados = window.__DADOS__ || await fetch('/api/chamados').then(r => r.json());
+    const dados = await fetch('/api/chamados').then(r => r.json());
     chamados = (dados.chamados || []).sort((a, b) =>
       new Date(b.dataAbertura) - new Date(a.dataAbertura)
     );
@@ -325,3 +327,4 @@ document.querySelectorAll('.aba-btn').forEach(btn => {
 });
 
 carregar();
+setInterval(carregar, 30000);
