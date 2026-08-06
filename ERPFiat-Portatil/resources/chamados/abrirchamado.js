@@ -175,6 +175,8 @@ async function salvarChamado() {
 
   await API.chamados.atualizar(c.id, c);
   API.invalidar('/chamados');
+  const dadosNovos = await API.chamados.listar();
+  allChamados = dadosNovos.chamados || [];
   atualizarContadores();
   aplicarFiltros();
   fecharModalVer();
