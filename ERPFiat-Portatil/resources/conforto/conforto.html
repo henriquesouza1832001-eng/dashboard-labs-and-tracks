@@ -23,7 +23,7 @@
   <span class="topbar-sep">/</span>
   <span class="topbar-title">Conforto</span>
   <div class="topbar-right">
-    <div class="save-status nosave" id="save-status"><div class="dot"></div><span id="save-txt">sem arquivo</span></div>
+    <div class="save-status saved" id="save-status"><div class="dot"></div><span id="save-txt">salvo</span></div>
     <span class="file-badge" id="sidebar-arquivo">—</span>
   </div>
 </div>
@@ -66,11 +66,7 @@
         </button>
       </div>
       <div class="sidebar-bottom">
-        <button class="btn btn-secondary btn-sm" id="btn-abrir-arquivo" style="width:100%;opacity:.4;cursor:default" disabled title="Arquivos gerenciados pelo Hub">
-          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          Via Hub
-        </button>
-        <div class="sidebar-file" id="sidebar-file-info" style="margin-top:6px">—</div>
+        
       </div>
     </div>
 
@@ -833,6 +829,7 @@
 <script src="/qr/qrcode.min.js"></script>
 <script src="/hub/pwa.js"></script>
 <script src="../hub/auth.js"></script>
+<script src="../hub/savequeue.js"></script>
 <script src="../hub/api.js"></script>
 <script src="../hub/cache.js"></script>
 <script src="/conforto/conforto.js"></script>

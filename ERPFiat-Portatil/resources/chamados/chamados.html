@@ -33,14 +33,10 @@
   <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   Service Desk
 </a>
-    <div class="save-status nosave" id="save-status">
+    <div class="save-status saved" id="save-status">
       <span class="save-dot"></span>
-      <span id="save-label">sem arquivo</span>
+      <span id="save-label">salvo</span>
     </div>
-    <button class="btn btn-ghost" id="btn-open-file" style="font-size:12px;padding:6px 12px;opacity:.4;cursor:default" disabled title="Arquivos gerenciados pelo Hub">
-      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      Via Hub
-    </button>
   </div>
 </div>
 <div class="layout">
@@ -616,6 +612,7 @@ document.addEventListener('keydown',function(e){
 </script>
 <script src="/hub/pwa.js"></script>
 <script src="../hub/auth.js"></script>
+<script src="../hub/savequeue.js"></script>
 <script src="../hub/api.js"></script>
 <script src="../hub/cache.js"></script>
 <script src="/chamados/SLA.js"></script>

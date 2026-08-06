@@ -173,14 +173,16 @@ async function salvarChamado() {
   if (obs) c.ultimaObs = obs;
   c.fotos = [...editFotos];
 
-  await API.chamados.atualizar(c.id, c);
-  API.invalidar('/chamados');
-  const dadosNovos = await API.chamados.listar();
-  allChamados = dadosNovos.chamados || [];
+  allChamados[idx] = c;
   atualizarContadores();
   aplicarFiltros();
   fecharModalVer();
   showToast('Chamado atualizado!');
+
+  SaveQueue.run(async () => {
+    await API.chamados.atualizar(c.id, c);
+    API.invalidar('/chamados');
+  }, { label: `chamado ${c.id}` });
 }
 
 async function excluirChamado() {

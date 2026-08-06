@@ -75,10 +75,10 @@ async function inicializarCodin(){
   iniciarApp();
 }
 setTimeout(inicializarCodin, 300);
-document.getElementById('btn-reabrir')?.addEventListener('click',()=>{ toast('Arquivos gerenciados pelo Hub.',''); });
+
 document.getElementById('btn-abrir-dados')?.addEventListener('click',()=>{ iniciarApp(); });
 document.getElementById('btn-comecar-vazio')?.addEventListener('click',()=>{ iniciarApp(); });
-document.getElementById('btn-trocar-arquivo')?.addEventListener('click',()=>{ toast('Arquivos gerenciados pelo Hub.',''); });
+
 document.querySelectorAll('.nav-item').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const page=btn.dataset.page;
