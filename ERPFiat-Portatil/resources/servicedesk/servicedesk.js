@@ -327,4 +327,4 @@ document.querySelectorAll('.aba-btn').forEach(btn => {
 });
 
 carregar();
-setInterval(carregar, 30000);
+setInterval(carregar, 1200000);
